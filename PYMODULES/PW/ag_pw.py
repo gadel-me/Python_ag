@@ -299,30 +299,37 @@ class PwStuff(mdu.Universe):
 
                 line = opened_pwout.readline()
 
+    def _write_section(self, opened_file_instance, frame_id, keyword):
+        """
+        Helper function to write an input section.
+        """
+        # write entries
+        opened_file_instance.write("&{}\n".format(keyword))
+
+        for setting, value in self.pw_entries[keyword].iteritems():
+
+            # calculate celldm(1), which derives from lattice vector a
+            if setting == "celldm(1)":
+                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, self.ts_boxes[frame_id].ltc_a*angstrom_bohr))
+            else:
+                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, value))
+
+        opened_file_instance.write("/\n\n")
+
     def write_pwin(self, frame_id, filename):
         """
         Write an input file for pw.x. alat is converted to angstrom when read
         """
         with open(filename, "w") as opened_filename:
+            # since it seems that a certain order must be maintained,
+            # section by section is written
 
-            # write entries
-            for keyword in self.pw_entries:
-
-                # skip K_POINTS entry since it will be used later on
-                if keyword is "K_POINTS":
-                    continue
-                else:
-                    opened_filename.write("&{}\n".format(keyword))
-
-                    for setting, value in self.pw_entries[keyword].iteritems():
-
-                        # calculate celldm(1), which derives from lattice vector a
-                        if setting == "celldm(1)":
-                            opened_filename.write("    {0:<24s}= {1}\n".format(setting, self.ts_boxes[frame_id].ltc_a*angstrom_bohr))
-                        else:
-                            opened_filename.write("    {0:<24s}= {1}\n".format(setting, value))
-
-                    opened_filename.write("/\n\n")
+            # &CONTROL Section
+            self._write_section(opened_filename, frame_id, "CONTROL")
+            self._write_section(opened_filename, frame_id, "SYSTEM")
+            self._write_section(opened_filename, frame_id, "ELECTRONS")
+            self._write_section(opened_filename, frame_id, "IONS")
+            self._write_section(opened_filename, frame_id, "CELL")
 
             # Pseudopotentials (atom types)
             opened_filename.write("ATOMIC_SPECIES\n")
