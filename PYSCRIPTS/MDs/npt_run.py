@@ -24,7 +24,7 @@ parser.add_argument("-lmprst",
                     )
 
 parser.add_argument("-gpu",
-                    nargs=2,
+                    nargs="*",
                     metavar=("neigh", "no"),
                     default=None,
                     help="Utilize gpu-package and build neighbor (neigh) lists on the gpu (yes) or on the cpu (no).",
@@ -37,6 +37,13 @@ parser.add_argument("-set",
                          "settings"
                     )
 
+parser.add_argument("-non_covalent",
+                    default=None,
+                    metavar="*.lmpcfg",
+                    help="lammps' input-file/-script with non covalent simulation " +
+                         "settings (pair_styles, pair_coeffs)."
+                    )
+
 parser.add_argument("-group",
                     nargs="*",
                     default="all",
@@ -47,7 +54,7 @@ parser.add_argument("-group",
 parser.add_argument("-ensemble",
                     nargs="*",
                     default=None,
-                    metavar="FIXNPTISO npt temp 150 290 0.1 iso 1.0 1.0 1",
+                    metavar="npt temp 150 290 0.1 iso 1.0 1.0 1",
                     help="Hoover npt settings for lammps. Currently only hoover " +
                          "ensembles can be utilized. If not chosen, no md will be run."
                     )
@@ -128,6 +135,9 @@ lmp.command("log {}.lmplog".format(args.out))
 
 # basic lammps settings
 if args.gpu is not None:
+    #args.gpu = args.gpu[0].split()
+    #print(args.gpu)
+    args.gpu = ["neigh", "no"]
     lmp.command("package gpu 1 {neigh[0]} {neigh[1]}".format(neigh=args.gpu))
     lmp.command("suffix gpu")
 
@@ -146,8 +156,18 @@ elif os.path.isfile(args.lmpdat) is True:
 else:
     raise IOError("No data nor restart files given.")
 
+if args.non_covalent is not None:
+    lmp.file(args.non_covalent)
+    lmp.command("compute hb all pair hbond/dreiding/lj")
+    lmp.command("variable n_hbond equal c_hb[1]")
+    lmp.command("variable E_hbond equal c_hb[2]")
+
 # thermo stuff
-lmp.command("thermo_style custom " + " ".join(thermargs))
+if args.non_covalent is not None:
+    lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
+else:
+    lmp.command("thermo_style custom " + " ".join(thermargs))
+
 lmp.command("thermo_modify lost warn flush yes")
 lmp.command("thermo {}".format(args.logsteps))
 

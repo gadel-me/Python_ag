@@ -1,17 +1,22 @@
+"""
+Funny stuff
+"""
 from __future__ import print_function, division
+import math
 import os
 import re
 import numpy as np
 import scipy.constants as sc
-import time
+# import time
 import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
 
 __version__ = "2018-05-03"
 
-bohr_angstrom = sc.value("Bohr radius")/sc.angstrom
-angstrom_bohr = sc.angstrom/sc.value("Bohr radius")
+BOHR_ANGSTROM = sc.value("Bohr radius")/sc.angstrom
+ANGSTROM_BOHR = sc.angstrom/sc.value("Bohr radius")
+
 
 class PwStuff(mdu.Universe):
     """
@@ -57,7 +62,7 @@ class PwStuff(mdu.Universe):
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
-                        if re.match("^\d+?\.\d+?$", split_line[1]):
+                        if re.match(r"^\d+?\.\d+?$", split_line[1]):
                             split_line[1] = float(split_line[1])
                         else:
                             try:
@@ -81,7 +86,7 @@ class PwStuff(mdu.Universe):
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
-                        if re.match("^\d+?\.\d+?$", split_line[1]):
+                        if re.match(r"^\d+?\.\d+?$", split_line[1]):
                             split_line[1] = float(split_line[1])
                         else:
                             try:
@@ -105,7 +110,7 @@ class PwStuff(mdu.Universe):
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
-                        if re.match("^\d+?\.\d+?$", split_line[1]):
+                        if re.match(r"^\d+?\.\d+?$", split_line[1]):
                             split_line[1] = float(split_line[1])
                         else:
                             try:
@@ -129,7 +134,7 @@ class PwStuff(mdu.Universe):
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
-                        if re.match("^\d+?\.\d+?$", split_line[1]):
+                        if re.match(r"^\d+?\.\d+?$", split_line[1]):
                             split_line[1] = float(split_line[1])
                         else:
                             try:
@@ -153,7 +158,7 @@ class PwStuff(mdu.Universe):
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
-                        if re.match("^\d+?\.\d+?$", split_line[1]):
+                        if re.match(r"^\d+?\.\d+?$", split_line[1]):
                             split_line[1] = float(split_line[1])
                         else:
                             try:
@@ -198,7 +203,7 @@ class PwStuff(mdu.Universe):
                 elif line.startswith("K_POINTS"):
                     kpoints_line = line.split()
                     self.pw_entries["K_POINTS"]["option"] = kpoints_line[1]
-                    self.pw_entries["K_POINTS"]["k_point_grid"] = []
+                    #self.pw_entries["K_POINTS"]["k_point_grid"] = []
 
                     while line != '':
                         line = opened_pwin.readline()
@@ -208,8 +213,8 @@ class PwStuff(mdu.Universe):
 
                         split_line = line.split()
 
-                        if kpoints_line[1] == "automatic":
-                            self.pw_entries["K_POINTS"]["k_point_grid"].append([int(i) for i in split_line])
+                        if kpoints_line[1].strip("{}()") == "automatic":
+                            self.pw_entries["K_POINTS"]["k_point_grid"] = [int(i) for i in split_line]
                         elif kpoints_line[1] == "gamma":
                             self.pw_entries["K_POINTS"]["k_point_grid"] = ["\n"]
                             break
@@ -232,15 +237,46 @@ class PwStuff(mdu.Universe):
                             cbox.crt_c = line  # vector c
 
                     self.ts_boxes.append(cbox)
-                    del line_cntr
                 else:
                     pass
 
                 line = opened_pwin.readline()
 
+        # convert cell to lattice cell and append it to the current cells
+        if "A" in self.pw_entries["SYSTEM"] and \
+           "B" in self.pw_entries["SYSTEM"] and \
+           "C" in self.pw_entries["SYSTEM"] and \
+           "cosAB" in self.pw_entries["SYSTEM"] and \
+           "cosAC" in self.pw_entries["SYSTEM"] and \
+           "cosBC" in self.pw_entries["SYSTEM"]:
+            cbox = mdb.Box(
+                ltc_a=float(self.pw_entries["SYSTEM"]["A"]),
+                ltc_b=float(self.pw_entries["SYSTEM"]["B"]),
+                ltc_c=float(self.pw_entries["SYSTEM"]["C"]),
+                ltc_alpha=math.acos(float(self.pw_entries["SYSTEM"]["cosBC"])),
+                ltc_beta=math.acos(float(self.pw_entries["SYSTEM"]["cosAC"])),
+                ltc_gamma=math.acos(float(self.pw_entries["SYSTEM"]["cosAB"])),
+                boxtype="lattice")
+
+            # delete surplus box entries
+            del self.pw_entries["SYSTEM"]["A"]
+            del self.pw_entries["SYSTEM"]["B"]
+            del self.pw_entries["SYSTEM"]["C"]
+            del self.pw_entries["SYSTEM"]["cosBC"]
+            del self.pw_entries["SYSTEM"]["cosAC"]
+            del self.pw_entries["SYSTEM"]["cosAB"]
+
+            # add celldm(1)
+            self.pw_entries["SYSTEM"]["celldm(1)"] = cbox.ltc_a * ANGSTROM_BOHR
+            self.pw_entries["SYSTEM"]["ibrav"] = 0
+
+            # convert lattice box to cartesian
+            cbox.box_lat2cart()
+            self.ts_boxes.append(cbox)
+
         # convert celldm (= alat) to box vector a with angstrom
         try:
-            self.ts_boxes[-1].ltc_a = float(self.pw_entries["SYSTEM"]["celldm(1)"]*bohr_angstrom)
+            self.ts_boxes[-1].ltc_a = float(self.pw_entries["SYSTEM"]["celldm(1)"]*BOHR_ANGSTROM)
         except KeyError:
             pass
 
@@ -249,7 +285,7 @@ class PwStuff(mdu.Universe):
             print("***Warning: Number of atoms and SYSTEM entry 'nat' differ!")
             #time.sleep(5)
 
-        if os.path.isdir("/home/hpc/bccc/bccc34/opt/Programs/quantum_espresso_pseudo_potentials") is False:
+        if os.path.isdir(self.pw_entries["CONTROL"]["pseudo_dir"].strip("'")) is False:
             print("***Warning: Folder for Pseudopotentials does not exist!")
             #time.sleep(5)
 
@@ -262,17 +298,17 @@ class PwStuff(mdu.Universe):
         with open(pwout) as opened_pwout:
             line = opened_pwout.readline()
             while line != '':
-                #TODO box vectors should be converted to lattice or their real lengths
+                # TODO box vectors should be converted to lattice or their real lengths
                 if line.startswith("CELL_PARAMETERS"):
                     # get alat
                     split_line = line.split()
 
-                    #TODO calculate real cartesian box vectors from given ones
+                    # TODO calculate real cartesian box vectors from given ones
                     # get box vectors
                     cbox = mdb.Box(boxtype="cartesian")
 
                     if "alat" in line:
-                        cbox.ltc_a = float(split_line[2].strip(")"))*bohr_angstrom
+                        cbox.ltc_a = float(split_line[2].strip(")"))*BOHR_ANGSTROM
                         cbox.crt_a = [float(i) for i in opened_pwout.readline().split()]
                         cbox.crt_b = [float(i) for i in opened_pwout.readline().split()]
                         cbox.crt_c = [float(i) for i in opened_pwout.readline().split()]
@@ -292,6 +328,7 @@ class PwStuff(mdu.Universe):
                         split_line = line.split()
 
                         cur_atm = mds.Atom(sitnam=split_line[0])
+                        self.atoms.append(cur_atm)
                         cur_atm_coords = np.array([float(i) for i in split_line[1:]])
                         self.ts_coords[-1].append(cur_atm_coords)
                 else:
@@ -310,7 +347,7 @@ class PwStuff(mdu.Universe):
 
             # calculate celldm(1), which derives from lattice vector a
             if setting == "celldm(1)":
-                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, self.ts_boxes[frame_id].ltc_a*angstrom_bohr))
+                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, self.ts_boxes[frame_id].ltc_a*ANGSTROM_BOHR))
             else:
                 opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, value))
 
@@ -333,14 +370,14 @@ class PwStuff(mdu.Universe):
 
             # Pseudopotentials (atom types)
             opened_filename.write("ATOMIC_SPECIES\n")
-            for index, atom_type in self.atm_types.iteritems():
+            for _, atom_type in self.atm_types.iteritems():
                 opened_filename.write("{0} {1:>6} {2:}\n".format(atom_type.sitnam,
-                                                               atom_type.weigh,
-                                                               atom_type.pseudopotential))
+                                                                 atom_type.weigh,
+                                                                 atom_type.pseudopotential))
             opened_filename.write("\n")
 
             # Atom Coordinates
-            #TODO currently atomic positions are only supported in angstrom
+            # TODO currently atomic positions are only supported in angstrom
             opened_filename.write("ATOMIC_POSITIONS {angstrom}\n")
             for atom, atom_coordinates in zip(self.atoms, self.ts_coords[frame_id]):
                 opened_filename.write("{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n".format(atom.sitnam, c=atom_coordinates))
@@ -350,15 +387,21 @@ class PwStuff(mdu.Universe):
             opened_filename.write("K_POINTS {}\n".format(self.pw_entries["K_POINTS"]["option"]))
 
             # write grid or skip entry if gamma point is set
-            if self.pw_entries["K_POINTS"]["option"] == "automatic":
-                opened_filename.write("{}\n".format(self.pw_entries["K_POINTS"]["k_point_grid"]))
+            if self.pw_entries["K_POINTS"]["option"].strip("{}()") == "automatic":
+                for kpoint in self.pw_entries["K_POINTS"]["k_point_grid"]:
+                    opened_filename.write("{} ".format(kpoint))
+                opened_filename.write("\n")
 
             opened_filename.write("\n")
 
             # Cell
-            #TODO currently only alat as cell option is supported
-            opened_filename.write("CELL_PARAMETERS {alat}\n")
-            opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_a))
-            opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_b))
-            opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_c))
-            opened_filename.write("\n")
+            #TODO Currently only a really really dirty fix, proper cell conversion
+            #TODO is absolutely advisable
+            try:
+                self.pw_entries["SYSTEM"]["A"]
+            except KeyError:
+                opened_filename.write("CELL_PARAMETERS {alat}\n")
+                opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_a))
+                opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_b))
+                opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_c))
+                opened_filename.write("\n")

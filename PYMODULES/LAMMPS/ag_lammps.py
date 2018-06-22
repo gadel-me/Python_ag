@@ -434,7 +434,7 @@ class LmpStuff(mdu.Universe):
                         if comment is not None:
                             comment = comment.split()
                             # read bond order
-                            cur_bnd.bnd_order = int(comment[0])
+                            cur_bnd.bnd_order = float(comment[0])
 
                             # read atom types the bond is between
                             if len(comment) > 2:
@@ -789,46 +789,47 @@ class LmpStuff(mdu.Universe):
                 lmpdat_out.write("\n")
 
             # /// pair types (coeffs) (requires mixed vdw)///
-            if self.pair_types != []:
-                # crawl through pair_types if there are any ij-pairs
-                pair_ij = False
-                for cpair in self.pair_types:
-                    if cpair.pairs == "ij":
-                        pair_ij = True
-                        break
+            if hasattr(self, "pair_types") is True:
+                if self.pair_types != []:
+                    # crawl through pair_types if there are any ij-pairs
+                    pair_ij = False
+                    for cpair in self.pair_types:
+                        if cpair.pairs == "ij":
+                            pair_ij = True
+                            break
 
-                if pair_ij is True:
-                    lmpdat_out.write("PairIJ Coeffs\n")
-                else:
-                    lmpdat_out.write("Pair Coeffs\n")
-
-                lmpdat_out.write("\n")
-
-                for prtyp in self.pair_types:
-
-                    if prtyp.pairs == "ii":
-                        lmpdat_out.write("{:>8d} {:>12.6f} {:>12.6f}".format(
-                            prtyp.atm_key_i,
-                            prtyp.epsilon_ij,
-                            prtyp.sigma_ij))
-                    elif prtyp.pairs == "ij":
-                        lmpdat_out.write("{:>8d} {:>8d} {:>12.6f} {:>12.6f}".format(
-                            prtyp.atm_key_i,
-                            prtyp.atm_key_j,
-                            prtyp.epsilon_ij,
-                            prtyp.sigma_ij))
+                    if pair_ij is True:
+                        lmpdat_out.write("PairIJ Coeffs\n")
                     else:
-                        raise Warning("No type for current pair given!")
-
-                    # add some comment stuff
-                    try:
-                        lmpdat_out.write(" # {}".format(prtyp.lr_key))
-                    except AttributeError:
-                        pass
+                        lmpdat_out.write("Pair Coeffs\n")
 
                     lmpdat_out.write("\n")
 
-                lmpdat_out.write("\n")
+                    for prtyp in self.pair_types:
+
+                        if prtyp.pairs == "ii":
+                            lmpdat_out.write("{:>8d} {:>12.6f} {:>12.6f}".format(
+                                prtyp.atm_key_i,
+                                prtyp.epsilon_ij,
+                                prtyp.sigma_ij))
+                        elif prtyp.pairs == "ij":
+                            lmpdat_out.write("{:>8d} {:>8d} {:>12.6f} {:>12.6f}".format(
+                                prtyp.atm_key_i,
+                                prtyp.atm_key_j,
+                                prtyp.epsilon_ij,
+                                prtyp.sigma_ij))
+                        else:
+                            raise Warning("No type for current pair given!")
+
+                        # add some comment stuff
+                        try:
+                            lmpdat_out.write(" # {}".format(prtyp.lr_key))
+                        except AttributeError:
+                            pass
+
+                        lmpdat_out.write("\n")
+
+                    lmpdat_out.write("\n")
 
             # /// atoms entry ///
             if self.atoms:
@@ -876,6 +877,11 @@ class LmpStuff(mdu.Universe):
                         width_2=longest_bnd_key,
                         width_3=longest_atm_id)
                     )
+
+                    # write bond order as well if given for current bond
+                    if hasattr(cbnd, "bnd_order"):
+                        lmpdat_out.write(" # {}".format(cbnd.bnd_order))
+
 
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")

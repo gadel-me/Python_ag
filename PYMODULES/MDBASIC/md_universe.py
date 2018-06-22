@@ -267,7 +267,7 @@ class Universe(object):
             print("***UI-Convert-Warning: Conversion for pair_types not implemented yet (but for atoms it is)!")
             pass
 
-    def mix_pair_types(self, mode="ii", mix_style="arithmetic", debug=False):
+    def mix_pair_types(self, mode="ii", mix_style="arithmetic", to_file=None, debug=False):
         """
         Calculate sigma_ij and epsilon_ij by utilizing the Lorentz-Berthelot rules
         Sources:    https://en.wikipedia.org/wiki/Combining_rules
@@ -282,6 +282,8 @@ class Universe(object):
         mix geometric:
             sigma_ij = sqrt(sigma_i * sigma_j)
             epsilon_ij = sqrt(epsilon_i * epsilon_j)
+        to_file:
+            write mixing to a file with filename being the value of 'to_file'
         """
         # delete previous values
         if debug is True:
@@ -306,7 +308,14 @@ class Universe(object):
                                     epsilon_ij=epsilon_ii,
                                     pairs="ii"
                                     )
-                self.pair_types.append(cii)
+
+                # write results to file
+                if to_file is not None:
+                    with open(to_file, "a") as pair_file:
+                        pair_file.write("{:<5}{:<5}{:>10}{:>10}\n".format(cij.atm_key_i, cij.atm_key_j, cij.sigma_ij, cij.epsilon_ij))
+                else:
+                    self.pair_types.append(cii)
+
         elif mode == "ij":
             #TODO Mix and do not overwrite existing styles, i.e. i and j must be
             #TODO renamed when appending takes place between different files
@@ -323,9 +332,15 @@ class Universe(object):
                                     atm_key_j=j,
                                     sigma_ij=sigma_ij,
                                     epsilon_ij=epsilon_ij,
-                                    pairs="ij"
-                                    )
-                self.pair_types.append(cij)
+                                    pairs="ij")
+
+                # write results to file
+                if to_file is not None:
+                    with open(to_file, "a") as pair_file:
+                        pair_file.write("{:<5}{:<5}{:<20}{:<20}\n".format(cij.atm_key_i, cij.atm_key_j, cij.epsilon_ij, cij.sigma_ij))
+                else:
+                    self.pair_types.append(cij)
+
         else:
             raise IOError("Wrong mode. Allowed: ii|ij")
 
@@ -1479,7 +1494,8 @@ class Universe(object):
         if refresh_bonds is True:
             self.fetch_molecules_by_bonds()
 
-    def change_indices(self, incr=1, mode="increase"):
+    def change_indices(self, incr=1, mode="increase",
+                      entries="atm_id, atm_grp_id, atm_key, "):
         """
         Programs, such as lammps, need (why so ever) to have the integers in
         data-files to run from 1-N. Since other programs (like VMD) have starting
@@ -1537,42 +1553,68 @@ class Universe(object):
 
         # atoms
         for idx in xrange(len(self.atoms)):
-            self.atoms[idx].atm_id  += mod
-            self.atoms[idx].grp_id  += mod
-            self.atoms[idx].atm_key += mod
+            if hasattr(self.atoms[idx], "atm_id") and "atm_id" in entries:
+                self.atoms[idx].atm_id  += mod
+
+            if hasattr(self.atoms[idx], "grp_id"):
+                self.atoms[idx].grp_id  += mod
+
+            if hasattr(self.atoms[idx], "atm_key"):
+                self.atoms[idx].atm_key += mod
 
         # bonds
         for idx in xrange(len(self.bonds)):
-            self.bonds[idx].bnd_id  += mod
-            self.bonds[idx].bnd_key += mod
-            self.bonds[idx].atm_id1 += mod
-            self.bonds[idx].atm_id2 += mod
+            if hasattr(self.bonds[idx], "bnd_id"):
+                self.bonds[idx].bnd_id  += mod
+            if hasattr(self.bonds[idx], "bnd_key"):
+                self.bonds[idx].bnd_key += mod
+            if hasattr(self.bonds[idx], "atm_id1"):
+                self.bonds[idx].atm_id1 += mod
+            if hasattr(self.bonds[idx], "atm_id2"):
+                self.bonds[idx].atm_id2 += mod
 
         # angles
         for idx in xrange(len(self.angles)):
-            self.angles[idx].ang_id   += mod
-            self.angles[idx].ang_key  += mod
-            self.angles[idx].atm_id1  += mod
-            self.angles[idx].atm_id2  += mod
-            self.angles[idx].atm_id3  += mod
+            if hasattr(self.angles[idx], "ang_id"):
+                self.angles[idx].ang_id   += mod
+            if hasattr(self.angles[idx], "ang_key"):
+                self.angles[idx].ang_key  += mod
+            if hasattr(self.angles[idx], "atm_id1"):
+                self.angles[idx].atm_id1  += mod
+            if hasattr(self.angles[idx], "atm_id2"):
+                self.angles[idx].atm_id2  += mod
+            if hasattr(self.angles[idx], "atm_id3"):
+                self.angles[idx].atm_id3  += mod
 
         # dihedrals
         for idx in xrange(len(self.dihedrals)):
-            self.dihedrals[idx].dih_id  += mod
-            self.dihedrals[idx].dih_key += mod
-            self.dihedrals[idx].atm_id1 += mod
-            self.dihedrals[idx].atm_id2 += mod
-            self.dihedrals[idx].atm_id3 += mod
-            self.dihedrals[idx].atm_id4 += mod
+            if hasattr(self.dihedrals[idx], "dih_id"):
+                self.dihedrals[idx].dih_id  += mod
+            if hasattr(self.dihedrals[idx], "dih_key"):
+                self.dihedrals[idx].dih_key += mod
+            if hasattr(self.dihedrals[idx], "atm_id1"):
+                self.dihedrals[idx].atm_id1 += mod
+            if hasattr(self.dihedrals[idx], "atm_id2"):
+                self.dihedrals[idx].atm_id2 += mod
+            if hasattr(self.dihedrals[idx], "atm_id3"):
+                self.dihedrals[idx].atm_id3 += mod
+            if hasattr(self.dihedrals[idx], "atm_id4"):
+                self.dihedrals[idx].atm_id4 += mod
 
         # impropers
         for idx in xrange(len(self.impropers)):
-            self.impropers[idx].imp_id  += mod
-            self.impropers[idx].imp_key += mod
-            self.impropers[idx].atm_id1 += mod
-            self.impropers[idx].atm_id2 += mod
-            self.impropers[idx].atm_id3 += mod
-            self.impropers[idx].atm_id4 += mod
+            if hasattr(self.impropers[idx], "imp_id"):
+                self.impropers[idx].imp_id  += mod
+            if hasattr(self.impropers[idx], "imp_key"):
+                self.impropers[idx].imp_key += mod
+            if hasattr(self.impropers[idx], "atm_id1"):
+                self.impropers[idx].atm_id1 += mod
+            if hasattr(self.impropers[idx], "atm_id2"):
+                self.impropers[idx].atm_id2 += mod
+            if hasattr(self.impropers[idx], "atm_id3"):
+                self.impropers[idx].atm_id3 += mod
+            if hasattr(self.impropers[idx], "atm_id4"):
+                self.impropers[idx].atm_id4 += mod
 
         # molecules
         for idx in xrange(len(self.molecules)):

@@ -10,9 +10,24 @@ parser.add_argument("pwscf_in",
                     help="Quantum Espresso (PW) input file (needed for settings)."
                     )
 
-parser.add_argument("pwscf_out",
-                    metavar="*.pwscf_in",
+parser.add_argument("-pwscf_out",
+                    default=None,
+                    metavar="*.pwscf_out",
                     help="Quantum Espresso (PW) output file (needed for coordinates and box vectors)."
+                    )
+
+parser.add_argument("-ecutwfc",
+                    type=int,
+                    default=None,
+                    metavar="47",
+                    help="kinetic energy cutoff (Ry) for wavefunctions"
+                    )
+
+parser.add_argument("-ecutrho",
+                    type=int,
+                    metavar="323",
+                    default=None,
+                    help="Kinetic energy cutoff (Ry) for charge density and potential"
                     )
 
 parser.add_argument("-frame_id",
@@ -31,5 +46,17 @@ parser.add_argument("-o",
 args = parser.parse_args()
 pw_file_handler = agum.Unification()
 pw_file_handler.read_pwin(args.pwscf_in)
-pw_file_handler.read_pwout(args.pwscf_out)
-pw_file_handler.write_pwin(-1, args.o)
+
+# read last frame from pw output file
+if args.pwscf_out is not None:
+    pw_file_handler.read_pwout(args.pwscf_out)
+
+# define ecutwfc by user input
+if args.ecutwfc is not None:
+    pw_file_handler.pw_entries["SYSTEM"]["ecutwfc"] = args.ecutwfc
+
+# define ecutrho by user input
+if args.ecutrho is not None:
+    pw_file_handler.pw_entries["SYSTEM"]["ecutrho"] = args.ecutrho
+
+pw_file_handler.write_pwin(args.frame_id, args.o)

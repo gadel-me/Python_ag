@@ -3,12 +3,14 @@ import re
 import numpy as np
 import md_stars as mds
 import md_universe as mdu
+import md_elements as mde
 
 __version__ = "2018-04-24"
 
 """
 CURRENTLY THIS MODULE IS UNDER CONSTRUCTION AND NOT FULLY FUNCTIONAL!
 """
+
 
 class GauStuff(mdu.Universe):
     """
@@ -22,19 +24,23 @@ class GauStuff(mdu.Universe):
                  chk=None,
                  nproc=None,
                  mem=None,
-                 job_settings=None,
-                 charge=None,
-                 multiplicity=None,
+                 job_settings="",
+                 gaussian_charges=[],
+                 gaussian_multiplicities=[],
                  energy_unit=None):
         """
         > job_settings      str; line with job settings, e.g. #P Opt=tight MP2/6-311++G**
                             or #P SP MP2/6-311++G**
+        > coordinate_style       str; cartesian | z-matrix
+        >
+        >
 
         Sources:    http://gaussian.com/basissets/
                     http://gaussian.com/dft/
                     http://gaussian.com/mp/
                     http://gaussian.com/capabilities/
                     http://gaussian.com/geom/
+                    http://wild.life.nctu.edu.tw/~jsyu/compchem/g09/g09ur/m_molspec.htm
 
         Note that this is far from complete
         """
@@ -58,144 +64,251 @@ class GauStuff(mdu.Universe):
         if job_settings is not None:
             self.job_settings = job_settings
 
-        if charge is not None:
-            self.charge = charge
+        if gaussian_charges != []:
+            self.gaussian_charges = gaussian_charges
 
-        if multiplicity is not None:
-            self.multiplicity = multiplicity
+        if gaussian_multiplicities != []:
+            self.gaussian_multiplicities = gaussian_multiplicities
 
         if energy_unit is not None:
             self.energy_unit = energy_unit
 
-    def read_gau(self, gauin, overwrite=False):
+    def read_gau(self, gauin, coordinate_style="cartesian", overwrite=False, debug=True):
         """
-        CAVEAT: UNDER CONSTRUCTION, CURRENTLY NOT WORKING!
         """
-        print("***Gau-Info: Reading  Gaussian-Input-File!")
+        self.coordinate_style = coordinate_style
 
-        (chk, nproc, mem, job_type, method, basis_set, geom, charge,
-         multiplicity) = [None for _ in xrange(9)]
+        print("***Gau-Info: Reading  Gaussian-Input-File!")
         cframe = []
+        reading = True
 
         with open(gauin, "r") as gau_in:
-            for line in gau_in:
-                if "%chk" in line:
-                    if not hasattr(self, "chk"):
+            line = gau_in.readline()
+
+            if debug is True:
+                print("Parsing link 0 and route section")
+
+            # line != "" -> just to be safe this will eventually finish when
+            # loading a wrong file by accident
+            while line != "":
+
+                # // LINK 0 SECTION
+                if "%oldchk" in line:
+                    if not hasattr(self, "oldchk") or overwrite is True:
+                        self.oldchk = line.split("=")[1].strip("\n")
+
+                elif "%chk" in line:
+                    if not hasattr(self, "chk") or overwrite is True:
                         self.chk = line.split("=")[1].strip("\n")
+
                 elif "%nproc" in line:
-                    if not hasattr(self, "nproc"):
+                    if not hasattr(self, "nproc") or overwrite is True:
                         self.nproc = int(line.split("=")[1].strip("\n"))
+
                 elif "%mem" in line:
-                    if not hasattr(self, "mem"):
-                        mem = line.split("=")[1].strip("\n")
-                        self.mem = int(re.findall(r'^\d+', mem)[0])
+                    if not hasattr(self, "mem") or overwrite is True:
+                        self.mem = line.split("=")[1].strip("\n")
+
+                #// ROUTE SECTION (may be scattered over several files)
                 elif line.startswith("#"):
-                    # job settings direction
-                    job_settings = line.split()
+                    if not hasattr(self, "job_settings") or overwrite is True:
 
-                    # classify job settings
-                    for setting in job_settings:
-                        # remove # e.g. #SP
-                        if setting.startswith("#"):
-                            setting = setting.strip("#")
+                        # keep reading until empty line is reached, end loop
+                        # when it is
+                        while line != "\n":
+                            self.job_settings += line.rstrip("\n") + " "
+                            line = gau_in.readline()
 
-                        if setting in self.job_types:
-                            if not hasattr(self, "job_type"):
-                                self.job_type = setting
-                        elif "geom" in setting:
-                            if not hasattr(self, "geom"):
-                                self.geom = setting.split("=")[1]
-                        elif "EmpiricalDispersion" in setting:
-                            if not hasattr(self, "dispersion"):
-                                self.dispersion = setting.split("=")[1]
-                        elif "/" in setting:
-                            setting = setting.split("/")
-                            if not hasattr(self, "method"):
-                                self.method = setting[0]
-                            if not hasattr(self, "basis_set"):
-                                self.basis_set = setting[1]
+                            # eof reached
+                            if line == "":
+                                break
+
                         else:
-                            pass
-
-                elif re.findall(r'^-?\d+ \d$', line):
-                    line = line.split()
-
-                    if not hasattr(self, "charge"):
-                        self.charge = int(line[0])
-
-                    if not hasattr(self, "multiplicity"):
-                        self.multiplicity = int(line[1])
-
-                    read_coords_section = True
-
-                    while read_coords_section is True:
-
-                        # read info
-                        try:
-                            line = gau_in.next()
-                        except StopIteration:
-                            # last line of document reached
                             break
-
-                        # quit reading section when empty line occurs
-                        if line == "\n":
-                            read_coords_section = False
-                            break
-
-                        line = line.split()
-                        csitnam = line[0]
-                        ccoords = np.array([float(i) for i in line[1:]])
-
-                        # store info
-                        cur_atom = mds.Atom(sitnam=csitnam)
-                        self.atoms.append(cur_atom)
-                        cframe.append(ccoords)
-
-                    self.ts_coords.append(cframe)
-
-                elif hasattr(self, "geom") and self.geom == "connectivity":
-                    # section with bonds-information
-                    if bool(re.search(r'(^\d+ \d+ \d+.\d+)|(^\d+\n$)', line)) is True:
-                        line = line.split()
-
-                        # get rest of the bond-entries
-                        read_connectivity_section = True
-
-                        while read_connectivity_section is True:
-
-                            # stop reading current entry if line is empty
-                            if line == []:
-                                break
-
-                            # only process line if it really has bond information
-                            if len(line) > 1:
-                                # get atm-id 1 (always the same for current line)
-                                catm_id1 = int(line[0])
-
-                                for idx, cur_subentry in enumerate(line[1:]):
-
-                                    # get atm-id 2
-                                    if idx % 2 == 0:
-                                        catm_id2 = int(cur_subentry)
-                                        # decrease indices by 1 since internally
-                                        # atom-indices start with 0
-                                        cbnd = mds.Bond(atm_id1=catm_id1-1,
-                                                        atm_id2=catm_id2-1)
-                                    else:
-                                        cbnd_order = float(cur_subentry)
-                                        cbnd.bnd_order = cbnd_order
-                                        self.bonds.append(cbnd)
-
-                            # if there is only one empty line at file bottom
-                            try:
-                                line = gau_in.next().split()
-                            except StopIteration:
-                                break
 
                 else:
                     pass
 
-    def write_gau(self, gauout, frame_id, title=""):
+                line = gau_in.readline()
+
+            #// TITLE SECTION
+            if debug is True:
+                print("Title section")
+
+            # skip all empty lines until title line is reached
+            while line == "\n":
+                line = gau_in.readline()
+            else:
+                title_line = line
+                line = gau_in.readline()
+
+            #// MOLECULE SPECIFICATION SECTION
+            if debug is True:
+                print("Molecule specification section")
+
+            while line == "\n":
+                line = gau_in.readline()
+            else:
+                charge_mutliplicity_line = re.findall(r'[\w]+', line)
+
+                if not hasattr(self, "gaussian_charges") or overwrite is True:
+                    self.gaussian_charges = [int(i)
+                                             for idx, i in enumerate(charge_mutliplicity_line)
+                                             if idx % 2 == 0]
+
+                if not hasattr(self, "gaussian_multiplicities") or overwrite is True:
+                    self.gaussian_multiplicities = [int(i)
+                                                    for idx, i in enumerate(charge_mutliplicity_line[1:])
+                                                    if idx % 2 == 0]
+
+                line = gau_in.readline()
+
+            #// COORDINATES SECTION
+            if debug is True:
+                print("Coordinates section")
+
+            g_atoms = []
+            g_frame = []  # gaussian coordinates
+            # counter to substitute given atoms or complement their attributes
+            atom_index = 0
+
+            while line != "\n":
+                line = line.split()
+                columns_coordinates_section_atomic = len(line)
+
+                # element label
+                csitnam = line[0].split("(")[0]
+
+                # translate atomic number to its element
+                if csitnam.isdigit():
+                    csitnam = int(csitnam)
+                    csitnam = mde.atomicnumber_element[csitnam]
+
+                # element parameters section
+                if "Fragment=" in line[0]:
+                    fragment_id = re.search(r"Fragment=\d+", line[0]).group(0)
+                    fragment_id = int(re.search(r"\d+", fragment_id).group(0))
+                else:
+                    fragment_id = None
+
+                if "Iso=" in line[0]:
+                    print("Iso not implemented yet")
+
+                if "Spin=" in line[0]:
+                    print("Iso not implemented yet")
+
+                # element freeze section
+                if len(line) > 4 and (line[-4] == "0" or line[-4] == "-1"):
+                    cifrz = int(line[-4])
+                else:
+                    cifrz = None
+
+                # store element info
+                cur_atom = mds.Atom(sitnam=csitnam, atm_id=atom_index ,ifrz=cifrz,
+                                    grp_id=fragment_id)
+
+                #g_atoms.append(cur_atom)
+
+                try:
+                    if overwrite is True:
+                        self.atoms[atom_index] = cur_atom
+                    else:
+                        if not hasattr(self.atoms[atom_index], "sitnam"):
+                            self.atoms[atom_index].sitnam = cur_atom.sitnam
+
+                        # add ifrz to current atom if overwrite option is set or ifrz attribute has not been defined yet
+                        if hasattr(cur_atom, "ifrz") and not hasattr(self.atoms[atom_index], "ifrz"):
+                            self.atoms[atom_index].ifrz = cur_atom.ifrz
+
+                        if hasattr(cur_atom, "grp_id") and not hasattr(self.atoms[atom_index], "grp_id"):
+                            self.atoms[atom_index].grp_id = cur_atom.grp_id
+
+                except IndexError:
+                    # overwrite the whole entry if one index does not fit
+                    self.atoms.append(cur_atom)
+
+                # add coordinates
+                if self.coordinate_style == "cartesian":
+                    ccoords = np.array([float(i) for i in line[-3:]])
+                    g_frame.append(ccoords)
+                else:
+                    print("Z-Matrix not implemented yet.")
+
+                line = gau_in.readline()
+                atom_index += 1
+
+                if line == "":
+                    break
+
+            # overwrite or append frame (coordinates) to existing one(s)
+            g_frame = np.array(g_frame)
+
+            if self.ts_coords != [] and overwrite is True:
+                self.ts_coords[-1] = g_frame
+            else:
+                self.ts_coords.append(g_frame)
+
+            # skip all empty lines until title line is reached
+            while line == "\n":
+                line = gau_in.readline()  # first bond line
+
+                # just to be sure this will end
+                if line == "":
+                    break
+
+            # BOND SECTION
+            if debug is True:
+                print("Bonds Section")
+
+            if "CONNECTIVITY" in self.job_settings.upper() and bool(re.search(r'(^\d+ \d+ \d+.\d+)|(^\d+\n$)', line)) is True:
+                gau_bonds = []
+
+                while line != "\n":
+                    line = line.split()
+
+                    # only process line if it really has bond information
+                    if len(line) > 1:
+                        # get atm-id 1 (always the same for current line)
+                        catm_id1 = int(line[0])
+                        catm_id1 -= 1  # decrement atom index by 1
+                        # read other further bond partners (if present)
+                        catms_id2 = [int(i)-1 for idx, i in enumerate(line[1:]) if idx % 2 == 0]
+                        # read bond orders (if present)
+                        cbnd_orders = [float(i) for idx, i in enumerate(line[2:]) if idx % 2 == 0]
+
+                        # append bond to gaussian given bonds
+                        for catm_id2, cbnd_order in zip(catms_id2, cbnd_orders):
+                            cbnd = mds.Bond(atm_id1=catm_id1,
+                                            atm_id2=catm_id2,
+                                            bnd_order=cbnd_order)
+                            gau_bonds.append(cbnd)
+
+                    # if there is only one empty line at file bottom
+                    line = gau_in.readline()
+
+                    if line == "":
+                        break
+
+                # complement attributes that do not exist or overwrite existing ones if wanted
+                if len(gau_bonds) == len(self.bonds) and overwrite is False:
+                    for idx, gau_bnd in enumerate(gau_bonds):
+                        for universe_bnd in self.bonds:
+                            if (universe_bnd.atm_id1 == gau_bnd.atm_id1 and
+                                universe_bnd.atm_id2 == gau_bnd.atm_id2):
+                                # complement attribute or overwrite existing one
+                                # if overwriting is active
+                                if not hasattr(universe_bnd, "bnd_order"):
+                                    universe_bnd.bnd_order = gau_bnd.bnd_order
+                                break
+                else:
+                    self.bonds = gau_bonds
+
+                # create molecules by bond information
+                self.fetch_molecules_by_bonds()
+
+            #line = gau_in.readline()
+
+    def write_gau(self, gauout, frame_id, write_fragments=False, title=""):
         """
         job_type    modredundant | SP
         method      user choice (e.g. MP2, B3LYP)
@@ -205,6 +318,8 @@ class GauStuff(mdu.Universe):
         basis_set   user choice (e.g. 6-311+G*)
                     http://gaussian.com/basissets/
         geom        PrintInputOrient|connectivity
+
+        Sources: http://wild.life.nctu.edu.tw/~jsyu/compchem/g09/g09ur/m_molspec.htm
         """
         print("***Gau-Info: Writing Gaussian-Input-File!")
 
@@ -225,51 +340,63 @@ class GauStuff(mdu.Universe):
                 gau_out.write("%rwf={}\n".format(self.rwf))
 
             gau_out.write(self.job_settings + "\n\n")
-            gau_out.write("Title: {}\n\n".format(title))
-            gau_out.write("{} {}\n".format(self.charge, self.multiplicity))
 
-            for idx, catm in enumerate(self.atoms):
-                gau_out.write("{:<3} {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
-                    catm.sitnam,
-                    self.ts_coords[frame_id][idx][0],
-                    self.ts_coords[frame_id][idx][1],
-                    self.ts_coords[frame_id][idx][2])
-                )
+            # write title line only if allcheck-keyword is not set
+            if "ALLCHECK" not in self.job_settings.upper():
+                gau_out.write("Title: {}\n\n".format(title))
+
+            # write multiplicity and charge line only if allcheck-keyword is not set
+            if "ALLCHECK" not in self.job_settings.upper() or (self.charge is not None and self.multiplicity is not None):
+                #gau_out.write("{} {}\n".format(self.charge, self.multiplicity))
+
+                for charge, multiplicity in zip(self.gaussian_charges, self.gaussian_multiplicities):
+                    gau_out.write("{} {} ".format(charge, multiplicity))
+
+                gau_out.write("\n")
+
+            if self.ts_coords != [] and ("ALLCHECK" not in self.job_settings.upper() or "CHECK" not in self.job_settings.upper()):
+                for idx, catm in enumerate(self.atoms):
+                    gau_out.write("{}".format(catm.sitnam))
+
+                    if write_fragments is True:
+                        for molecule_idx, molecule in enumerate(self.molecules):
+                            if (idx+1) in molecule:
+                                gau_out.write("(Fragment={})".format(molecule_idx+1))
+                                break
+
+                    # write frozen state of the atom
+                    if hasattr(catm, "ifrz") and catm.ifrz is not None:
+                        gau_out.write(" {:<3} ".format(catm.ifrz))
+
+                    gau_out.write(" {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
+                        self.ts_coords[frame_id][idx][0],
+                        self.ts_coords[frame_id][idx][1],
+                        self.ts_coords[frame_id][idx][2])
+                    )
 
             gau_out.write("\n")
 
             # write bonds
             if "CONNECTIVITY" in self.job_settings.upper():
-                # since gaussian wants bonds in a kind of condensed style,
-                # prepare a dictionary to do so
-                a = range(len(self.atoms))
-                b = [[] for _ in xrange(len(self.atoms))]
-                d = dict(zip(a, b))
-
-                # merge bonds of same atom 1 utilizing a dictionary
-                for i in xrange(len(self.bonds)):
-                    d[self.bonds[i].atm_id1].append(self.bonds[i])
-
-                # write bond-entry
-                for i in d:
-                    # write current atom
-                    gau_out.write("{}".format(i+1))
-
-                    for val in d[i]:
-                        if val != []:
-                            gau_out.write(" {} {}".format(
-                                val.atm_id2+1, float(val.bnd_order))
-                            )
-
-                    # newline after each entry
+                for cur_atom in self.atoms:
+                    gau_out.write("{} ".format(cur_atom.atm_id))
+                    # check whether atom is bonded -> write partner atoms and
+                    # according bond order
+                    for cur_bond in self.bonds:
+                        if cur_atom.atm_id == cur_bond.atm_id1:
+                            gau_out.write("{} {} ".format(cur_bond.atm_id2,
+                                                          cur_bond.bnd_order))
                     gau_out.write("\n")
 
             gau_out.write("\n"*4)
 
-    def read_gau_log(self, gau_log):
+    def read_gau_log(self, gau_log, overwrite=False):
         """
         Read the last coordinates from a gaussian log file.
+        Overwrite overwrites the last frame.
         """
+        print("Reading last frame of the output file.")
+
         log_resume = ""
         get_lines = False
         with open(gau_log, "r") as gau_log:
@@ -292,11 +419,12 @@ class GauStuff(mdu.Universe):
         del line
         del get_lines
 
-        cframe = []
+        g_atoms = []
+        g_frame = []
         coordinates_cntr = 0
 
         for entry in log_resume:
-            if entry == '':
+            if entry == "":
                 coordinates_cntr += 1
 
             if coordinates_cntr == 3:
@@ -307,7 +435,24 @@ class GauStuff(mdu.Universe):
 
                     # store info
                     cur_atom = mds.Atom(sitnam=csitnam)
-                    self.atoms.append(cur_atom)
-                    cframe.append(ccoords)
+                    g_atoms.append(cur_atom)
+                    g_frame.append(ccoords)
 
-        self.ts_coords.append(cframe)
+        #g_frame = np.array(g_frame)
+
+        for idx, gatm in enumerate(g_atoms):
+            try:
+                if overwrite is True:
+                    self.atoms[idx] = gatm
+                else:
+                    if not hasattr(self.atoms[idx], "sitnam"):
+                        self.atoms[idx].sitnam = gatm.sitnam
+            except IndexError:
+                # overwrite the whole entry if one index does not fit
+                self.atoms = g_atoms
+                break
+
+        if self.ts_coords != [] and overwrite is True:
+            self.ts_coords[-1] = g_frame
+        else:
+            self.ts_coords.append(g_frame)
