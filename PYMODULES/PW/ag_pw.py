@@ -12,7 +12,7 @@ import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
 
-__version__ = "2018-05-03"
+__version__ = "2018-06-22"
 
 BOHR_ANGSTROM = sc.value("Bohr radius")/sc.angstrom
 ANGSTROM_BOHR = sc.angstrom/sc.value("Bohr radius")

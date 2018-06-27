@@ -27,6 +27,7 @@ class GauStuff(mdu.Universe):
                  job_settings="",
                  gaussian_charges=[],
                  gaussian_multiplicities=[],
+                 gaussian_other_info={},
                  energy_unit=None):
         """
         > job_settings      str; line with job settings, e.g. #P Opt=tight MP2/6-311++G**
@@ -66,14 +67,23 @@ class GauStuff(mdu.Universe):
 
         if gaussian_charges != []:
             self.gaussian_charges = gaussian_charges
+        else:
+            self.gaussian_charges = []
 
         if gaussian_multiplicities != []:
             self.gaussian_multiplicities = gaussian_multiplicities
+        else:
+            self.gaussian_multiplicities = []
 
         if energy_unit is not None:
             self.energy_unit = energy_unit
 
-    def read_gau(self, gauin, coordinate_style="cartesian", overwrite=False, debug=True):
+        if gaussian_other_info != {}:
+            self.gaussian_other_info = gaussian_other_info
+        else:
+            self.gaussian_other_info = {}
+
+    def read_gau(self, gauin, coordinate_style="cartesian", overwrite=False, debug=False):
         """
         """
         self.coordinate_style = coordinate_style
@@ -176,20 +186,19 @@ class GauStuff(mdu.Universe):
                 line = line.split()
                 columns_coordinates_section_atomic = len(line)
 
-                # element label
-                csitnam = line[0].split("(")[0]
+                # element parameters section
+                if "Fragment=" in line[0]:
+                    fragment_id = re.search(r"Fragment=\d+", line[0]).group(0)
+                    fragment_id = int(re.search(r"\d+", fragment_id).group(0))
+                    csitnam = line[0].split("(")[0]
+                else:
+                    fragment_id = None
+                    csitnam = line[0]
 
                 # translate atomic number to its element
                 if csitnam.isdigit():
                     csitnam = int(csitnam)
                     csitnam = mde.atomicnumber_element[csitnam]
-
-                # element parameters section
-                if "Fragment=" in line[0]:
-                    fragment_id = re.search(r"Fragment=\d+", line[0]).group(0)
-                    fragment_id = int(re.search(r"\d+", fragment_id).group(0))
-                else:
-                    fragment_id = None
 
                 if "Iso=" in line[0]:
                     print("Iso not implemented yet")
@@ -377,7 +386,7 @@ class GauStuff(mdu.Universe):
             gau_out.write("\n")
 
             # write bonds
-            if "CONNECTIVITY" in self.job_settings.upper():
+            if "CONNECTIVITY" in self.job_settings.upper() and write_fragments is False:
                 for cur_atom in self.atoms:
                     gau_out.write("{} ".format(cur_atom.atm_id))
                     # check whether atom is bonded -> write partner atoms and
@@ -421,7 +430,10 @@ class GauStuff(mdu.Universe):
 
         g_atoms = []
         g_frame = []
+        # switch which defines that coordinates section is reached
         coordinates_cntr = 0
+        # atom indx
+        cidx = 0
 
         for entry in log_resume:
             if entry == "":
@@ -429,16 +441,32 @@ class GauStuff(mdu.Universe):
 
             if coordinates_cntr == 3:
                 entry = entry.split(",")
-                if len(entry) == 4:
+
+                if len(entry) == 4 or len(entry) == 5:
+                    if len(entry) == 4:
+                        ccoords = np.array([float(i) for i in entry[1:]])
+                    else:
+                        ccoords = np.array([float(i) for i in entry[2:]])
+
                     csitnam = entry[0]
-                    ccoords = np.array([float(i) for i in entry[1:4]])
 
                     # store info
-                    cur_atom = mds.Atom(sitnam=csitnam)
+                    cur_atom = mds.Atom(sitnam=csitnam, atm_id=cidx)
+
                     g_atoms.append(cur_atom)
                     g_frame.append(ccoords)
 
-        #g_frame = np.array(g_frame)
+                    # increment atom index
+                    cidx += 1
+
+            if "NImag" in entry:
+                # get number of imaginary frequencies
+                self.gaussian_other_info["NImag"] = int(entry.split("NImag=")[1])
+
+        del cidx
+        del coordinates_cntr
+
+        g_frame = np.array(g_frame)
 
         for idx, gatm in enumerate(g_atoms):
             try:
@@ -447,6 +475,10 @@ class GauStuff(mdu.Universe):
                 else:
                     if not hasattr(self.atoms[idx], "sitnam"):
                         self.atoms[idx].sitnam = gatm.sitnam
+
+                    if not hasattr(self.atoms[idx], "atm_id"):
+                        self.atoms[idx].atm_id = gatm.atm_id
+
             except IndexError:
                 # overwrite the whole entry if one index does not fit
                 self.atoms = g_atoms
