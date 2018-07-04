@@ -30,6 +30,13 @@ parser.add_argument("-ecutrho",
                     help="Kinetic energy cutoff (Ry) for charge density and potential"
                     )
 
+parser.add_argument("-london_rcut",
+                    type=int,
+                    metavar="200",
+                    default=None,
+                    help="Kinetic energy cutoff (Ry) for charge density and potential"
+                    )
+
 parser.add_argument("-frame_id",
                     type=int,
                     default=-1,
@@ -58,5 +65,8 @@ if args.ecutwfc is not None:
 # define ecutrho by user input
 if args.ecutrho is not None:
     pw_file_handler.pw_entries["SYSTEM"]["ecutrho"] = args.ecutrho
+
+if args.london_rcut is not None:
+    pw_file_handler.pw_entries["SYSTEM"]["london_rcut"] = args.london_rcut
 
 pw_file_handler.write_pwin(args.frame_id, args.o)

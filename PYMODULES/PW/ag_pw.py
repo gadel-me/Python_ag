@@ -222,8 +222,10 @@ class PwStuff(mdu.Universe):
                             pass
 
                 elif line.startswith("CELL_PARAMETERS"):
+                    box_unit = line.split()[1].strip("{}")
+
                     # get box vectors
-                    cbox = mdb.Box(boxtype="cartesian")
+                    cbox = mdb.Box(boxtype="cartesian", unit=box_unit)
 
                     for line_cntr in xrange(3):
                         line = [float(i) for i in opened_pwin.readline().split()]
@@ -243,12 +245,13 @@ class PwStuff(mdu.Universe):
                 line = opened_pwin.readline()
 
         # convert cell to lattice cell and append it to the current cells
-        if "A" in self.pw_entries["SYSTEM"] and \
-           "B" in self.pw_entries["SYSTEM"] and \
-           "C" in self.pw_entries["SYSTEM"] and \
-           "cosAB" in self.pw_entries["SYSTEM"] and \
-           "cosAC" in self.pw_entries["SYSTEM"] and \
-           "cosBC" in self.pw_entries["SYSTEM"]:
+        if ("A" in self.pw_entries["SYSTEM"] and
+            "B" in self.pw_entries["SYSTEM"] and
+            "C" in self.pw_entries["SYSTEM"] and
+            "cosAB" in self.pw_entries["SYSTEM"] and
+            "cosAC" in self.pw_entries["SYSTEM"] and
+            "cosBC" in self.pw_entries["SYSTEM"]):
+            #
             cbox = mdb.Box(
                 ltc_a=float(self.pw_entries["SYSTEM"]["A"]),
                 ltc_b=float(self.pw_entries["SYSTEM"]["B"]),
@@ -256,7 +259,8 @@ class PwStuff(mdu.Universe):
                 ltc_alpha=math.acos(float(self.pw_entries["SYSTEM"]["cosBC"])),
                 ltc_beta=math.acos(float(self.pw_entries["SYSTEM"]["cosAC"])),
                 ltc_gamma=math.acos(float(self.pw_entries["SYSTEM"]["cosAB"])),
-                boxtype="lattice")
+                boxtype="lattice",
+                unit="angstrom")
 
             # delete surplus box entries
             del self.pw_entries["SYSTEM"]["A"]
@@ -266,8 +270,8 @@ class PwStuff(mdu.Universe):
             del self.pw_entries["SYSTEM"]["cosAC"]
             del self.pw_entries["SYSTEM"]["cosAB"]
 
-            # add celldm(1)
-            self.pw_entries["SYSTEM"]["celldm(1)"] = cbox.ltc_a * ANGSTROM_BOHR
+            # add celldm(1) and convert it to bohr
+            #self.pw_entries["SYSTEM"]["celldm(1)"] = cbox.ltc_a * ANGSTROM_BOHR
             self.pw_entries["SYSTEM"]["ibrav"] = 0
 
             # convert lattice box to cartesian
@@ -275,10 +279,10 @@ class PwStuff(mdu.Universe):
             self.ts_boxes.append(cbox)
 
         # convert celldm (= alat) to box vector a with angstrom
-        try:
-            self.ts_boxes[-1].ltc_a = float(self.pw_entries["SYSTEM"]["celldm(1)"]*BOHR_ANGSTROM)
-        except KeyError:
-            pass
+        #try:
+            #self.ts_boxes[-1].ltc_a = float(self.pw_entries["SYSTEM"]["celldm(1)"]*BOHR_ANGSTROM)
+        #except KeyError:
+            #pass
 
         # final check
         if len(self.atoms) != self.pw_entries["SYSTEM"]["nat"]:
@@ -291,29 +295,44 @@ class PwStuff(mdu.Universe):
 
     def read_pwout(self, pwout):
         """
-        CAVEAT: UNDER CONSTRUCTION! Read the output of pw.x
+        CAVEAT: UNDER CONSTRUCTION! Read the output of pw.x.
+
         Currently this only reads the coordinates and cell vectors.
         Cell vector alat (celldm(1)) is converted to angstrom when read.
         """
         with open(pwout) as opened_pwout:
             line = opened_pwout.readline()
             while line != '':
-                # TODO box vectors should be converted to lattice or their real lengths
+
                 if line.startswith("CELL_PARAMETERS"):
                     # get alat
                     split_line = line.split()
 
-                    # TODO calculate real cartesian box vectors from given ones
                     # get box vectors
                     cbox = mdb.Box(boxtype="cartesian")
 
                     if "alat" in line:
-                        cbox.ltc_a = float(split_line[2].strip(")"))*BOHR_ANGSTROM
-                        cbox.crt_a = [float(i) for i in opened_pwout.readline().split()]
-                        cbox.crt_b = [float(i) for i in opened_pwout.readline().split()]
-                        cbox.crt_c = [float(i) for i in opened_pwout.readline().split()]
+                        #self.pw_entries["SYSTEM"]["celldm(1)"] = float(split_line[2].strip(")"))
+                        cbox.unit = "alat"
+                    elif "bohr" in line:
+                        cbox.unit = "bohr"
+                    elif "angstrom" in line:
+                        cbox.unit = "angstrom"
+                    else:
+                        raise Warning("Keyword for box unknown and not implemented.")
+
+                    cbox.crt_a = [float(i)
+                                  for i in opened_pwout.readline().split()]
+                    cbox.crt_b = [float(i)
+                                  for i in opened_pwout.readline().split()]
+                    cbox.crt_c = [float(i)
+                                  for i in opened_pwout.readline().split()]
+
+                    if cbox.unit == "alat":
+                        cbox.alat2angstrom(float(split_line[2].strip(")")))
 
                     self.ts_boxes.append(cbox)
+
                 elif line.startswith("ATOMIC_POSITIONS"):
                     # prepare container for coordinates to come
                     self.ts_coords.append([])
@@ -322,7 +341,9 @@ class PwStuff(mdu.Universe):
                     while line != '':
                         line = opened_pwout.readline()
 
-                        if line.startswith("\n") or line.startswith("End final coordinates"):
+                        # stop reading when EOF is reached
+                        if (line.startswith("\n") or
+                           line.startswith("End final coordinates")):
                             break
 
                         split_line = line.split()
@@ -338,7 +359,11 @@ class PwStuff(mdu.Universe):
 
     def _write_section(self, opened_file_instance, frame_id, keyword):
         """
-        Helper function to write an input section.
+        Helps writing an input section.
+
+        opened_file_instance    file; file to write section to
+        frame_id                int; id of coordinates to write
+        keyword                 str; pw_entry keyword
         """
         # write entries
         opened_file_instance.write("&{}\n".format(keyword))
@@ -347,15 +372,20 @@ class PwStuff(mdu.Universe):
 
             # calculate celldm(1), which derives from lattice vector a
             if setting == "celldm(1)":
-                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, self.ts_boxes[frame_id].ltc_a*ANGSTROM_BOHR))
+                opened_file_instance.write("    {0:<24s}= {1}\n".format(
+                    setting, self.ts_boxes[frame_id].ltc_a * ANGSTROM_BOHR))
             else:
-                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, value))
+                opened_file_instance.write("    {0:<24s}= {1}\n".format(
+                    setting, value))
 
         opened_file_instance.write("/\n\n")
 
     def write_pwin(self, frame_id, filename):
         """
-        Write an input file for pw.x. alat is converted to angstrom when read
+        Write an input file for pw.x. alat is converted to angstrom when read.
+
+        frame_id                int; id of coordinates to write
+        filename                str; pw-output file to write to
         """
         with open(filename, "w") as opened_filename:
             # since it seems that a certain order must be maintained,
@@ -371,20 +401,24 @@ class PwStuff(mdu.Universe):
             # Pseudopotentials (atom types)
             opened_filename.write("ATOMIC_SPECIES\n")
             for _, atom_type in self.atm_types.iteritems():
-                opened_filename.write("{0} {1:>6} {2:}\n".format(atom_type.sitnam,
-                                                                 atom_type.weigh,
-                                                                 atom_type.pseudopotential))
+                opened_filename.write("{0} {1:>6} {2:}\n".format(
+                    atom_type.sitnam, atom_type.weigh,
+                    atom_type.pseudopotential))
             opened_filename.write("\n")
 
             # Atom Coordinates
-            # TODO currently atomic positions are only supported in angstrom
             opened_filename.write("ATOMIC_POSITIONS {angstrom}\n")
-            for atom, atom_coordinates in zip(self.atoms, self.ts_coords[frame_id]):
-                opened_filename.write("{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n".format(atom.sitnam, c=atom_coordinates))
+            coordinate_string = "{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n"
+            for atom, atom_coordinates in zip(self.atoms,
+                                              self.ts_coords[frame_id]):
+                opened_filename.write(coordinate_string.format(
+                    atom.sitnam, c=atom_coordinates))
+
             opened_filename.write("\n")
 
             # K Points
-            opened_filename.write("K_POINTS {}\n".format(self.pw_entries["K_POINTS"]["option"]))
+            opened_filename.write("K_POINTS {}\n".format(
+                self.pw_entries["K_POINTS"]["option"]))
 
             # write grid or skip entry if gamma point is set
             if self.pw_entries["K_POINTS"]["option"].strip("{}()") == "automatic":
@@ -395,13 +429,16 @@ class PwStuff(mdu.Universe):
             opened_filename.write("\n")
 
             # Cell
-            #TODO Currently only a really really dirty fix, proper cell conversion
-            #TODO is absolutely advisable
+            # write section only if ibrav is 0
             try:
-                self.pw_entries["SYSTEM"]["A"]
+                if self.pw_entries["SYSTEM"]["ibrav"] == 0:
+                    cell_string = "{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n"
+                    opened_filename.write("CELL_PARAMETERS {{{0}}}\n".format(self.ts_boxes[frame_id].unit))
+                    opened_filename.write(
+                        cell_string.format(v=self.ts_boxes[frame_id].crt_a))
+                    opened_filename.write(
+                        cell_string.format(v=self.ts_boxes[frame_id].crt_b))
+                    opened_filename.write(
+                        cell_string.format(v=self.ts_boxes[frame_id].crt_c))
             except KeyError:
-                opened_filename.write("CELL_PARAMETERS {alat}\n")
-                opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_a))
-                opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_b))
-                opened_filename.write("{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n".format(v=self.ts_boxes[frame_id].crt_c))
-                opened_filename.write("\n")
+                pass

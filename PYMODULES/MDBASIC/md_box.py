@@ -1,16 +1,20 @@
 from __future__ import print_function
+#import numpy as np
+import scipy.constants as sc
 import ag_vectalg as agv
 import ag_cryst as agc
-#import numpy as np
 
 __version__ = "2017-03-30"
+
+BOHR_ANGSTROM = sc.value("Bohr radius")/sc.angstrom
+ANGSTROM_BOHR = sc.angstrom/sc.value("Bohr radius")
 
 
 class Box(object):
     """
     Settings for simulation-box.
     """
-    def __init__(self, boxtype="lattice",
+    def __init__(self, boxtype="lattice", unit="angstrom",
                  crt_a=None, crt_b=None, crt_c=None,
                  ltc_a=None, ltc_b=None, ltc_c=None,
                  ltc_alpha=None, ltc_beta=None, ltc_gamma=None,
@@ -26,13 +30,14 @@ class Box(object):
         ltc_alpha, ltc_beta, ltc_gamma: floats/ints; lattice angles
         lmp_xlo, lmp_xhi, lmp_ylo, lmp_yhi, lmp_zlo, lmp_zhi: floats; lammps box size parameters
         lmp_xy, lmp_xz, lmp_yz: floats; lammps tilt factors
-        Caveat: ltc_a and crt_a may coexist when a pw input file is read!
-                If this is the case, ltc_a is the same as alat or celldm(1)
+        unit    str; angstrom | bohr | alat
+                    alat: lattice vector a in bohr (only used in pw), see pw.x input description
 
         Sources:    http://lammps.sandia.gov/doc/Section_howto.html#howto-12
                     https://www.quantum-espresso.org/Doc/INPUT_PW.html#celldm
         """
         self.boxtype = boxtype
+        self.unit = unit
 
         if boxtype == "cartesian":
             self.crt_a = crt_a
@@ -207,3 +212,60 @@ class Box(object):
             ]
         else:
             pass
+
+    def angstrom2bohr(self):
+        """
+        Change the lengths of each box vector from angstrom to bohr.
+        """
+        # first check that units are not bohr already
+        if self.unit != "bohr":
+            if self.boxtype == "lattice":
+                self.ltc_a *= ANGSTROM_BOHR
+                self.ltc_b *= ANGSTROM_BOHR
+                self.ltc_c *= ANGSTROM_BOHR
+            elif self.boxtype == "cartesian":
+                self.crt_a = [i*ANGSTROM_BOHR for i in self.crt_a]
+                self.crt_b = [i*ANGSTROM_BOHR for i in self.crt_b]
+                self.crt_c = [i*ANGSTROM_BOHR for i in self.crt_c]
+            else:
+                raise Warning("Conversion of lammps boxes currently not supported!")
+
+        self.unit = "bohr"
+
+    def bohr2angstrom(self):
+        """
+        Change the lengths of each box vector from bohr to angstrom
+        """
+        # first check that units are not bohr already
+        if self.unit != "bohr":
+            if self.boxtype == "lattice":
+                self.ltc_a *= BOHR_ANGSTROM
+                self.ltc_b *= BOHR_ANGSTROM
+                self.ltc_c *= BOHR_ANGSTROM
+            elif self.boxtype == "cartesian":
+                self.crt_a = [i*BOHR_ANGSTROM for i in self.crt_a]
+                self.crt_b = [i*BOHR_ANGSTROM for i in self.crt_b]
+                self.crt_c = [i*BOHR_ANGSTROM for i in self.crt_c]
+            else:
+                raise Warning("Conversion of lammps boxes currently not supported!")
+
+        self.unit = "angstrom"
+
+    def alat2angstrom(self, alat):
+        """
+        Convert unit 'alat' which is in bohr (see pw.x input description) to unit angstrom.
+        """
+        # just check that the current unit is alat
+        if self.unit == "alat":
+            # check if the box type is cartesian or it will not be converted
+            if self.boxtype == "cartesian":
+                self.crt_a = [i*BOHR_ANGSTROM*alat for i in self.crt_a]
+                self.crt_b = [i*BOHR_ANGSTROM*alat for i in self.crt_b]
+                self.crt_c = [i*BOHR_ANGSTROM*alat for i in self.crt_c]
+            else:
+                print("Wrong unit with wrong boxtype ({}/{})!".format(
+                    self.unit, self.boxtype))
+        else:
+            print("Wrong unit ({})!".format(self.unit))
+
+        self.unit = "angstrom"
