@@ -1,5 +1,5 @@
 """
-Funny stuff
+Funny stuff.
 """
 from __future__ import print_function, division
 import math
@@ -11,6 +11,7 @@ import scipy.constants as sc
 import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
+import ag_vectalg as agv
 
 __version__ = "2018-06-22"
 
@@ -359,7 +360,7 @@ class PwStuff(mdu.Universe):
 
     def _write_section(self, opened_file_instance, frame_id, keyword):
         """
-        Helps writing an input section.
+        Help writing an input section.
 
         opened_file_instance    file; file to write section to
         frame_id                int; id of coordinates to write
@@ -380,13 +381,17 @@ class PwStuff(mdu.Universe):
 
         opened_file_instance.write("/\n\n")
 
-    def write_pwin(self, frame_id, filename):
+    def write_pwin(self, frame_id, filename, verbosity="'high'"):
         """
         Write an input file for pw.x. alat is converted to angstrom when read.
 
         frame_id                int; id of coordinates to write
         filename                str; pw-output file to write to
+        verbosity               str; high | low
         """
+        self.pw_entries["CONTROL"]["verbosity"] = verbosity
+        #self.pw_entries["SYSTEM"]["A"] = agv.get_mag(self.ts_boxes[frame_id].crt_a)
+
         with open(filename, "w") as opened_filename:
             # since it seems that a certain order must be maintained,
             # section by section is written
@@ -433,7 +438,8 @@ class PwStuff(mdu.Universe):
             try:
                 if self.pw_entries["SYSTEM"]["ibrav"] == 0:
                     cell_string = "{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n"
-                    opened_filename.write("CELL_PARAMETERS {{{0}}}\n".format(self.ts_boxes[frame_id].unit))
+                    opened_filename.write("CELL_PARAMETERS {{{0}}}\n".format(
+                        self.ts_boxes[frame_id].unit))
                     opened_filename.write(
                         cell_string.format(v=self.ts_boxes[frame_id].crt_a))
                     opened_filename.write(

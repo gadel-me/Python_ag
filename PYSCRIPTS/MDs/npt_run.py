@@ -167,6 +167,7 @@ if args.non_covalent is not None:
     lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
 else:
     lmp.command("thermo_style custom " + " ".join(thermargs))
+#lmp.command("thermo_style custom " + " ".join(thermargs))
 
 lmp.command("thermo_modify lost warn flush yes")
 lmp.command("thermo {}".format(args.logsteps))
