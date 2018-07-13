@@ -1,15 +1,19 @@
 from __future__ import print_function, division
 import re
 import numpy as np
+import scipy.constants
 import md_stars as mds
 import md_universe as mdu
 import md_elements as mde
+import log_universe as logu
 
 __version__ = "2018-04-24"
 
 """
 CURRENTLY THIS MODULE IS UNDER CONSTRUCTION AND NOT FULLY FUNCTIONAL!
 """
+
+hartree_eV = scipy.constants.physical_constants["Hartree energy in eV"][0]
 
 
 class GauStuff(mdu.Universe):
@@ -317,7 +321,8 @@ class GauStuff(mdu.Universe):
 
             #line = gau_in.readline()
 
-    def write_gau(self, gauout, frame_id, write_fragments=False, title=""):
+    def write_gau(self, gauout, frame_id, modredundant=None,
+                  write_fragments=False, title=""):
         """
         job_type    modredundant | SP
         method      user choice (e.g. MP2, B3LYP)
@@ -395,7 +400,11 @@ class GauStuff(mdu.Universe):
                         if cur_atom.atm_id == cur_bond.atm_id1:
                             gau_out.write("{} {} ".format(cur_bond.atm_id2,
                                                           cur_bond.bnd_order))
-                    gau_out.write("\n")
+                    gau_out.write("\n"*2)
+
+            if modredundant is not None:
+                gau_out.write(modredundant)
+                gau_out.write("\n"*2)
 
             gau_out.write("\n"*4)
 
@@ -462,6 +471,14 @@ class GauStuff(mdu.Universe):
             if "NImag" in entry:
                 # get number of imaginary frequencies
                 self.gaussian_other_info["NImag"] = int(entry.split("NImag=")[1])
+
+            if "Version" in entry:
+                other_entries = entry.split("\\")
+                for other_entry in other_entries:
+                    if "HF" in other_entry:
+                        energies_entry = other_entry.split(",")
+                        energies_entry = [float(i)*hartree_eV for i in energies_entry]
+                        self.gaussian_other_info["energies_entry"] = energies_entry
 
         del cidx
         del coordinates_cntr

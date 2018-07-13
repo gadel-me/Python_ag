@@ -1,6 +1,9 @@
 """
-Funny stuff.
+PW Module.
+
+Read/Write PW-Input-/Output-Files.
 """
+
 from __future__ import print_function, division
 import math
 import os
@@ -21,8 +24,11 @@ ANGSTROM_BOHR = sc.angstrom/sc.value("Bohr radius")
 
 class PwStuff(mdu.Universe):
     """
-    PW Stuff
+    PW Stuff.
+
+    Read and write PW input/output files.
     """
+
     def __init__(self):
         """
         Initialize general stuff.
@@ -40,6 +46,7 @@ class PwStuff(mdu.Universe):
     def read_pwin(self, pwin):
         """
         Read an input file for pw.x.
+
         Cell vector alat (celldm(1)) is converted to angstrom when read.
         """
         with open(pwin) as opened_pwin:
