@@ -614,7 +614,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         a = b = c = box_diameter
 
                         # DEBUGGING NOW
-                        a = b = c = 100
+                        a = b = c = 400
 
                         alpha = beta = gamma = math.pi/2
                         main_sys.ts_boxes = []
@@ -1612,7 +1612,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 #========================================#
 
                 #DEBUGGING skip extended calculation
-                anneal_success = True
+                #anneal_success = True
 
                 if status_anneal_agg is False:  # aggregate not ok
                     if rank == 0:
