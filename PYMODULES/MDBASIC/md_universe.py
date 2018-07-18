@@ -296,25 +296,27 @@ class Universe(object):
             for i in self.atm_types:
                 # define current atom-type
                 atm_i = self.atm_types[i]
-                # mix vdw of current atom-type with itself
-                sigma_ii, epsilon_ii = atm_i.mix_ij(atm_i.sigma,
-                                                    atm_i.epsilon,
-                                                    mix=mix_style)
-                # create instance of LongRange()
-                cii = mds.LongRange(lr_key="lj",
-                                    atm_key_i=i,
-                                    atm_key_j=i,
-                                    sigma_ij=sigma_ii,
-                                    epsilon_ij=epsilon_ii,
-                                    pairs="ii"
-                                    )
 
-                # write results to file
-                if to_file is not None:
-                    with open(to_file, "a") as pair_file:
-                        pair_file.write("{:<5}{:<5}{:>10}{:>10}\n".format(cij.atm_key_i, cij.atm_key_j, cij.sigma_ij, cij.epsilon_ij))
-                else:
-                    self.pair_types.append(cii)
+                if hasattr(atm_i, "sigma")and hasattr(atm_i, "epsilon"):
+                    # mix vdw of current atom-type with itself
+                    sigma_ii, epsilon_ii = atm_i.mix_ij(atm_i.sigma,
+                                                        atm_i.epsilon,
+                                                        mix=mix_style)
+                    # create instance of LongRange()
+                    cii = mds.LongRange(lr_key="lj",
+                                        atm_key_i=i,
+                                        atm_key_j=i,
+                                        sigma_ij=sigma_ii,
+                                        epsilon_ij=epsilon_ii,
+                                        pairs="ii"
+                                        )
+
+                    # write results to file
+                    if to_file is not None:
+                        with open(to_file, "a") as pair_file:
+                            pair_file.write("{:<5}{:<5}{:>10}{:>10}\n".format(cij.atm_key_i, cij.atm_key_j, cij.sigma_ij, cij.epsilon_ij))
+                    else:
+                        self.pair_types.append(cii)
 
         elif mode == "ij":
             #TODO Mix and do not overwrite existing styles, i.e. i and j must be
@@ -323,23 +325,26 @@ class Universe(object):
             for i, j in it.combinations_with_replacement(self.atm_types, 2):
                 atm_i = self.atm_types[i]
                 atm_j = self.atm_types[j]
-                sigma_ij, epsilon_ij = atm_i.mix_ij(atm_j.sigma,
-                                                    atm_j.epsilon,
-                                                    mix=mix_style)
-                # create instance of LongRange()
-                cij = mds.LongRange(lr_key="lj",
-                                    atm_key_i=i,
-                                    atm_key_j=j,
-                                    sigma_ij=sigma_ij,
-                                    epsilon_ij=epsilon_ij,
-                                    pairs="ij")
 
-                # write results to file
-                if to_file is not None:
-                    with open(to_file, "a") as pair_file:
-                        pair_file.write("{:<5}{:<5}{:<20}{:<20}\n".format(cij.atm_key_i, cij.atm_key_j, cij.epsilon_ij, cij.sigma_ij))
-                else:
-                    self.pair_types.append(cij)
+                if hasattr(atm_i, "sigma")and hasattr(atm_i, "epsilon") \
+                   and hasattr(atm_j, "sigma")and hasattr(atm_j, "epsilon"):
+                    sigma_ij, epsilon_ij = atm_i.mix_ij(atm_j.sigma,
+                                                        atm_j.epsilon,
+                                                        mix=mix_style)
+                    # create instance of LongRange()
+                    cij = mds.LongRange(lr_key="lj",
+                                        atm_key_i=i,
+                                        atm_key_j=j,
+                                        sigma_ij=sigma_ij,
+                                        epsilon_ij=epsilon_ij,
+                                        pairs="ij")
+
+                    # write results to file
+                    if to_file is not None:
+                        with open(to_file, "a") as pair_file:
+                            pair_file.write("{:<5}{:<5}{:<20}{:<20}\n".format(cij.atm_key_i, cij.atm_key_j, cij.epsilon_ij, cij.sigma_ij))
+                    else:
+                        self.pair_types.append(cij)
 
         else:
             raise IOError("Wrong mode. Allowed: ii|ij")

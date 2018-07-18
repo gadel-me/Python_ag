@@ -44,6 +44,21 @@ parser.add_argument("-frame_id",
                     help="ID of Frame from pwscf_out to use coordinates and cell from."
                     )
 
+parser.add_argument("-k_points_option",
+                    type=str,
+                    default=None,
+                    metavar="automatic",
+                    help="K Points option: tpiba | automatic | crystal | gamma | tpiba_b | crystal_b | tpiba_c | crystal_c"
+                    )
+
+parser.add_argument("-k_points_grid",
+                    type=int,
+                    nargs=6,
+                    default=None,
+                    metavar="-1",
+                    help="K Points in x, y and z-direction"
+                    )
+
 parser.add_argument("-o",
                     default="foo.pwscf_in",
                     metavar="*.pwscf_in",
@@ -68,5 +83,11 @@ if args.ecutrho is not None:
 
 if args.london_rcut is not None:
     pw_file_handler.pw_entries["SYSTEM"]["london_rcut"] = args.london_rcut
+
+if args.k_points_option is not None:
+    pw_file_handler.pw_entries["K_POINTS"]["option"] = args.k_points_option
+
+if args.k_points_grid is not None:
+    pw_file_handler.pw_entries["K_POINTS"]["k_point_grid"] = args.k_points_grid
 
 pw_file_handler.write_pwin(args.frame_id, args.o)

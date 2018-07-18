@@ -81,7 +81,7 @@ class XYZ(mdu.Universe):
                     # charge of current atom
                     ccharge = None
                     if len(catm) > 4:
-                        ccharge = float(catm[5])
+                        ccharge = float(catm[4])
 
                     # check if an instance of Atom with index iid already exists;
                     # overwrite info if it does or create a new one if it does not

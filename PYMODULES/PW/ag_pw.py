@@ -14,7 +14,7 @@ import scipy.constants as sc
 import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
-import ag_vectalg as agv
+# import ag_vectalg as agv
 
 __version__ = "2018-06-22"
 
@@ -211,8 +211,8 @@ class PwStuff(mdu.Universe):
                 elif line.startswith("K_POINTS"):
                     kpoints_line = line.split()
                     self.pw_entries["K_POINTS"]["option"] = kpoints_line[1]
-                    #self.pw_entries["K_POINTS"]["k_point_grid"] = []
 
+                    # read upcoming lines
                     while line != '':
                         line = opened_pwin.readline()
 
@@ -223,8 +223,9 @@ class PwStuff(mdu.Universe):
 
                         if kpoints_line[1].strip("{}()") == "automatic":
                             self.pw_entries["K_POINTS"]["k_point_grid"] = [int(i) for i in split_line]
+                            break
                         elif kpoints_line[1] == "gamma":
-                            self.pw_entries["K_POINTS"]["k_point_grid"] = ["\n"]
+                            self.pw_entries["K_POINTS"]["k_point_grid"] = []
                             break
                         else:
                             pass

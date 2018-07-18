@@ -35,11 +35,16 @@ CAVEAT: DO NOT UNWRAP SOLVENT BOX, IT MUST BE WRAPPED OR OTHERWISE THE DENSITY
 CAVEAT: THE PATTERN STUFF IS ADDED SHOULD BE ACCORDING TO A CERTAIN PROBABILITY.
 """
 
+#TODO When restarting, check if last run equilibrated successfully
+
 #==============================================================================#
 # Helper functions and variables
 #==============================================================================#
 _pwd = os.getcwd()
+# percent of last values from log file to check
+percentage_to_check = 80
 _sqrt_3 = math.sqrt(3)
+
 thermargs = ["step", "temp", "press", "vol", "density",
              "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma",
              "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp",
@@ -126,7 +131,7 @@ def check_energy_convergence(logfiles,
     num_values = len(data)
     perecentage /= 100  # perecentage to per cent
     testdata = data[-int(perecentage*num_values):]
-    print(testdata)
+    #print(testdata)
     min_value_testdata = min(testdata)
 
     if debug is True:
@@ -267,6 +272,13 @@ parser.add_argument("-set",
                     required=True,
                     help="lammps' input-file/-script with basic simulation " +
                          "settings"
+                    )
+
+parser.add_argument("-pair_coeffs",
+                    default=None,
+                    metavar="*.lmpcfg",
+                    required=True,
+                    help="lammps'  script with lj, dreiding, etc. parameters"
                     )
 
 parser.add_argument("-logsteps",
@@ -600,6 +612,10 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # add new orthogonal box
                         box_diameter  = 2 * (main_sys_radius*2 + add_sys_radius*2)
                         a = b = c = box_diameter
+
+                        # DEBUGGING NOW
+                        a = b = c = 100
+
                         alpha = beta = gamma = math.pi/2
                         main_sys.ts_boxes = []
                         main_sys.ts_boxes.append(mdb.Box(boxtype="lattice",
@@ -693,6 +709,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                 else:
                     quench_lmp.command("read_data {}".format(sysprep_out))
                     quench_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(quench_temp))
+
+                if args.pair_coeffs is not None:
+                    quench_lmp.file(args.pair_coeffs)
 
                 quench_lmp.command("group loose id > {}".format(natoms_main_sys))
 
@@ -939,6 +958,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         void_lmp.command("read_data {}".format(void_solv_out))
                     else:  # first run with solvent
                         void_lmp.command("read_data {}".format(args.lmps))
+
+                    if args.pair_coeffs is not None:
+                        void_lmp.file(args.pair_coeffs)
 
                     # load further lammps settings
                     void_lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -1214,6 +1236,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         relax_solvent_lmp.command(("velocity all create {} 483806 "
                                                    "rot yes dist gaussian").format(start_relax_temp))
 
+                    if args.pair_coeffs is not None:
+                        relax_solvent_lmp.file(args.pair_coeffs)
+
                     # read last temperature  # DEBUGGING not necessary since
                     # this is to relax the solvent before annealing begins
                     #if os.path.isfile(relax_solv_rst) is True:
@@ -1309,6 +1334,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                 else:
                     equil_anneal_lmp.command("read_restart {}".format(quench_out))
                     equil_anneal_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(start_anneal_temp))
+
+                if args.pair_coeffs is not None:
+                    equil_anneal_lmp.file(args.pair_coeffs)
 
                 equil_anneal_lmp.command("group solvate id <= {}".format(natoms_solvate_sys))
                 equil_anneal_lmp.command("fix ic_prevention all momentum " +
@@ -1438,6 +1466,9 @@ for curcycle, idx_lmpa in remaining_cycles:
             else:
                 anneal_lmp.command("read_restart {}".format(equil_anneal_out))
 
+            if args.pair_coeffs is not None:
+                anneal_lmp.file(args.pair_coeffs)
+
             anneal_lmp.command("group solvate id <= {}".format(natoms_solvate_sys))
             anneal_lmp.command("fix ic_prevention all momentum " +
                                "{} linear 1 1 1 angular rescale".format(100))
@@ -1505,8 +1536,6 @@ for curcycle, idx_lmpa in remaining_cycles:
             if next_anneal_run == total_anneal_runs:
                 next_anneal_run -= 1  # redo last aborted run
 
-            percentage_to_check = 80
-
             for anneal_run in xrange(next_anneal_run, total_anneal_runs):
                 # dcd stuff
                 anneal_dcd = anneal_dir + "{}_anneal_{}".format(anneal_run, curcycle) + ".dcd"
@@ -1564,13 +1593,14 @@ for curcycle, idx_lmpa in remaining_cycles:
                     skew               = energy_result[0]
                     p_skew             = energy_result[1]
                     p_normal           = energy_result[2]
-                    status_normal_dist = energy_result[3]
+                    #status_normal_dist = energy_result[3]
+                    normal_distributed_pe_quench = energy_result[3]
                     min_pe             = energy_result[5]
 
                     # write results to the logfile
-                    write_to_log("Skewness {}".format(skew))
-                    write_to_log("Pvalue (skewness) {}".format(p_skew))
-                    write_to_log("Pvalue (normality) {}\n".format(status_normal_dist))
+                    write_to_log("Skewness {} ".format(skew))
+                    write_to_log("Pvalue (skewness) {} ".format(p_skew))
+                    write_to_log("Pvalue (normality) {}\n\n".format(p_normal))
                     del (skew, p_skew, p_normal)
 
                 del anneal_dcd
@@ -1580,7 +1610,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                 #========================================#
                 # check outcome of last annealing attempt
                 #========================================#
-                anneal_success = True  # DEBUGGING
+
+                #DEBUGGING skip extended calculation
+                anneal_success = True
 
                 if status_anneal_agg is False:  # aggregate not ok
                     if rank == 0:
@@ -1602,27 +1634,36 @@ for curcycle, idx_lmpa in remaining_cycles:
             # aftermath: extract frame with lowest pe of the solvate and check
             #            if its aggregate is intact
             #=================================================================#
-
             if anneal_success is True:
-                status_min_pe_anneal_agg = False
+                #status_min_pe_anneal_agg = False
 
                 if rank == 0:
+
                     # find dcd file with lowest pe/solvate
                     index_min_pe = None
-                    for anneal_dcd, anneal_log in zip(anneal_dcds, anneal_logs):
-                        # [anneal_log] as workaround since check_energy_convergence only takes tuples or lists
-                        anneal_pe = check_energy_convergence([anneal_log], keyword="c_pe", debug=True)[4]
 
-                        if min_pe in anneal_pe:
-                            print("min_pe", min_pe)
-                            index_min_pe = anneal_pe.index(min_pe)
+                    # find minimum energy of all considered frames (i.e. all
+                    # frames of an equilibrated system) and find the correspond-
+                    # ing log file or rather its index which can be used for the
+                    # dcd files to extract the coordinates of said frame
+                    for index_logfile, anneal_log in enumerate(anneal_logs):
+                        clog = agul.LogUnification()
+                        clog.read_lmplog(anneal_log)
+
+                        # get index of frame with lowest potential energy
+                        if min_pe in clog.data[-1]["c_pe"]:
+                            # last frame is current frame read
+                            index_min_pe = clog.data[-1]["c_pe"].index(min_pe)
                             break
 
-                    solution_sys.import_dcd(anneal_dcd)
+                    del (clog, min_pe)
+                    solution_sys.ts_coords = []
+                    solution_sys.import_dcd(anneal_dcds[index_logfile])
+                    del index_logfile
                     solution_sys.read_frames(frame=index_min_pe,
-                                             to_frame=index_min_pe+1)
+                                             to_frame=index_min_pe + 1)
+                    del index_min_pe
                     solution_sys.close_dcd()
-                    del (min_pe, index_min_pe)
 
                     #=============================#
                     # separate solute from solvent
@@ -1660,15 +1701,13 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_success = False
                 continue
 
-            time.sleep(20)
+            #time.sleep(20)
 
         # tidy up
         if rank == 0:
             if args.lmps is not None:
                 del solvent_sys
             del (solvate_sys, solution_sys)
-
-    exit()
 
     #==========================================================================#
     # 4. REQUENCHING
@@ -1695,6 +1734,9 @@ for curcycle, idx_lmpa in remaining_cycles:
         requench_lmp.file(args.set)
         requench_lmp.command("read_data {}".format(tmp_solvate_anneal_out))
 
+        if args.pair_coeffs is not None:
+            requench_lmp.file(args.pair_coeffs)
+
         if rank == 0:
             os.remove(tmp_solvate_anneal_out)
             del tmp_solvate_anneal_out
@@ -1706,7 +1748,7 @@ for curcycle, idx_lmpa in remaining_cycles:
         requench_lmp.command("thermo_modify lost warn flush yes")
         requench_lmp.command("thermo {}".format(args.logsteps))
         requench_lmp.command("dump dump_requench all dcd {} {}".format(
-                             args.logsteps, requench_dcd))
+            args.logsteps, requench_dcd))
         requench_lmp.command("dump_modify dump_requench unwrap yes")
         requench_lmp.command("neigh_modify every 1 delay 0 check yes")
         requench_steps = args.requench_steps
@@ -1717,7 +1759,7 @@ for curcycle, idx_lmpa in remaining_cycles:
         # tidy up
         del requench_lmp
         if rank == 0:
-            del (solvate_sys)
+            del solvate_sys
 
     if rank == 0:
         print("***Current cycle finished successfully!")
