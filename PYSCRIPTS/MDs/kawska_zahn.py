@@ -1158,7 +1158,8 @@ for curcycle, idx_lmpa in remaining_cycles:
                                 void_pylmp_fixes = []
                                 void_lmp.command("run {}".format(void_steps))
 
-                                print(void_pylmp.fixes)
+                                #DEBUGGING
+                                #print(void_pylmp.fixes)
                                 time.sleep(5)
 
                                 if atom_sphere_run < 11:
