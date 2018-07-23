@@ -740,6 +740,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 # logging of thermodynamic data
                 quench_lmp.command("thermo_style custom " + " ".join(thermargs))
                 quench_lmp.command("thermo_modify lost warn flush yes")
+                #quench_lmp.command("thermo_modify line multi format float %g")
                 quench_lmp.command("thermo {}".format(args.quench_logsteps))
 
                 # trajectory
@@ -1373,6 +1374,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         last_step = None
 
                     del equil_anneal_llog
+
+                else:
+                    last_step = None
 
                 last_step = comm.bcast(last_step, 0)
 

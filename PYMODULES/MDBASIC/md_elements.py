@@ -85,7 +85,9 @@ element_radii = [1.5, 1.2, 1.4, 1.82, 2.0, 2.0, 1.7, 1.55, 1.52, 1.47, 1.54, 1.3
 
 # element radius by mass
 elements_mass_radii = dict(zip(element_rnd_mass, element_radii))
+element_mass = dict(zip(element_name, element_rnd_mass))
 
 # element name by atomic number
 element_number = range(0, len(element_name))
 atomicnumber_element = dict(zip(element_number, element_name))
+atomic_number_mass = dict(zip(element_number, element_rnd_mass))

@@ -5,12 +5,13 @@ import scipy.constants
 import md_stars as mds
 import md_universe as mdu
 import md_elements as mde
-import log_universe as logu
+#import log_universe as logu
 
 __version__ = "2018-04-24"
 
 """
 CURRENTLY THIS MODULE IS UNDER CONSTRUCTION AND NOT FULLY FUNCTIONAL!
+Forces should also be read.
 """
 
 hartree_eV = scipy.constants.physical_constants["Hartree energy in eV"][0]
@@ -408,100 +409,160 @@ class GauStuff(mdu.Universe):
 
             gau_out.write("\n"*4)
 
-    def read_gau_log(self, gau_log, overwrite=False):
+    def read_gau_log(self, gau_log, save_all_scf_steps=False, overwrite=False):
         """
         Read the last coordinates from a gaussian log file.
+
         Overwrite overwrites the last frame.
         """
-        print("Reading last frame of the output file.")
+        #TODO read atomy by initial coordinates and not by scf cycles
 
+        if overwrite is True:
+            self.ts_coords = []
+
+        #print("Reading last frame of the output file.")
+        self.gaussian_other_info["scf_energies"] = []
+        all_scf_cycles_coords = []
+        current_scf_cycles_coords = []
+        all_scf_cycles_energies = []
+        scf_cycles_energies = []
         log_resume = ""
-        get_lines = False
-        with open(gau_log, "r") as gau_log:
-            for line in gau_log:
-                if line.startswith(" 1\\1\\") is True:
-                    get_lines = True
-                elif line.endswith("\\@\n") is True:
-                    get_lines = False
+        g_atoms = []
+
+        # read geometries from all scf cycles and their corresponding energies
+        with open(gau_log, "r") as opened_gau_log:
+            line = opened_gau_log.readline()
+
+            # read all scf cycles and the corresponding energy
+            while line != "":
+
+                if "Standard orientation" in line:
+                    cframe = []
+                    # skip the following 4 lines
+                    for _ in xrange(5):
+                        line = opened_gau_log.readline()
+
+                    while not line.startswith(" ----------------------------"):
+                        split_line = line.split()
+                        coords = [float(i) for i in split_line[3:]]
+                        coords = np.array(coords)
+                        cframe.append(coords)
+                        line = opened_gau_log.readline()
+
+                    # append current frame to current scf_cycle
+                    current_scf_cycles_coords.append(cframe)
+
+                elif "SCF Done:" in line:
+                    scf_energy = float(line.split()[4])
+                    scf_cycles_energies.append(scf_energy)
+
+                elif "!   Optimized Parameters   !" in line:
+                    # current entry is finished
+                    all_scf_cycles_coords.append(current_scf_cycles_coords)
+                    all_scf_cycles_energies.append(scf_cycles_energies)
+                    # reset current optimized scf cycles
+                    current_scf_cycles_coords = []
+                    scf_cycles_energies = []
+                elif line.startswith(" 1\\1\\") is True:
+
+                    while not line.endswith("\\@\n"):
+                        line = line.lstrip()
+                        line = line.rstrip()
+                        # create one huge string since lines could be oddly wrapped
+                        log_resume += line
+                        line = opened_gau_log.readline()
                 else:
                     pass
 
-                if get_lines is True:
-                    line = line.lstrip()
-                    line = line.rstrip()
-                    # create one huge string since lines could be oddly wrapped
-                    log_resume += line
+                line = opened_gau_log.readline()
 
-        # split string by its entries
-        log_resume = log_resume.split("\\")
-        del line
-        del get_lines
+        #return (all_scf_cycles_coords, all_scf_cycles_energies)
+        # extract geometries with lowest energy, omit other scf geometries
+        # and energies
+        for scf_cycle_coords, scf_cycle_energy in zip(all_scf_cycles_coords,
+                                                      all_scf_cycles_energies):
+            cur_cycle_min_scf_energy = 1e12
+            cur_cycle_min_scf_energy_idx = None
 
-        g_atoms = []
-        g_frame = []
-        # switch which defines that coordinates section is reached
-        coordinates_cntr = 0
-        # atom indx
-        cidx = 0
+            # get index of frame with lowest energy
+            for index_energy, cur_energy in enumerate(scf_cycle_energy):
+                if cur_energy < cur_cycle_min_scf_energy:
+                    cur_cycle_min_scf_energy = cur_energy
+                    cur_cycle_min_scf_energy_idx = index_energy
 
-        for entry in log_resume:
-            if entry == "":
-                coordinates_cntr += 1
+            self.ts_coords.append(scf_cycle_coords[cur_cycle_min_scf_energy_idx])
+            self.gaussian_other_info["scf_energies"].append(scf_cycle_energy[cur_cycle_min_scf_energy_idx])
 
-            if coordinates_cntr == 3:
-                entry = entry.split(",")
+        # # split string by its entries
+        # log_resume = log_resume.split("\\")
+        # del line
+        # del get_lines
 
-                if len(entry) == 4 or len(entry) == 5:
-                    if len(entry) == 4:
-                        ccoords = np.array([float(i) for i in entry[1:]])
-                    else:
-                        ccoords = np.array([float(i) for i in entry[2:]])
+        # g_atoms = []
+        # g_frame = []
+        # # switch which defines that coordinates section is reached
+        # coordinates_cntr = 0
+        # # atom indx
+        # cidx = 0
 
-                    csitnam = entry[0]
+        # for entry in log_resume:
+        #    if entry == "":
+        #        coordinates_cntr += 1
 
-                    # store info
-                    cur_atom = mds.Atom(sitnam=csitnam, atm_id=cidx)
+        #    if coordinates_cntr == 3:
+        #        entry = entry.split(",")
 
-                    g_atoms.append(cur_atom)
-                    g_frame.append(ccoords)
+        #        if len(entry) == 4 or len(entry) == 5:
+        #            if len(entry) == 4:
+        #                ccoords = np.array([float(i) for i in entry[1:]])
+        #            else:
+        #                ccoords = np.array([float(i) for i in entry[2:]])
 
-                    # increment atom index
-                    cidx += 1
+        #            csitnam = entry[0]
 
-            if "NImag" in entry:
-                # get number of imaginary frequencies
-                self.gaussian_other_info["NImag"] = int(entry.split("NImag=")[1])
+        #            # store info
+        #            cur_atom = mds.Atom(sitnam=csitnam, atm_id=cidx)
 
-            if "Version" in entry:
-                other_entries = entry.split("\\")
-                for other_entry in other_entries:
-                    if "HF" in other_entry:
-                        energies_entry = other_entry.split(",")
-                        energies_entry = [float(i)*hartree_eV for i in energies_entry]
-                        self.gaussian_other_info["energies_entry"] = energies_entry
+        #            g_atoms.append(cur_atom)
+        #            g_frame.append(ccoords)
 
-        del cidx
-        del coordinates_cntr
+        #            # increment atom index
+        #            cidx += 1
 
-        g_frame = np.array(g_frame)
+        #    if "NImag" in entry:
+        #        # get number of imaginary frequencies
+        #        self.gaussian_other_info["NImag"] = int(entry.split("NImag=")[1])
 
-        for idx, gatm in enumerate(g_atoms):
-            try:
-                if overwrite is True:
-                    self.atoms[idx] = gatm
-                else:
-                    if not hasattr(self.atoms[idx], "sitnam"):
-                        self.atoms[idx].sitnam = gatm.sitnam
+        #    if "Version" in entry:
+        #        other_entries = entry.split("\\")
+        #        for other_entry in other_entries:
+        #            if "HF" in other_entry:
+        #                energies_entry = other_entry.split(",")
+        #                energies_entry = [float(i)*hartree_eV for i in energies_entry]
+        #                self.gaussian_other_info["energies_entry"] = energies_entry
+#
+        #del cidx
+        #del coordinates_cntr
+#
+        #g_frame = np.array(g_frame)
+#
+        #for idx, gatm in enumerate(g_atoms):
+        #    try:
+        #        if overwrite is True:
+        #            self.atoms[idx] = gatm
+        #        else:
+        #            if not hasattr(self.atoms[idx], "sitnam"):
+        #                self.atoms[idx].sitnam = gatm.sitnam
+#
+        #            if not hasattr(self.atoms[idx], "atm_id"):
+        #                self.atoms[idx].atm_id = gatm.atm_id
+#
+        #    except IndexError:
+        #        # overwrite the whole entry if one index does not fit
+        #        self.atoms = g_atoms
+        #        break
 
-                    if not hasattr(self.atoms[idx], "atm_id"):
-                        self.atoms[idx].atm_id = gatm.atm_id
-
-            except IndexError:
-                # overwrite the whole entry if one index does not fit
-                self.atoms = g_atoms
-                break
-
-        if self.ts_coords != [] and overwrite is True:
-            self.ts_coords[-1] = g_frame
-        else:
-            self.ts_coords.append(g_frame)
+        # if self.ts_coords != [] and overwrite is True:
+        #     self.ts_coords[-1] = g_frame
+        # else:
+        #     self.ts_coords.append(g_frame)
