@@ -33,6 +33,9 @@ class Box(object):
         unit    str; angstrom | bohr | alat
                     alat: lattice vector a in bohr (only used in pw), see pw.x input description
 
+        #TODO boxtype should always be given or an error for the user has to
+        #TODO appear, that states that a boxtype must be defined!
+
         Sources:    http://lammps.sandia.gov/doc/Section_howto.html#howto-12
                     https://www.quantum-espresso.org/Doc/INPUT_PW.html#celldm
         """

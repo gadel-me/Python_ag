@@ -323,7 +323,7 @@ class GauStuff(mdu.Universe):
             #line = gau_in.readline()
 
     def write_gau(self, gauout, frame_id, modredundant=None,
-                  write_fragments=False, title=""):
+                  write_fragments=False, job_settings=None, title=""):
         """
         job_type    modredundant | SP
         method      user choice (e.g. MP2, B3LYP)
@@ -337,6 +337,9 @@ class GauStuff(mdu.Universe):
         Sources: http://wild.life.nctu.edu.tw/~jsyu/compchem/g09/g09ur/m_molspec.htm
         """
         print("***Gau-Info: Writing Gaussian-Input-File!")
+
+        if job_settings is not None:
+            self.job_settings = job_settings
 
         with open(gauout, "w") as gau_out:
             if hasattr(self, "nproc"):
@@ -358,7 +361,7 @@ class GauStuff(mdu.Universe):
 
             # write title line only if allcheck-keyword is not set
             if "ALLCHECK" not in self.job_settings.upper():
-                gau_out.write("Title: {}\n\n".format(title))
+                gau_out.write("T: {}\n\n".format(title))
 
             # write multiplicity and charge line only if allcheck-keyword is not set
             if "ALLCHECK" not in self.job_settings.upper() or (self.charge is not None and self.multiplicity is not None):
@@ -375,8 +378,8 @@ class GauStuff(mdu.Universe):
 
                     if write_fragments is True:
                         for molecule_idx, molecule in enumerate(self.molecules):
-                            if (idx+1) in molecule:
-                                gau_out.write("(Fragment={})".format(molecule_idx+1))
+                            if idx + 1 in molecule:
+                                gau_out.write("(Fragment={})".format(molecule_idx + 1))
                                 break
 
                     # write frozen state of the atom
@@ -386,8 +389,7 @@ class GauStuff(mdu.Universe):
                     gau_out.write(" {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
                         self.ts_coords[frame_id][idx][0],
                         self.ts_coords[frame_id][idx][1],
-                        self.ts_coords[frame_id][idx][2])
-                    )
+                        self.ts_coords[frame_id][idx][2]))
 
             gau_out.write("\n")
 
@@ -421,13 +423,18 @@ class GauStuff(mdu.Universe):
             self.ts_coords = []
 
         #print("Reading last frame of the output file.")
-        self.gaussian_other_info["scf_energies"] = []
+        if "scf_energies" not in self.gaussian_other_info or overwrite is True:
+            self.gaussian_other_info["scf_energies"] = []
+
         all_scf_cycles_coords = []
         current_scf_cycles_coords = []
         all_scf_cycles_energies = []
         scf_cycles_energies = []
         log_resume = ""
         g_atoms = []
+        atom_index = 0
+        read_element_numbers = True
+        scanned_coordinates = []
 
         # read geometries from all scf cycles and their corresponding energies
         with open(gau_log, "r") as opened_gau_log:
@@ -447,13 +454,25 @@ class GauStuff(mdu.Universe):
                         coords = [float(i) for i in split_line[3:]]
                         coords = np.array(coords)
                         cframe.append(coords)
+
+                        # get element number, i.e. element name
+                        if read_element_numbers is True:
+                            element_number = int(split_line[1])
+                            element_name = mde.element_name[element_number]
+                            cur_atom = mds.Atom(sitnam=element_name,
+                                                atm_id=atom_index)
+                            g_atoms.append(cur_atom)
+                            atom_index += 1
+
                         line = opened_gau_log.readline()
 
                     # append current frame to current scf_cycle
                     current_scf_cycles_coords.append(cframe)
+                    # stop reading the element numbers after first entry
+                    read_element_numbers = False
 
                 elif "SCF Done:" in line:
-                    scf_energy = float(line.split()[4])
+                    scf_energy = hartree_eV * float(line.split()[4])
                     scf_cycles_energies.append(scf_energy)
 
                 elif "!   Optimized Parameters   !" in line:
@@ -462,7 +481,51 @@ class GauStuff(mdu.Universe):
                     all_scf_cycles_energies.append(scf_cycles_energies)
                     # reset current optimized scf cycles
                     current_scf_cycles_coords = []
+                    # reset energies for next run to read
                     scf_cycles_energies = []
+                    #self.gaussian_other_info("optimized_parameters")
+
+                    # skip the next 5 lines
+                    for _ in xrange(6):
+                        line = opened_gau_log.readline()
+
+                    while not line.startswith(" ----------------------------"):
+                        split_line = line.split()
+
+                        parameter_definition = split_line[2]
+                        parameter_value = float(split_line[3])
+                        self.gaussian_other_info[parameter_definition].append(parameter_value)
+
+
+
+                        #for scanned_coordinate in scanned_coordinates:
+                        #    if split_line[2] == scanned_coordinate:
+                        #        self.gaussian_other_info[scanned_coordinate].append(float(split_line[3]))
+
+                        line = opened_gau_log.readline()
+
+                # get scanned coordinates (if mod redundant is used)
+                elif "Initial Parameters" in line:
+                    # skip the next 4 lines
+                    for _ in xrange(5):
+                        line = opened_gau_log.readline()
+
+                    while not line.startswith(" ----------------------------"):
+                        split_line = line.split()
+
+                        # prepare containers for current parameter definition
+                        parameter_definition = split_line[2]
+                        self.gaussian_other_info[parameter_definition] = []
+
+                        #if "Scan" in line:
+                        #    scanned_coordinates.append(split_line[2])
+
+                        line = opened_gau_log.readline()
+
+                    #for scanned_coordinate in scanned_coordinates:
+                    #    self.gaussian_other_info[scanned_coordinate] = []
+
+                # read the summary
                 elif line.startswith(" 1\\1\\") is True:
 
                     while not line.endswith("\\@\n"):
@@ -546,23 +609,23 @@ class GauStuff(mdu.Universe):
 #
         #g_frame = np.array(g_frame)
 #
-        #for idx, gatm in enumerate(g_atoms):
-        #    try:
-        #        if overwrite is True:
-        #            self.atoms[idx] = gatm
-        #        else:
-        #            if not hasattr(self.atoms[idx], "sitnam"):
-        #                self.atoms[idx].sitnam = gatm.sitnam
-#
-        #            if not hasattr(self.atoms[idx], "atm_id"):
-        #                self.atoms[idx].atm_id = gatm.atm_id
-#
-        #    except IndexError:
-        #        # overwrite the whole entry if one index does not fit
-        #        self.atoms = g_atoms
-        #        break
+        for idx, gatm in enumerate(g_atoms):
+            try:
+                if overwrite is True:
+                    self.atoms[idx] = gatm
+                else:
+                    if not hasattr(self.atoms[idx], "sitnam"):
+                        self.atoms[idx].sitnam = gatm.sitnam
 
-        # if self.ts_coords != [] and overwrite is True:
-        #     self.ts_coords[-1] = g_frame
-        # else:
-        #     self.ts_coords.append(g_frame)
+                    if not hasattr(self.atoms[idx], "atm_id"):
+                        self.atoms[idx].atm_id = gatm.atm_id
+
+            except IndexError:
+                # overwrite the whole entry if one index does not fit
+                self.atoms = g_atoms
+                break
+
+        #if self.ts_coords != [] and overwrite is True:
+        #    self.ts_coords[-1] = g_frame
+        #else:
+        #    self.ts_coords.append(g_frame)

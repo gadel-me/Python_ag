@@ -27,4 +27,4 @@ args = parser.parse_args()
 # read gaussian log file
 gau_output  = agum.Unification()
 gau_output.read_gau_log(args.gau_out)
-gau_output.write_xyz(args.out)
+gau_output.write_xyz(args.out, args.gau_out, False, *range(len(gau_output.ts_coords)))

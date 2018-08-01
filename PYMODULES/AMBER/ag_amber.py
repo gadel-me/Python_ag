@@ -548,15 +548,17 @@ class AmberStuff(mdu.Universe):
         Source: http://ambermd.org/formats.html#trajectory
         """
         print("***Mdcrd-Info: Writing Amber-Coordinates-File!")
+        flatten_coords = []
 
         with open(mdcrd, "w") as mdcrd_out:
             title = "Written output coordinates.\n"
             mdcrd_out.write(title)
 
             for frame_id in frame_ids:
-                # flatten list explained:
-                # for cframe in ts_coords:; for atm_coords in cframe: for coord in atm_coords: coord
-                flatten_coords = [coord for cframe in self.ts_coords for atm_coords in cframe for coord in atm_coords]
+                # flatten list
+                flatten_coords = [coord for
+                                  xyz_coords in self.ts_coords[frame_id] for
+                                  coord in xyz_coords]
 
                 for cidx, ccoord in enumerate(flatten_coords):
                     # write coordinates

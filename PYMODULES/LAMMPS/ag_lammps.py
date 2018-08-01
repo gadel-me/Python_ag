@@ -46,7 +46,7 @@ class LmpStuff(mdu.Universe):
 
         # check if there are frames existing before data is loaded
         if self.ts_coords:
-            print("***Warning Loading coordinates from data-file on top of " +
+            print("***Info Loading coordinates from data-file on top of " +
                   "already loaded coordinates!")
 
         lmpdat_box = mdb.Box(boxtype="lammps")
@@ -609,14 +609,19 @@ class LmpStuff(mdu.Universe):
             frame_id = 0
 
         # convert (the copy) of the current box-type to a fractional box-type
-        cbox = copy.copy(self.ts_boxes[frame_id])
+        try:
+            cbox = copy.copy(self.ts_boxes[frame_id])
 
-        if cbox.boxtype == "cartesian":
-            cbox.box_cart2lmp()
-        elif cbox.boxtype == "lattice":
-            cbox.box_lat2lmp()
-        else:
-            pass  # already of lammps' box-type
+            if cbox.boxtype == "cartesian":
+                cbox.box_cart2lmp()
+            elif cbox.boxtype == "lattice":
+                cbox.box_lat2lmp()
+            else:
+                pass  # already of lammps' box-type
+        except IndexError:
+            cbox = None
+            print("***Warning: No box specified - a simulation box must be specified for this file to work!")
+
 
         total_atms     = len(self.atoms)
         total_bnds     = len(self.bonds)
@@ -657,23 +662,26 @@ class LmpStuff(mdu.Universe):
 
             # /// box summary ///
             # write only if attributes were given beforehand
-            if cbox.lmp_xlo is not None and cbox.lmp_xhi is not None:
-                lmpdat_out.write("{:> 12.6f} {:> 12.6f}  xlo xhi\n".format(
-                    cbox.lmp_xlo, cbox.lmp_xhi)
-                )
-            if cbox.lmp_ylo is not None and cbox.lmp_yhi is not None:
-                lmpdat_out.write("{:> 12.6f} {:> 12.6f}  ylo yhi\n".format(
-                    cbox.lmp_ylo, cbox.lmp_yhi)
-                )
-            if cbox.lmp_zlo is not None and cbox.lmp_zhi is not None:
-                lmpdat_out.write("{:> 12.6f} {:> 12.6f}  zlo zhi\n".format(
-                    cbox.lmp_zlo, cbox.lmp_zhi)
-                )
-            if cbox.lmp_xy is not None and cbox.lmp_xz is not None and cbox.lmp_yz is not None:
-                lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
-                    cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
-                )
-            lmpdat_out.write("\n")
+
+            # skip if no box was defined in data file
+            if cbox is not None:
+                if cbox.lmp_xlo is not None and cbox.lmp_xhi is not None:
+                    lmpdat_out.write("{:> 12.6f} {:> 12.6f}  xlo xhi\n".format(
+                        cbox.lmp_xlo, cbox.lmp_xhi)
+                    )
+                if cbox.lmp_ylo is not None and cbox.lmp_yhi is not None:
+                    lmpdat_out.write("{:> 12.6f} {:> 12.6f}  ylo yhi\n".format(
+                        cbox.lmp_ylo, cbox.lmp_yhi)
+                    )
+                if cbox.lmp_zlo is not None and cbox.lmp_zhi is not None:
+                    lmpdat_out.write("{:> 12.6f} {:> 12.6f}  zlo zhi\n".format(
+                        cbox.lmp_zlo, cbox.lmp_zhi)
+                    )
+                if cbox.lmp_xy is not None and cbox.lmp_xz is not None and cbox.lmp_yz is not None:
+                    lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
+                        cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
+                    )
+                lmpdat_out.write("\n")
 
             # /// write atom types (masses) ///
             if self.atm_types:

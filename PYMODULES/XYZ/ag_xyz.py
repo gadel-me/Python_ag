@@ -120,7 +120,7 @@ class XYZ(mdu.Universe):
                 # append current frame
                 self.ts_coords.append(cframe)
 
-    def write_xyz(self, xyz_file, guess_element=False, *frame_ids):
+    def write_xyz(self, xyz_file, title, guess_element=False, *frame_ids):
         """
         Write a xyz-file.
         """
@@ -133,6 +133,8 @@ class XYZ(mdu.Universe):
 
             for frame_id in frame_ids:
                 xyz_out.write("{}\n".format(num_atms))
+                xyz_out.write("Step: {} - {}".format(frame_id, title))
+                xyz_out.write("\n")
 
                 # write box info to comment line
                 if self.ts_boxes != [] and self.ts_boxes is not None:
@@ -177,18 +179,15 @@ class XYZ(mdu.Universe):
                         except AttributeError:
                             sitnam = "X"
 
-                        xyz_out.write("{} ".format(sitnam)
-                        )
+                        xyz_out.write("{} ".format(sitnam))
 
                     # write coordinates
                     xyz_out.write("{:> 10.5f} {:> 10.5f} {:> 10.5f} ".format(
-                        ccoords[0], ccoords[1], ccoords[2])
-                    )
+                        ccoords[0], ccoords[1], ccoords[2]))
 
                     # write charges as additional info if they were given
                     if hasattr(catm, "chge") is True:
-                        xyz_out.write("{:> 10.5f} ".format(catm.chge)
-                    )
+                        xyz_out.write("{:> 10.5f} ".format(catm.chge))
 
                     # write a newline after current entry is done
                     xyz_out.write("\n")
