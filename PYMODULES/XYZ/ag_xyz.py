@@ -28,6 +28,7 @@ class XYZ(mdu.Universe):
         """
         with open(xyzfile, "r") as xyz_in:
             for line in xyz_in:
+                print(line)
                 num_atms = int(line.split()[0])  # line with number of atoms (mandatory)
                 comment_line = xyz_in.next()  # comment line (may be empty)
 
@@ -35,7 +36,7 @@ class XYZ(mdu.Universe):
                 if "Boxtype" in comment_line:
                     comment_line = comment_line.split()
                     box = [None if i == "None" else None if round(float(i), 8) == 0 else float(i) for i in comment_line[3::2]]
-                    print(box)
+                    print("************", box)
 
                     if comment_line[1] == "cartesian":
                         current_box = mdb.Box(boxtype=comment_line[1],
@@ -133,10 +134,12 @@ class XYZ(mdu.Universe):
 
             for frame_id in frame_ids:
                 xyz_out.write("{}\n".format(num_atms))
-                xyz_out.write("Step: {} - {}".format(frame_id, title))
-                xyz_out.write("\n")
+                #xyz_out.write("Step: {} - {}".format(frame_id, title))
+                # does not work out with box information -> change newline after
+                # comment line was written, maybe define comment line seperately
 
                 # write box info to comment line
+                # write box always as lattice: a, b, c, alpha, beta, gamma
                 if self.ts_boxes != [] and self.ts_boxes is not None:
                     xyz_out.write("Boxtype {} ".format(self.ts_boxes[frame_id].boxtype))
 

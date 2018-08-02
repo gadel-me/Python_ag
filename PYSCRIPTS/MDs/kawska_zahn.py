@@ -1532,10 +1532,12 @@ for curcycle, idx_lmpa in remaining_cycles:
                 except IndexError:  # no file given (first start)
                     next_anneal_run = 0
             else:
+                anneal_dcds = None
+                anneal_logs = None
                 next_anneal_run = None
 
-            #anneal_dcds = comm.bcast(anneal_dcds, 0)
-            #anneal_logs = comm.bcast(anneal_logs, 0)
+            anneal_dcds = comm.bcast(anneal_dcds, 0)
+            anneal_logs = comm.bcast(anneal_logs, 0)
             next_anneal_run = comm.bcast(next_anneal_run, 0)
 
             if next_anneal_run == total_anneal_runs:
@@ -1692,6 +1694,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         solvate_sys.write_xyz(solvate_anneal_out, -1)
                     else:
                         anneal_success = False
+                else:
+                    status_min_pe_agg = None
+                    anneal_success = None
 
                 status_min_pe_agg = comm.bcast(status_min_pe_agg, 0)
                 anneal_success = comm.bcast(anneal_success, 0)
