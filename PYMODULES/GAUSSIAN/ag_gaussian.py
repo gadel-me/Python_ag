@@ -417,7 +417,7 @@ class GauStuff(mdu.Universe):
 
         Overwrite overwrites the last frame.
         """
-        #TODO read atomy by initial coordinates and not by scf cycles
+        #TODO read atom by initial coordinates and not by scf cycles
 
         if overwrite is True:
             self.ts_coords = []
@@ -434,7 +434,7 @@ class GauStuff(mdu.Universe):
         g_atoms = []
         atom_index = 0
         read_element_numbers = True
-        scanned_coordinates = []
+        #scanned_coordinates = []
 
         # read geometries from all scf cycles and their corresponding energies
         with open(gau_log, "r") as opened_gau_log:
@@ -495,8 +495,6 @@ class GauStuff(mdu.Universe):
                         parameter_definition = split_line[2]
                         parameter_value = float(split_line[3])
                         self.gaussian_other_info[parameter_definition].append(parameter_value)
-
-
 
                         #for scanned_coordinate in scanned_coordinates:
                         #    if split_line[2] == scanned_coordinate:

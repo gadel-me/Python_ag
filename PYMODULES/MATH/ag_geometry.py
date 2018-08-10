@@ -262,6 +262,48 @@ def get_dihedral(ptI, ptJ, ptK, ptL):
     return cgt.angle_between_vectors(cp1, cp2)
 
 
+def new_dihedral(p):
+    """Praxeolitic formula
+    1 sqrt, 1 cross product"""
+    p0 = p[0]
+    p1 = p[1]
+    p2 = p[2]
+    p3 = p[3]
+
+    b0 = -1.0*(p1 - p0)
+    b1 = p2 - p1
+    b2 = p3 - p2
+
+    # normalize b1 so that it does not influence magnitude of vector
+    # rejections that come next
+    b1 /= np.linalg.norm(b1)
+
+    # vector rejections
+    # v = projection of b0 onto plane perpendicular to b1
+    #   = b0 minus component that aligns with b1
+    # w = projection of b2 onto plane perpendicular to b1
+    #   = b2 minus component that aligns with b1
+    v = b0 - np.dot(b0, b1)*b1
+    w = b2 - np.dot(b2, b1)*b1
+
+    # angle between v and w in a plane is the torsion angle
+    # v and w may not be normalized but that's fine since tan is y/x
+    x = np.dot(v, w)
+    y = np.dot(np.cross(b1, v), w)
+    return np.arctan2(y, x)
+
+
+def get_angle(ptI, ptJ, ptK):
+    """
+    Bla.
+
+    Get angle between three points I, J and K.
+    """
+    v1 = ptI - ptJ
+    v2 = ptK - ptJ
+    return cgt.angle_between_vectors(v1, v2)
+
+
 def dist_plane_point(plane_vt_1, plane_vt_2, pt):
     """
     Calculate the smallest distance between a point pt and a plane defined
@@ -314,7 +356,7 @@ def get_molecule_radius(coords, buffering=0):
 
     for coord in coords:
         # current distance
-        cdist = np.linalg.norm(cog-coord)
+        cdist = np.linalg.norm(cog - coord)
         # replace current radius if current distance is larger
         if cdist > radius:
             radius = cdist
