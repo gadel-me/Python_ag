@@ -51,8 +51,7 @@ mydata.read_lmpdat(args.data)
 mydata.import_dcd(args.dcd)
 mydata.read_frames(frame=None,
                    to_frame=-1,
-                   frame_by="index",
-                   verbose=False)  # read only the last frame
+                   frame_by="index")  # read only the last frame
 # convert box to lammps box
 print("***Info: Converting box lammps' box format.")
 mydata.change_indices(incr=1, mode="increase")
