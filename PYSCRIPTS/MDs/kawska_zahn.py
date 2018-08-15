@@ -1,16 +1,33 @@
-#!/usr/bin/env python
+"""
+Kawska-Zahn approach to aggregate crystals.
+
+This script is doing a Kawska-Zahn approach to crystallize given molecules using
+lammps as the driver for molecular dynamics simulations. Equilibration is
+checked and the simulation time is elongated if the system has not equilibrated
+yet.
+
+#TODO Implement using the gpu for small systems only if a certain number of
+#TODO atoms exists.
+
+#TODO Implement using a certain amount of cores for small systems only
+#TODO if a certain number of atoms exists.
+"""
+
+
 from __future__ import print_function, division
-from mpi4py import MPI
 import os
 import copy
 import shutil as sl
 import re
 import argparse
 import math
+import pdb
+import time
 import numpy as np
 from natsort import natsorted
 #import itertools as it
 import scipy.stats
+from mpi4py import MPI
 from lammps import lammps, PyLammps
 import Transformations as cgt
 import md_elements as mde
@@ -18,7 +35,6 @@ import md_box as mdb
 import ag_unify_md as agum
 import ag_geometry as agm
 import ag_unify_log as agul
-import time
 
 """
 Kawska Zahn Approach with lammps. Do not use neigh yes since it leads to segment-
@@ -274,12 +290,23 @@ parser.add_argument("-set",
                          "settings"
                     )
 
+parser.add_argument("-settings_solvent",
+                    metavar="*.lmpcfg",
+                    help="lammps' input-file/-script with basic simulation " +
+                         "settings for the solvent system")
+
 parser.add_argument("-pair_coeffs",
                     default=None,
                     metavar="*.lmpcfg",
                     required=True,
-                    help="lammps'  script with lj, dreiding, etc. parameters"
-                    )
+                    help="lammps'  script with lj, dreiding, etc. parameters")
+
+
+parser.add_argument("-solvent_paircoeffs",
+                    default=None,
+                    metavar="*.lmpcfg",
+                    help="lammps'  script with lj, dreiding, etc. parameters " +
+                         "for the solvent")
 
 parser.add_argument("-logsteps",
                     type=int,
@@ -950,7 +977,10 @@ for curcycle, idx_lmpa in remaining_cycles:
                         void_lmp.command("suffix gpu")
 
                     # read settings file
-                    void_lmp.file(args.set)
+                    if args.settings_solvent is not None:
+                        void_lmp.file(args.settings_solvent)
+                    else:
+                        void_lmp.file(args.set)
 
                     # load last void state
                     if os.path.isfile(void_solv_rst) is True:  # void run was aborted, restart file written; start from here
@@ -960,8 +990,10 @@ for curcycle, idx_lmpa in remaining_cycles:
                     else:  # first run with solvent
                         void_lmp.command("read_data {}".format(args.lmps))
 
-                    if args.pair_coeffs is not None:
-                        void_lmp.file(args.pair_coeffs)
+                    #TODO apply a proper fix for creating the voids using the
+                    #TODO right pair coefficients from the right files
+                    if args.solvent_paircoeffs is not None:
+                        void_lmp.file(args.solvent_paircoeffs)
 
                     # load further lammps settings
                     void_lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")

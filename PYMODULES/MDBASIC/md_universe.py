@@ -1,3 +1,11 @@
+"""
+Module which combines classes from submodules.
+
+MD-Universe is a class that has everything a system needs to be useful for
+carrying out molecular dynamics. Given bond information it groups atoms to
+molecules.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 import copy
