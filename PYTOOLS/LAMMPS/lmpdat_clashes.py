@@ -3,15 +3,15 @@ from __future__ import print_function, division
 import argparse
 import itertools as it
 from numpy import linalg as LA
+import pdb
 import ag_unify_md as agum
 
 __version__ = "2017-06-02"
 
 # Argument Parsing -------------------------------------------------------------
-parser = argparse.ArgumentParser(prog="refine_structure.py",
+parser = argparse.ArgumentParser(prog="",
                                  formatter_class=argparse.RawTextHelpFormatter,
-                                 description="Minimize energy by cooling " +
-                                 "down the system to a final temperature of 5 K.")
+                                 description="")
 
 parser.add_argument("-lmpdat",
                     metavar="*.lmpdat",
@@ -19,84 +19,36 @@ parser.add_argument("-lmpdat",
                     required=True
                     )
 
-parser.add_argument("-min_z",
+parser.add_argument("-dcd",
+                    required=True,
+                    metavar="*.dcd",
                     action="store",
-                    type=float,
-                    required=True
+                    help="Lammps' DCD-file."
                     )
 
-parser.add_argument("-max_z",
-                    action="store",
-                    type=float,
-                    required=True
+parser.add_argument("-f",
+                    "--frame",
+                    default=-1,
+                    type=int,
+                    help="Index (!) of frame to convert (negative indices allowed)."
                     )
 
-parser.add_argument("-max_dist",
+parser.add_argument("-min_dist",
                     type=float,
                     default=1.0
                     )
 
-parser.add_argument("-o",
-                    "--outputname",
-                    dest="o",
-                    default="DEFAULTNAME",
-                    action="store",
-                    help="output file names"
-                    )
 
 args = parser.parse_args()
 
 # Read Data --------------------------------------------------------------------
 mydata = agum.Unification()
+
+frame = args.frame
+mydata = agum.Unification()
 mydata.read_lmpdat(args.lmpdat)
-
-# Find smallest distances ------------------------------------------------------
-region_idx = []
-
-# define a region
-for cidx, ccoord in enumerate(mydata.ts_coords[0]):
-
-    # z-coordinate between min- and max-z
-    if args.min_z < ccoord[2] < args.max_z:
-        region_idx.append(cidx)
-
-# find atoms with small distances in that region
-small_dist_idx = []
-
-for a, b in it.combinations(region_idx, 2):
-    ccoords_a = mydata.ts_coords[0][a]
-    ccoords_b = mydata.ts_coords[0][b]
-    # calculate distance between a and b
-    vect_ab = ccoords_b-ccoords_a
-    dist_ab = LA.norm(vect_ab)
-
-    if dist_ab < args.max_dist:
-        small_dist_idx.append(a)
-        small_dist_idx.append(b)
-
-small_dist_idx = set(small_dist_idx)
-del region_idx
-
-# Convert indices to ids -------------------------------------------------------
-small_dist_ids = []
-
-for cidx in small_dist_idx:
-    cid = mydata.atm_idx_id[cidx]
-    small_dist_ids.append(cid)
-
-del small_dist_idx
-
-# Get molecules ----------------------------------------------------------------
-molecules = []
-
-for cmol in mydata.molecules:
-    for cid in small_dist_ids:
-        if cid in cmol:
-            molecules.extend(cmol)
-            break
-
-print(molecules)
-#molecules = [i-1 for i in molecules]
-#molecules = [str(i) for i in molecules]
-#molecules = " ".join(molecules)
-#print(molecules)
+mydata.import_dcd(args.dcd)
+mydata.read_frames(frame=None, to_frame=-1, frame_by="index")
+mydata.create_linked_cells(frame_id=args.frame, rcut_a=2, rcut_b=2, rcut_c=2)
+close_contacts = mydata.chk_atm_dist(min_dist=args.min_dist)
+pdb.set_trace()

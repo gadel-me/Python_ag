@@ -383,8 +383,7 @@ parser.add_argument("-relax_solvent_steps",
 
 parser.add_argument("-start_equil_anneal_temp",
                     type=int,
-                    default=10
-                    )
+                    default=10)
 
 parser.add_argument("-stop_equil_anneal_temp",
                     type=int,
@@ -1376,9 +1375,13 @@ for curcycle, idx_lmpa in remaining_cycles:
                 equil_anneal_lmp.command("fix ic_prevention all momentum " +
                                          "{} linear 1 1 1 angular rescale".format(100))
 
-                equil_anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps, equil_anneal_dcd))
+                args.logsteps = 50
+                #equil_anneal_lmp.command("timestep 0.00005")
+
+                equil_anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps,
+                                                                                    equil_anneal_dcd))
                 equil_anneal_lmp.command("dump_modify dump_annealing unwrap yes")
-                equil_anneal_lmp.command("restart {} {} {}".format(args.logsteps*25,
+                equil_anneal_lmp.command("restart {} {} {}".format(args.logsteps * 25,
                                                                    equil_anneal_rst,
                                                                    equil_anneal_rst))
 
@@ -1392,7 +1395,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 equil_anneal_lmp.command(("fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.1").format("all", start_anneal_temp, stop_anneal_temp))
 
                 if args.lmps is not None:
-                    equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 1.0 1.0 1.0").format("all"))
+                    equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 100").format("all"))
 
                 # skip heating run if it is already finished but was restarted
                 if rank == 0:

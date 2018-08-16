@@ -955,7 +955,7 @@ class Universe(object):
         self.ts_lnk_cls.append(linked_cells)
 
     def chk_atm_dist(self,
-                     frame_id=0,
+                     frame_id=-1,
                      min_dist=0.80,
                      exclude_same_molecule=True,
                      get_aggregates=False,
@@ -976,6 +976,7 @@ class Universe(object):
                                 contacts as min_dist
         """
         if debug is True:
+            # not sure if that is the case - i think this works with wrapped cells
             print("***Info: Atom distance check only works with unwrapped cells! " +
                   "Unwrap cells if necessary.")
         # PBC - get cartesian box vectors
@@ -1713,9 +1714,15 @@ class Universe(object):
             # delete atoms which are inside the box
             self.delete_atoms(*inside_atoms)
 
-    def find_bonds(self):
+    def find_h_bonds(self, frame_id, distance):
         """
-        Find Bonds between atoms according to the distance between them.
-        Bonds are defined if the distance is less than or equal the atomic
-        radii.
+        Find H-Bonds.
+
+        Measure the number of H-Bonds and return a list with atom-indices of all
+        atoms involved in the H-Bond, i.e. Acceptor, H-Atom, Donor.
         """
+
+        # create linked cells of non already exist
+        if self.ts_lnk_cls != []:
+            print("***Info: Creating linked cells.")
+            self.create_linked_cells(frame_id)
