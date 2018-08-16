@@ -1375,15 +1375,12 @@ for curcycle, idx_lmpa in remaining_cycles:
                 equil_anneal_lmp.command("fix ic_prevention all momentum " +
                                          "{} linear 1 1 1 angular rescale".format(100))
 
-                args.logsteps = 50
+                #args.logsteps = 50
                 #equil_anneal_lmp.command("timestep 0.00005")
 
-                equil_anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps,
-                                                                                    equil_anneal_dcd))
+                equil_anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps, equil_anneal_dcd))
                 equil_anneal_lmp.command("dump_modify dump_annealing unwrap yes")
-                equil_anneal_lmp.command("restart {} {} {}".format(args.logsteps * 25,
-                                                                   equil_anneal_rst,
-                                                                   equil_anneal_rst))
+                equil_anneal_lmp.command("restart {} {} {}".format(args.logsteps * 25, equil_anneal_rst, equil_anneal_rst))
 
                 # thermo output
                 equil_anneal_lmp.command("thermo_style custom " + " ".join(thermargs))
