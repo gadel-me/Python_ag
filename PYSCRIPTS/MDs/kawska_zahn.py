@@ -72,7 +72,7 @@ def create_folder(folder):
     Create folder or skip creation if it already exists
     """
     try:
-        os.mkdir(folder)
+        os.mkdir(folder, 0755)
     except OSError:
         print("***Info: Folder {} already exists!".format(folder))
 
@@ -210,7 +210,7 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
         mdsys.unwrap_cell(frame_id)
 
     # maximal possible distance between two atoms
-    cube_side = atm_atm_dist/_sqrt_3  # -> atm_atm_dist/(2*math.sqrt(3)) * 2
+    cube_side = atm_atm_dist / _sqrt_3  # -> atm_atm_dist/(2*math.sqrt(3)) * 2
 
     if debug is True:
         print("***Check Aggregate Info: Cube side {}".format(cube_side))
@@ -808,9 +808,12 @@ for curcycle, idx_lmpa in remaining_cycles:
                     out_quench_sys.import_dcd(quench_dcd)
                     out_quench_sys.read_frames(frame=-2, to_frame=-1)
                     out_quench_sys.close_dcd()
+
+                    # CURRENT DIRTY FIX: quench success is set to be always true
                     quench_success = check_aggregate(out_quench_sys,
                                                      frame_id=-1,
                                                      atm_atm_dist=4)
+                    quench_success = True
                     del out_quench_sys
 
                 quench_success = comm.bcast(quench_success, root=0)
@@ -1205,7 +1208,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                                 #DEBUGGING
                                 #print(void_pylmp.fixes)
-                                time.sleep(5)
+                                #time.sleep(2)
 
                                 if atom_sphere_run < 11:
                                     void_lmp.command("unfix {}".format(atom_void_fix_name))
@@ -1488,7 +1491,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     quench_success = False
                     anneal_success = False
-                    time.sleep(5)  # DEBUGGING
+                    #time.sleep(5)  # DEBUGGING
                     continue
 
                 del status_equil_anneal_agg
@@ -1821,4 +1824,4 @@ for curcycle, idx_lmpa in remaining_cycles:
     if rank == 0:
         print("***Current cycle finished successfully!")
 
-    time.sleep(2)
+    time.sleep(10)

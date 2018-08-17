@@ -1009,9 +1009,9 @@ class Universe(object):
         close_contacts = []
 
         # number n-1 of boxes to check (without the last one since we start counting from 0 to n-1)
-        ra     = linked_cells.ra
-        rb     = linked_cells.rb
-        rc     = linked_cells.rc
+        ra = linked_cells.ra
+        rb = linked_cells.rb
+        rc = linked_cells.rc
 
         if debug is True:
             print("***Info: Checking distances")
@@ -1065,7 +1065,7 @@ class Universe(object):
                                         # alter them permanently
                                         tmp_coords_cidx_b = np.copy(linked_cells.atm_coords[cidx_b])
 
-                                        # skip same molecule atoms
+                                        # skip atoms which are part of the same molecule (same grp_id)
                                         if exclude_same_molecule is True and (self.atoms[cidx_a].grp_id == self.atoms[cidx_b].grp_id):
                                             continue
 
@@ -1112,6 +1112,7 @@ class Universe(object):
         # remove duplicates
         close_contacts = set(close_contacts)
 
+        #pdb.set_trace()
         #if get_aggregates is True:
         #    print("***Info: Connected groups: ", connected_groups)
 
