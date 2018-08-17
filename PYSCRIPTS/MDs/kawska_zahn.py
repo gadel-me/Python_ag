@@ -180,6 +180,8 @@ def check_energy_convergence(logfiles,
 
 def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=False):
     """
+    #TODO Buggy, does not recognize aggregates properly when they form a chain
+
     At the moment this works only for orthogonal cells (reason: sub-cell length)
     Check if the aggregate did not get dissolved in the process. This is achieved
     by calculating the center of geometry for each molecule and subsequent com-
@@ -236,6 +238,8 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
 
         if debug is True:
             print("***Check Aggregate Info: Aggregate looks fine!")
+
+    pdb.set_trace()
 
     return aggregate_ok
 
@@ -395,10 +399,10 @@ parser.add_argument("-equil_anneal_steps",
                     default=500000
                     )
 
-#parser.add_argument("-equil_anneal_ensemble",
-#                    type=str,
-#                    default="npt",
-#                    help="nvt or npt")
+parser.add_argument("-equil_anneal_ensemble",
+                    type=str,
+                    default="npt",
+                    help="nvt or npt")
 
 parser.add_argument("-anneal_steps",
                     type=int,
@@ -636,13 +640,14 @@ for curcycle, idx_lmpa in remaining_cycles:
                         del add_sys
 
                         # add new orthogonal box
-                        box_diameter  = 2 * (main_sys_radius*2 + add_sys_radius*2)
+                        pdb.set_trace()
+                        box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
                         a = b = c = box_diameter
 
                         # DEBUGGING NOW
                         a = b = c = 400
 
-                        alpha = beta = gamma = math.pi/2
+                        alpha = beta = gamma = math.pi / 2
                         main_sys.ts_boxes = []
                         main_sys.ts_boxes.append(mdb.Box(boxtype="lattice",
                                                  ltc_a=a, ltc_b=b, ltc_c=c,
@@ -668,6 +673,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         try:
                             if close_atms[-1] > natoms_main_sys:
                                 print("***Sysprep-Warning: New atoms were placed too near! Rebuilding...")
+                                #break  # DEBUGGING
                             else:
                                 break
 
@@ -1223,7 +1229,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         solvent_sys.import_dcd(void_solv_dcd)
                         solvent_sys.read_frames(frame=-2, to_frame=-1)
                         solvent_sys.close_dcd()
-                        # append solvate and updated solvent coordinates to the solution
+
+                        # merge solvate and solvent with relaxed (i.e. prepared)
+                        # solvent coordinates
                         solution_sys.ts_coords.append(
                             np.concatenate((solvate_sys.ts_coords[-1],
                                             solvent_sys.ts_coords[-1]))

@@ -24,6 +24,7 @@ import md_universe_helper_functions as mduh
 import networkx
 from networkx.algorithms.components.connected import connected_components
 import rmsd
+import pdb
 
 __version__ = "2018-01-10"
 
@@ -1110,8 +1111,8 @@ class Universe(object):
 
         # remove duplicates
         close_contacts = set(close_contacts)
-        #if get_aggregates is True:
-        #    print("************************************************", connected_groups)
+        if get_aggregates is True:
+            print("************************************************", connected_groups)
 
         # ==============================#
         # merge molecules to aggregates
@@ -1119,11 +1120,12 @@ class Universe(object):
         if get_aggregates is True:
             # create a dict with all groups
             connections = to_graph(connected_groups)
-            aggregates  = connected_components(connections)
-            aggregates  = [i for i in aggregates]  # generator to list
+            aggregates = connected_components(connections)
+            aggregates = [i for i in aggregates]  # generator to list
+            pdb.set_trace()
             return (close_contacts, aggregates)
-        else:
-            return close_contacts
+
+        return close_contacts
 
     def unwrap_cell(self, frame_id=0):
         """

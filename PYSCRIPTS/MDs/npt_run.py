@@ -44,6 +44,11 @@ parser.add_argument("-non_covalent",
                          "settings (pair_styles, pair_coeffs)."
                     )
 
+
+parser.add_argument("-dreiding",
+                    action="store_true",
+                    help="Dreiding settings on/off")
+
 parser.add_argument("-group",
                     nargs="*",
                     default="all",
@@ -158,12 +163,14 @@ else:
 
 if args.non_covalent is not None:
     lmp.file(args.non_covalent)
-    lmp.command("compute hb all pair hbond/dreiding/lj")
-    lmp.command("variable n_hbond equal c_hb[1]")
-    lmp.command("variable E_hbond equal c_hb[2]")
+
+    if args.dreiding is True:
+        lmp.command("variable E_hbond equal c_hb[2]")
+        lmp.command("compute hb all pair hbond/dreiding/lj")
+        lmp.command("variable n_hbond equal c_hb[1]")
 
 # thermo stuff
-if args.non_covalent is not None:
+if args.dreiding is True:
     lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
 else:
     lmp.command("thermo_style custom " + " ".join(thermargs))
