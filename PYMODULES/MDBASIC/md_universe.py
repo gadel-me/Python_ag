@@ -1111,8 +1111,9 @@ class Universe(object):
 
         # remove duplicates
         close_contacts = set(close_contacts)
-        if get_aggregates is True:
-            print("************************************************", connected_groups)
+
+        #if get_aggregates is True:
+        #    print("***Info: Connected groups: ", connected_groups)
 
         # ==============================#
         # merge molecules to aggregates
@@ -1122,7 +1123,7 @@ class Universe(object):
             connections = to_graph(connected_groups)
             aggregates = connected_components(connections)
             aggregates = [i for i in aggregates]  # generator to list
-            pdb.set_trace()
+            #pdb.set_trace()
             return (close_contacts, aggregates)
 
         return close_contacts

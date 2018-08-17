@@ -111,7 +111,7 @@ def process_data(data_lammps, dcd_lammps=None):
 
 def check_energy_convergence(logfiles,
                              keyword="PotEng",
-                             perecentage=100,
+                             percentage=100,
                              debug=False):
     """
     Calculate the skewness, p-value and z-score, to check if the values
@@ -124,7 +124,7 @@ def check_energy_convergence(logfiles,
     Input:
         > logfiles      list; all written lammps-logfiles
         > keyword       str; keywords from thermo-output
-        > perecentage   int; number of last values in %,
+        > percentage   int; number of last values in %,
                         e.g. 80 means last 80 % of all values
         > debug         boolean; enable debug messaging
         > stage         str; which stage of the kwz-approach (relevant for
@@ -145,14 +145,14 @@ def check_energy_convergence(logfiles,
     data = [value for data_index in xrange(len(log_data.data)) for value in
             log_data.data[data_index][keyword]]
     num_values = len(data)
-    perecentage /= 100  # perecentage to per cent
-    testdata = data[-int(perecentage*num_values):]
+    percentage /= 100  # percentage to per cent
+    testdata = data[-int(percentage*num_values):]
     #print(testdata)
     min_value_testdata = min(testdata)
 
     if debug is True:
         print(("***Info: Smallest value of "
-               "{} % of all measured data is: {}").format(perecentage*100,
+               "{} % of all measured data is: {}").format(percentage*100,
                                                           min_value_testdata)
               )
 
@@ -239,7 +239,7 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
         if debug is True:
             print("***Check Aggregate Info: Aggregate looks fine!")
 
-    pdb.set_trace()
+    #pdb.set_trace()
 
     return aggregate_ok
 
@@ -494,7 +494,8 @@ for curcycle, idx_lmpa in remaining_cycles:
     # Define folders and files, retrieve stage of current cycle
     #==========================================================#
 
-    write_to_log("Cycle: {:d}\n".format(curcycle))
+    if rank == 0:
+        write_to_log("Cycle: {:d}\n".format(curcycle))
 
     # declare folder names for each cycle
     sysprep_dir  = _pwd + "/sysprep_{}/".format(curcycle)
@@ -640,21 +641,22 @@ for curcycle, idx_lmpa in remaining_cycles:
                         del add_sys
 
                         # add new orthogonal box
-                        pdb.set_trace()
                         box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
-                        a = b = c = box_diameter
+                        #a = b = c = box_diameter + 50  # 20 equals the cutoff
 
                         # DEBUGGING NOW
                         a = b = c = 400
 
                         alpha = beta = gamma = math.pi / 2
+
                         main_sys.ts_boxes = []
-                        main_sys.ts_boxes.append(mdb.Box(boxtype="lattice",
-                                                 ltc_a=a, ltc_b=b, ltc_c=c,
-                                                 ltc_alpha=alpha, ltc_beta=beta,
-                                                 ltc_gamma=gamma))
+                        main_sys.ts_boxes.append(
+                            mdb.Box(boxtype="lattice", ltc_a=a, ltc_b=b, ltc_c=c,
+                                    ltc_alpha=alpha, ltc_beta=beta, ltc_gamma=gamma))
+
                         del (main_sys_radius, add_sys_radius, box_diameter,
                              a, b, c, alpha, beta, gamma)
+
                         main_sys.ts_boxes[0].box_lat2lmp(triclinic=False)
 
                         # group atoms by bonds
@@ -663,11 +665,12 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                         # check interatomic distances
                         main_sys.create_linked_cells(-1)
-                        close_atms = main_sys.chk_atm_dist(frame_id=-1, min_dist=2)
+                        close_atms = main_sys.chk_atm_dist(frame_id=-1, min_dist=1.2)
 
                         # replace new atoms if they clash with atoms from the main system
                         # (which should not happen, just in case we grow an ellipsoid)
                         close_atms = sorted(close_atms)
+                        #pdb.set_trace()
 
                         # check if new atoms were placed too near to the main system
                         try:
@@ -715,7 +718,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 natoms_main_sys = comm.bcast(natoms_main_sys, 0)
 
-                quench_lmp   = lammps()
+                quench_lmp = lammps()
                 quench_pylmp = PyLammps(ptr=quench_lmp)
                 quench_lmp.command("log {} append".format(quench_log))
 
@@ -757,8 +760,8 @@ for curcycle, idx_lmpa in remaining_cycles:
                 # (prevents losing atoms due to being localized outside the cutoff)
                 if rank == 0:
                     cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys+1:])
-                    cog   /= np.linalg.norm(cog, axis=0)  # unit vector
-                    cog   *= -1e-5  # force vector of length 2 pointing towards the origin
+                    cog /= np.linalg.norm(cog, axis=0)  # unit vector
+                    cog *= -1e-5  # force vector of length 2 pointing towards the origin
                 else:
                     cog = None
 
@@ -788,9 +791,14 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # initial quench run
                 quench_steps = args.quench_steps
+
                 # 1st run with a little push towards the aggregate
                 if os.path.isfile(quench_rst) is False:
-                    quench_lmp.command("run {}".format(int(quench_steps*0.2)))
+                    #quench_lmp.command("run {}".format(int(quench_steps * 0.2)))
+                    # DEBUGGING OR LEAVING IT
+                    #TODO increase number of steps and force after several fails
+                    quench_lmp.command("run {}".format(10000))
+
                 quench_lmp.command("unfix group_loose_addforce")
                 # 2nd run without push bias
                 quench_lmp.command("run {} upto".format(quench_steps))
@@ -810,55 +818,54 @@ for curcycle, idx_lmpa in remaining_cycles:
                 ##=====================================#
                 # quench energy check, additional runs
                 ##=====================================#
-                #total_additional_quench_runs = 5
-                #chck_vals_pe_quench = int(quench_steps/args.quench_logsteps) - int(quench_steps/args.quench_logsteps*0.1)
-#
-                #for additional_quench_run in xrange(total_additional_quench_runs):
-#
-                #    # check if additional molecule docked successfully
-                #    if rank == 0:
-                #        out_quench_sys = process_data(sysprep_out, quench_dcd)
-                #        quench_success = check_aggregate(out_quench_sys,
-                #                                         atm_atm_dist=4,
-                #                                         frame_id=0)
-                #        del out_quench_sys
-#
-                #    quench_success = comm.bcast(quench_success, root=0)
-#
-                #    if quench_success is False:
-                #        break
-#
-                #    # ENERGY CHECK NOT NECESSARY IF MOLECULE HAS DOCKED SUCCESSFULLY
-                #    ## check quenching success by energy
-                #    #normal_distributed_pe_quench = None
-##
-                #    #if rank == 0:
-                #    #    (skewness_pe_quench,
-                #    #     pvalue_skewness_pe_quench,
-                #    #     pvalue_normality_quench,
-                #    #     normal_distributed_pe_quench,
-                #    #     _) = check_energy_convergence(quench_log,
-                #    #                                   keyword="PotEng",
-                #    #                                   stage="Quenching",
-                #    #                                   percentage=chck_vals_pe_quench,
-                #    #                                   debug=True)
-                #    #    write_to_log(("Skewness {}, "
-                #    #                  "Pvalue (skewness) {}, "
-                #    #                  "Pvalue (normality) {}\n").format(skewness_pe_quench,
-                #    #                                                    pvalue_skewness_pe_quench,
-                #    #                                                    pvalue_normality_quench))
-                #    #    del (skewness_pe_quench, pvalue_skewness_pe_quench, pvalue_normality_quench)
-##
-                #    #normal_distributed_pe_quench = comm.bcast(normal_distributed_pe_quench, 0)
-##
-                #    ## stop further runs, if normal distribution is achieved
-                #    #if normal_distributed_pe_quench is True:
-                #    #    break
-                #    #else:
-                #    #    if additional_quench_run < total_additional_quench_runs - 1:
-                #    #        quench_lmp.command("run {}".format(quench_steps))
-#
-                ##del (quench_steps, chck_vals_pe_quench)
+                total_additional_quench_runs = 0  # currently no need for additional runs
+                chck_vals_pe_quench = int(quench_steps/args.quench_logsteps) - int(quench_steps/args.quench_logsteps*0.1)
+
+                for additional_quench_run in xrange(total_additional_quench_runs):
+
+                    # check if additional molecule docked successfully
+                    if rank == 0:
+                        out_quench_sys = process_data(sysprep_out, quench_dcd)
+
+                        # skip first run since it has already been checked
+                        if additional_quench_run > 0:
+                            quench_success = check_aggregate(out_quench_sys,
+                                                             atm_atm_dist=4,
+                                                             frame_id=-1)
+                        del out_quench_sys
+
+                    quench_success = comm.bcast(quench_success, root=0)
+
+                    if quench_success is False:
+                        break
+
+                    # ENERGY CHECK NOT NECESSARY IF MOLECULE HAS DOCKED SUCCESSFULLY
+                    # check quenching success by energy
+                    normal_distributed_pe_quench = None
+
+                    #TODO Check convergence for quenching by rmsd
+                    if rank == 0:
+                        energy_result = check_energy_convergence([quench_log], keyword="PotEng",
+                                                                 percentage=chck_vals_pe_quench)
+
+                        write_to_log(("Skewness {}, "
+                                      "Pvalue (skewness) {}, "
+                                      "Pvalue (normality) {}\n").format(energy_result[0],
+                                                                        energy_result[1],
+                                                                        energy_result[2]))
+
+                        normal_distributed_pe_quench = energy_result[3]
+
+                    normal_distributed_pe_quench = comm.bcast(normal_distributed_pe_quench, 0)
+
+                    # stop further runs, if normal distribution is achieved
+                    if normal_distributed_pe_quench is True:
+                        break
+                    else:
+                        if additional_quench_run < total_additional_quench_runs - 1:
+                            quench_lmp.command("run {}".format(quench_steps // 10))
+
+                del (quench_steps, chck_vals_pe_quench)
 
                 # write data/restart file, adjust lammps written data file,
                 # rename lammps log file
@@ -1409,7 +1416,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     # read last step or define it as None if there was None before
                     try:
-                        last_step = equil_anneal_llog.data[-1]["Steps"][-1]
+                        last_step = equil_anneal_llog.data[-1]["Step"][-1]
                     except IndexError:
                         last_step = None
 
@@ -1521,7 +1528,7 @@ for curcycle, idx_lmpa in remaining_cycles:
             #anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps,
             #                                                              anneal_dcd))
             #anneal_lmp.command("dump_modify dump_annealing unwrap yes")
-            anneal_lmp.command("restart {} {} {}".format(args.logsteps*25,
+            anneal_lmp.command("restart {} {} {}".format(args.logsteps * 25,
                                                          anneal_rst,
                                                          anneal_rst))
 
@@ -1635,14 +1642,14 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     energy_result = check_energy_convergence(anneal_logs,
                                                              keyword="c_pe",
-                                                             perecentage=percentage_to_check,
+                                                             percentage=percentage_to_check,
                                                              debug=True)
-                    skew               = energy_result[0]
-                    p_skew             = energy_result[1]
-                    p_normal           = energy_result[2]
+                    skew = energy_result[0]
+                    p_skew = energy_result[1]
+                    p_normal = energy_result[2]
                     #status_normal_dist = energy_result[3]
                     normal_distributed_pe_quench = energy_result[3]
-                    min_pe             = energy_result[5]
+                    min_pe = energy_result[5]
 
                     # write results to the logfile
                     write_to_log("Skewness {} ".format(skew))

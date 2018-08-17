@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
 import collections
+import pdb
 import log_universe as logu
 
 __version__ = "2018-02-07"
@@ -17,6 +18,8 @@ class LmpLog(logu.LogUniverse):
         """
         Read a log.lammps file with one or more thermo entries.
         """
+        #pdb.set_trace()
+
         for lmplog in lmplogs:
             with open(lmplog, "r") as log_in:
                 line = log_in.readline()
@@ -25,7 +28,7 @@ class LmpLog(logu.LogUniverse):
                 while line != '':
                     # starting point of thermo-output
                     if (line.startswith("Memory usage per processor") or
-                       line.startswith("Per MPI rank memory allocation")):
+                        line.startswith("Per MPI rank memory allocation")):
 
                         # deploy containers for the data to come
                         thermo_line = log_in.readline()
