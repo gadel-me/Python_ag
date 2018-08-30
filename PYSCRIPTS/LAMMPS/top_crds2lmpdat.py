@@ -4,6 +4,7 @@ import argparse
 import math
 import md_box as mdb
 import ag_unify_md as agum
+import pdb
 
 """
 Input is as follows:
@@ -136,10 +137,11 @@ num_topo_atms   = len(sys_topo_ff.atoms)
 num_topo_coords = len(sys_topo_ff.ts_coords[0])
 n = num_topo_coords/num_topo_atms
 
-#if n.is_integer() is True:
-#    sys_topo_ff.add_topology_replicate(int(n), refresh_bonds=True)
-#else:
-#    raise Warning("Number of atoms in coordinates file is not a multiple of atoms in topology file!")
+if n.is_integer():
+    # replicate topology
+    sys_topo_ff.add_topology_replicate(int(n-1), refresh_bonds=True)
+else:
+    raise Warning("Number of atoms in coordinates file is not a multiple of atoms in topology file!")
 
 # box --------------------------------------------------------------------------
 # check if coordinates file has a cell given
