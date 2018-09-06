@@ -751,7 +751,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_lmp.command("group loose id > {}".format(natoms_main_sys))
 
                 # ice cube prevention
-                quench_lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(100))
+                #quench_lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(100))
 
                 # barostatting, thermostatting
                 quench_lmp.command("fix ensemble_quench loose nvt temp {0} {0} 0.1".format(quench_temp))
