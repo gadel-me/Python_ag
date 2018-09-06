@@ -761,7 +761,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 if rank == 0:
                     cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys+1:])
                     cog /= np.linalg.norm(cog, axis=0)  # unit vector
-                    cog *= -1e-5  # force vector of length 2 pointing towards the origin
+                    cog *= -1e-3  # force vector of length 2 pointing towards the origin
                 else:
                     cog = None
 
