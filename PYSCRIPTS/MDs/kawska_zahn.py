@@ -797,7 +797,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                     #quench_lmp.command("run {}".format(int(quench_steps * 0.2)))
                     # DEBUGGING OR LEAVING IT
                     #TODO increase number of steps and force after several fails
-                    quench_lmp.command("run {}".format(10000))
+                    quench_lmp.command("run {}".format(50000))
 
                 quench_lmp.command("unfix group_loose_addforce")
                 # 2nd run without push bias
