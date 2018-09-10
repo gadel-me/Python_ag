@@ -761,14 +761,14 @@ for curcycle, idx_lmpa in remaining_cycles:
                 if rank == 0:
                     cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys+1:])
                     cog /= np.linalg.norm(cog, axis=0)  # unit vector
-                    cog *= -1e-3  # force vector of length 2 pointing towards the origin
+                    cog *= -1e-4  # force vector of length 2 pointing towards the origin
                 else:
                     cog = None
 
                 del (natoms_main_sys)
                 cog = comm.bcast(cog, 0)
                 quench_lmp.command(("fix group_loose_addforce "
-                                    "loose addforce {0} {1} {2}").format(*cog))
+                                    "loose addforce {0} {1} {2} every 2").format(*cog))
 
                 del (quench_temp)
 
@@ -780,7 +780,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # trajectory
                 quench_lmp.command("dump QUENCH_DUMP all dcd {} {}".format(
-                                   args.quench_logsteps*2, quench_dcd))
+                                   args.quench_logsteps * 2, quench_dcd))
                 # unwrap trajectory coordinates
                 quench_lmp.command("dump_modify QUENCH_DUMP unwrap yes")
 
@@ -795,11 +795,10 @@ for curcycle, idx_lmpa in remaining_cycles:
                 # 1st run with a little push towards the aggregate
                 if os.path.isfile(quench_rst) is False:
                     #quench_lmp.command("run {}".format(int(quench_steps * 0.2)))
-                    # DEBUGGING OR LEAVING IT
-                    #TODO increase number of steps and force after several fails
-                    quench_lmp.command("run {}".format(50000))
+                    quench_lmp.command("run {}".format(20000))
 
                 quench_lmp.command("unfix group_loose_addforce")
+
                 # 2nd run without push bias
                 quench_lmp.command("run {} upto".format(quench_steps))
 
