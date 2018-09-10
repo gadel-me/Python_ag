@@ -180,7 +180,7 @@ def check_energy_convergence(logfiles,
 
 def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=False):
     """
-    #TODO Buggy, does not recognize aggregates properly when they form a chain
+    #TODO Buggy, does not recognize aggregates properly when they form a chain?
 
     At the moment this works only for orthogonal cells (reason: sub-cell length)
     Check if the aggregate did not get dissolved in the process. This is achieved
@@ -757,18 +757,19 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_lmp.command("fix ensemble_quench loose nvt temp {0} {0} 0.1".format(quench_temp))
 
                 # set an additional push to the added atoms that should be docked
+                # towards the origin at (0/0/0)
                 # (prevents losing atoms due to being localized outside the cutoff)
                 if rank == 0:
                     cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys+1:])
                     cog /= np.linalg.norm(cog, axis=0)  # unit vector
-                    cog *= -1e-4  # force vector of length 2 pointing towards the origin
+                    cog *= -1e-4
                 else:
                     cog = None
 
                 del (natoms_main_sys)
                 cog = comm.bcast(cog, 0)
                 quench_lmp.command(("fix group_loose_addforce "
-                                    "loose addforce {0} {1} {2} every 2").format(*cog))
+                                    "loose addforce {0} {1} {2} every 1").format(*cog))
 
                 del (quench_temp)
 
@@ -780,7 +781,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # trajectory
                 quench_lmp.command("dump QUENCH_DUMP all dcd {} {}".format(
-                                   args.quench_logsteps * 2, quench_dcd))
+                                   args.quench_logsteps, quench_dcd))
                 # unwrap trajectory coordinates
                 quench_lmp.command("dump_modify QUENCH_DUMP unwrap yes")
 
@@ -794,83 +795,24 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # 1st run with a little push towards the aggregate
                 if os.path.isfile(quench_rst) is False:
-                    #quench_lmp.command("run {}".format(int(quench_steps * 0.2)))
                     quench_lmp.command("run {}".format(20000))
 
+                # remove artificial pushing force and minimize the docked complex
                 quench_lmp.command("unfix group_loose_addforce")
-
-                # 2nd run without push bias
-                quench_lmp.command("run {} upto".format(quench_steps))
+                quench_lmp.command("run {}".format(10000))
 
                 # check if additional molecule docked successfully
                 if rank == 0:
                     out_quench_sys.import_dcd(quench_dcd)
                     out_quench_sys.read_frames(frame=-2, to_frame=-1)
                     out_quench_sys.close_dcd()
-
-                    # CURRENT DIRTY FIX: quench success is set to be always true
-                    quench_success = check_aggregate(out_quench_sys,
-                                                     frame_id=-1,
+                    quench_success = check_aggregate(out_quench_sys, frame_id=-1,
                                                      atm_atm_dist=4)
-                    quench_success = True
                     del out_quench_sys
 
                 quench_success = comm.bcast(quench_success, root=0)
 
-                ##=====================================#
-                # quench energy check, additional runs
-                ##=====================================#
-                total_additional_quench_runs = 0  # currently no need for additional runs
-                chck_vals_pe_quench = int(quench_steps/args.quench_logsteps) - int(quench_steps/args.quench_logsteps*0.1)
-
-                for additional_quench_run in xrange(total_additional_quench_runs):
-
-                    # check if additional molecule docked successfully
-                    if rank == 0:
-                        out_quench_sys = process_data(sysprep_out, quench_dcd)
-
-                        # skip first run since it has already been checked
-                        if additional_quench_run > 0:
-                            quench_success = check_aggregate(out_quench_sys,
-                                                             atm_atm_dist=4,
-                                                             frame_id=-1)
-                        del out_quench_sys
-
-                    quench_success = comm.bcast(quench_success, root=0)
-
-                    if quench_success is False:
-                        break
-
-                    # ENERGY CHECK NOT NECESSARY IF MOLECULE HAS DOCKED SUCCESSFULLY
-                    # check quenching success by energy
-                    normal_distributed_pe_quench = None
-
-                    #TODO Check convergence for quenching by rmsd
-                    if rank == 0:
-                        energy_result = check_energy_convergence([quench_log], keyword="PotEng",
-                                                                 percentage=chck_vals_pe_quench)
-
-                        write_to_log(("Skewness {}, "
-                                      "Pvalue (skewness) {}, "
-                                      "Pvalue (normality) {}\n").format(energy_result[0],
-                                                                        energy_result[1],
-                                                                        energy_result[2]))
-
-                        normal_distributed_pe_quench = energy_result[3]
-
-                    normal_distributed_pe_quench = comm.bcast(normal_distributed_pe_quench, 0)
-
-                    # stop further runs, if normal distribution is achieved
-                    if normal_distributed_pe_quench is True:
-                        break
-                    else:
-                        if additional_quench_run < total_additional_quench_runs - 1:
-                            quench_lmp.command("run {}".format(quench_steps // 10))
-
-                del (quench_steps, chck_vals_pe_quench)
-
-                # write data/restart file, adjust lammps written data file,
-                # rename lammps log file
+                # write data/restart file, adjust lammps written data file
                 if quench_success is True:
                     if rank == 0:
                         print("***Quench-Info: Molecules successfully docked.")
@@ -878,7 +820,6 @@ for curcycle, idx_lmpa in remaining_cycles:
                     # write restart file
                     quench_lmp.command("undump QUENCH_DUMP")
                     quench_lmp.command("unfix ensemble_quench")
-                    quench_lmp.command("unfix ic_prevention")
                     quench_lmp.command("reset_timestep 0")
                     quench_lmp.command("write_restart {}".format(quench_out))
                 else:
@@ -886,8 +827,8 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     if rank == 0:
                         print("***Quench-Warning: System did not aggregate! Quenching failed! Removing folders!")
-                        sl.rmtree(sysprep_dir)
                         sl.rmtree(quench_dir)
+                        sl.rmtree(sysprep_dir)
                         write_to_log("\tDocking failed\n")
 
                 # delete unnecessary files
