@@ -613,7 +613,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         M_arb_rot_y = agm.arb_rot_matrix([0, 1, 0])  # B
                         M_arb_rot_z = agm.arb_rot_matrix([0, 0, 1])  # C
                         # multiply all three matrices; ABC=A(BC)=(AB)C
-                        M_arb_xy  = np.matmul(M_arb_rot_x, M_arb_rot_y)  # AB
+                        M_arb_xy = np.matmul(M_arb_rot_x, M_arb_rot_y)  # AB
                         M_arb_xyz = np.matmul(M_arb_xy, M_arb_rot_z)  # ABC
                         # rotate the system
                         sys_add_natoms = len(add_sys.atoms)
@@ -642,7 +642,13 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                         # add new orthogonal box
                         box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
-                        a = b = c = box_diameter + 50  # 50 equals the cutoff plus safety distance
+
+                        # add safety distance to box diameter of small molecules
+                        # to satisfy the given cutoff
+                        if box_diameter > 30:
+                            a = b = c = box_diameter
+                        else:
+                            a = b = c = box_diameter + 30
 
                         # DEBUGGING NOW
                         #a = b = c = 400
