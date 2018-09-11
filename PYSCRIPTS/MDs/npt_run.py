@@ -41,9 +41,7 @@ parser.add_argument("-non_covalent",
                     default=None,
                     metavar="*.lmpcfg",
                     help="lammps' input-file/-script with non covalent simulation " +
-                         "settings (pair_styles, pair_coeffs)."
-                    )
-
+                         "settings (pair_styles, pair_coeffs).")
 
 parser.add_argument("-dreiding",
                     action="store_true",
@@ -53,15 +51,15 @@ parser.add_argument("-group",
                     nargs="*",
                     default="all",
                     metavar="water id < 20",
-                    help="Lammps group command: ID style args. This flag may be utilized several times for several groups."
-                    )
+                    help="Lammps group command: ID style args. This flag may be utilized several times for several groups.")
 
 parser.add_argument("-ensemble",
                     nargs="*",
                     default=None,
                     metavar="npt temp 150 290 0.1 iso 1.0 1.0 1",
                     help="Hoover npt settings for lammps. Currently only hoover " +
-                         "ensembles can be utilized. If not chosen, no md will be run."
+                         "ensembles can be utilized. If not chosen, no md will be run." +
+                         "Do NOT forget to set '' around the whole argument!"
                     )
 
 parser.add_argument("-minimize",

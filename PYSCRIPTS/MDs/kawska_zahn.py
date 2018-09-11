@@ -642,10 +642,10 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                         # add new orthogonal box
                         box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
-                        #a = b = c = box_diameter + 50  # 20 equals the cutoff
+                        a = b = c = box_diameter + 50  # 50 equals the cutoff plus safety distance
 
                         # DEBUGGING NOW
-                        a = b = c = 400
+                        #a = b = c = 400
 
                         alpha = beta = gamma = math.pi / 2
 
@@ -799,7 +799,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # remove artificial pushing force and minimize the docked complex
                 quench_lmp.command("unfix group_loose_addforce")
-                quench_lmp.command("run {}".format(10000))
+                quench_lmp.command("run {}".format(100000))
 
                 # check if additional molecule docked successfully
                 if rank == 0:
