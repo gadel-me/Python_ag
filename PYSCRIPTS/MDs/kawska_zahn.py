@@ -11,6 +11,8 @@ yet.
 
 #TODO Implement using a certain amount of cores for small systems only
 #TODO if a certain number of atoms exists.
+
+#TODO Annealing: Write a restart file after each completed annealing run
 """
 
 
@@ -121,6 +123,38 @@ def check_energy_convergence(logfiles,
     case the probability of getting a skewness different from that of a normal
     distribution (which is 0 because of symmetry).
 
+    Normality tests:
+
+    >   The Shapiro-Wilk test evaluates a data sample and quantifies how likely it is that the data
+        was drawn from a Gaussian distribution, named for Samuel Shapiro and Martin Wilk.
+
+    >   The D'Agostino's K^2 test calculates summary statistics from the data, namely kurtosis and
+        skewness, to determine if the data distribution departs from the normal distribution,
+        named for Ralph D'Agostino.
+        - Skew is a quantification of how much a distribution is pushed left or right,
+          a measure of asymmetry in the distribution.
+        - Kurtosis quantifies how much of the distribution is in the tail. It is a simple and commonly
+          used statistical test for normality.
+
+    >   Anderson-Darling Test is a statistical test that can be used to evaluate whether a data
+        sample comes from one of among many known data samples, named for Theodore Anderson and
+        Donald Darling.
+
+    A quick word on normality tests in general:
+        The theory for this test is based on the probability of getting a rational number from a
+        truly continuous distribution defined on the reals. The main goal of this test is to quickly
+        give a p-value for those that feel it necessary to test the uninteresting and uninformative
+        null hypothesis that the data represents an exact normal, and allows the user to then move
+        on to much more important questions, like "is the data close enough to the normal to use
+        normal theory inference?". After running this test (or better instead of running this and
+        any other test of normality) you should ask yourself what it means to test for normality
+        and why you would want to do so. Then plot the data and explore the interesting/useful
+        questions.
+
+    Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+            https://www.rdocumentation.org/packages/TeachingDemos/versions/2.10/topics/SnowsPenultimateNormalityTest
+            https://stackoverflow.com/questions/7781798/seeing-if-data-is-normally-distributed-in-r/7788452#7788452
+
     Input:
         > logfiles      list; all written lammps-logfiles
         > keyword       str; keywords from thermo-output
@@ -136,7 +170,7 @@ def check_energy_convergence(logfiles,
     if debug:
         print("***check_energy_convergence", logfiles)
 
-    normal_distribution = False
+    #normal_distribution = False
     data = []
 
     # gather all values from all logfiles given
@@ -146,40 +180,105 @@ def check_energy_convergence(logfiles,
             log_data.data[data_index][keyword]]
     num_values = len(data)
     percentage /= 100  # percentage to per cent
-    testdata = data[-int(percentage*num_values):]
-    #print(testdata)
+    testdata = data[-int(percentage * num_values):]
+
     min_value_testdata = min(testdata)
 
     if debug is True:
         print(("***Info: Smallest value of "
-               "{} % of all measured data is: {}").format(percentage*100,
-                                                          min_value_testdata)
-              )
+               "{} % of all measured data is: {}").format(percentage * 100,
+                                                          min_value_testdata))
 
+    # normality tests
+    alpha = 0.05  # alpha helps interpreting the p-value from the normality test at hand
+
+    # Shapiro-Wilk Test (only for ~ 2000 samples)
+    if len(testdata) <= 2000:
+        write_to_log("Shapiro-Wilk Test")
+        stat_shapiro, p_shapiro = scipy.stats.shapiro(testdata)
+        normal_shapiro = p_shapiro > alpha
+
+        if normal_shapiro:
+            write_to_log("Sample looks Gaussian (fail to reject H0)\n")
+        else:
+            write_to_log("Sample does not look Gaussian (reject H0)\n")
+
+    # D'Agostino's K^2 Test
+    write_to_log("D'Agostino's K^2 Test")
+    stat_agostino, p_agostino = scipy.stats.normaltest(testdata)
+    normal_agostino = p_agostino > alpha
+
+    if normal_agostino:
+        write_to_log("Sample looks Gaussian (fail to reject H0)\n")
+    else:
+        write_to_log("Sample does not look Gaussian (reject H0)\n")
+
+    # Anderson-Darling Test
+    write_to_log("Anderson-Darling Test")
+    result_anderson = scipy.stats.anderson(testdata, dist="norm")
+    write_to_log("Statistic: {}".format(result_anderson.statistic))
+
+    for idx in range(len(result_anderson.critical_values)):
+        sl_anderson = result_anderson.significance_level[idx]
+        cv_anderson = result_anderson.critical_values[idx]
+
+        # check if the null hypothesis can be rejected (H0: normal distributed)
+        normal_anderson = result_anderson.statistic < cv_anderson
+
+        # if H0 can be rejected: stop further testing and assume distribution
+        # is not normal if significance level is below 10 %
+        if normal_anderson is False and sl_anderson < 10:
+            break
+
+        if normal_anderson:
+            write_to_log("{:> .3f}: {:> .3f}, data looks normal (fail to reject H0)".format(sl_anderson, cv_anderson))
+        else:
+            write_to_log("{:> .3f}: {:> .3f}, data does not look normal (reject H0)".format(sl_anderson, cv_anderson))
+
+    # Compute the skewness of a data set, For normally distributed data,
+    # the skewness should be about 0
     skewness = scipy.stats.skew(testdata)
-    zscore_skewness, pvalue_skewness = scipy.stats.skewtest(testdata)
+    write_to_log("Skewness (should be 0): {:> 4.12f}".format(skewness))
 
-    # normality test
-    statistic_normality, pvalue_normality = scipy.stats.normaltest(testdata)
+    # determine if the skewness is close enough to 0 (statistically speaking)
+    stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
+    write_to_log("P-Value (skewness, should > 0.05): {:> 4.12f}".format(p_skewness))
 
-    if debug is True:
-        print(("***Info: "
-               "Skewness {}, "
-               "Pvalue (skewness) {}, "
-               "Pvalue (normality) {}").format(skewness,
-                                               pvalue_skewness,
-                                               pvalue_normality))
+    #statistic_normality, pvalue_normality = scipy.stats.normaltest(testdata)
 
-    # skewness ~ 0 with p-value <= 0.5 (normal distribution achieved)
-    if (skewness < 0.3 and skewness > -0.3) and pvalue_skewness <= 0.10 and pvalue_normality <= 0.10:
-        normal_distribution = True
+    # if debug is True:
+    #     print(("***Info: "
+    #            "Skewness {}, "
+    #            "Pvalue (skewness) {}, "
+    #            "Pvalue (normality) {}").format(skewness,
+    #                                            pvalue_skewness,
+    #                                            pvalue_normality))
 
-    return (skewness, pvalue_skewness, pvalue_normality,
-            normal_distribution, data, min_value_testdata)
+    # # skewness ~ 0 with p-value <= 0.5 (normal distribution achieved)
+    # if (skewness < 0.3 and skewness > -0.3) and pvalue_skewness >= 0.05 and pvalue_normality > 0.05:
+    #     normal_distribution = True
+
+    # #if (skewness < 0.3 and skewness > -0.3) and pvalue_normality <= 0.10:
+    # #    normal_distribution = True
+
+    # return (skewness, pvalue_skewness, pvalue_normality,
+    #         normal_distribution, data, min_value_testdata)
+
+
+def check_rmsd_convergence(dcdfiles):
+    """
+    Check if a simulation was finished.
+
+    Determine if a simulation reached equilibrium when the rmsd values do not
+    change too much anymore.
+    """
+    print("Not done yet!")
 
 
 def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=False):
     """
+    Check if several molecules form an aggregate.
+
     #TODO Buggy, does not recognize aggregates properly when they form a chain?
 
     At the moment this works only for orthogonal cells (reason: sub-cell length)
@@ -805,7 +904,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # remove artificial pushing force and minimize the docked complex
                 quench_lmp.command("unfix group_loose_addforce")
-                quench_lmp.command("run {}".format(100000))
+                quench_lmp.command("run {}".format(50000))
 
                 # check if additional molecule docked successfully
                 if rank == 0:
@@ -1353,10 +1452,11 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # choose ensemble
                 equil_anneal_lmp.command(("fix fix_nve_equil_anneal {} nve").format("all"))
-                equil_anneal_lmp.command(("fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.1").format("all", start_anneal_temp, stop_anneal_temp))
+                equil_anneal_lmp.command(("fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.5").format("all", start_anneal_temp, stop_anneal_temp))
 
                 if args.lmps is not None:
-                    equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 100").format("all"))
+                    #equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 100").format("all"))
+                    equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 50").format("all"))
 
                 # skip heating run if it is already finished but was restarted
                 if rank == 0:

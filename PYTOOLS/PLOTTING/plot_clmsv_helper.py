@@ -4,6 +4,8 @@ import matplotlib.mlab as mlab
 import scipy.stats as stats
 import numpy as np
 import math
+from statsmodels.graphics.gofplots import qqplot
+import pdb
 
 
 def ask4frame(first_last, num_frames):
@@ -24,12 +26,93 @@ def ask4keyword(xory, keywords):
     return raw_input("> ")
 
 
+def plot_qq(data, key):
+    """
+    Quantile-quantile plot.
+
+    This plot generates its own sample of the idealized distribution that we are comparing with,
+    in this case the Gaussian distribution. The idealized samples are divided into groups (e.g. 5),
+    called quantiles. Each data point in the sample is paired with a similar member from the
+    idealized distribution at the same cumulative distribution.
+
+    The resulting points are plotted as a scatter plot with the idealized value on the x-axis and
+    the data sample on the y-axis.
+
+    A perfect match for the distribution will be shown by a line of dots on a 45-degree angle from
+    the bottom left of the plot to the top right. Often a line is drawn on the plot to help make
+    this expectation clear. Deviations by the dots from the line shows a deviation from the
+    expected distribution.
+    """
+    data = np.array(data)
+    #pdb.set_trace()
+    qqplot(data, line='s')
+    # Set a title for current subplot
+    plt.title("QQ-Plot {}".format(key), fontweight='bold', fontsize=11)
+    plt.show()
+
+
 def plot_histogram(data, key, label=None):
     """
     Plot a histogram using given data
     """
+    alpha = 0.05
+
+    # Shapiro-Wilk Test (only for ~ 2000 samples)
+    if len(data) <= 2000:
+        print("Shapiro-Wilk Test")
+        stat_shapiro, p_shapiro = stats.shapiro(data)
+        normal_shapiro = p_shapiro > alpha
+
+        if normal_shapiro:
+            print("Sample looks Gaussian (fail to reject H0)\n")
+        else:
+            print("Sample does not look Gaussian (reject H0)\n")
+
+    # D'Agostino's K^2 Test
+    print("D'Agostino's K^2 Test")
+    stat_agostino, p_agostino = stats.normaltest(data)
+    normal_agostino = p_agostino > alpha
+
+    if normal_agostino:
+        print("Sample looks Gaussian (fail to reject H0)\n")
+    else:
+        print("Sample does not look Gaussian (reject H0)\n")
+
+    # Anderson-Darling Test
+    print("Anderson-Darling Test")
+    result_anderson = stats.anderson(data, dist="norm")
+    print("Statistic: {}".format(result_anderson.statistic))
+
+    for idx in range(len(result_anderson.critical_values)):
+        sl_anderson = result_anderson.significance_level[idx]
+        cv_anderson = result_anderson.critical_values[idx]
+
+        # check if the null hypothesis can be rejected (H0: normal distributed)
+        normal_anderson = result_anderson.statistic < cv_anderson
+
+        if normal_anderson:
+            print("{:> .3f}: {:> .3f}, data looks normal (fail to reject H0)".format(sl_anderson, cv_anderson))
+        else:
+            print("{:> .3f}: {:> .3f}, data does not look normal (reject H0)".format(sl_anderson, cv_anderson))
+
+    print("\n")
+    # Compute the skewness of a data set, For normally distributed data,
+    # the skewness should be about 0
+    skewness = stats.skew(data)
+    print("Skewness (should be 0): {:> 4.12f}".format(skewness))
+
+    # determine if the skewness is close enough to 0 (statistically speaking)
+    stat_skewness, p_skewness = stats.skewtest(data)
+    print("Statistic (Skewness): {:> 4.12f}".format(stat_skewness))
+    print("P-Value (skewness): {:> 4.12f}".format(p_skewness))
+
+    # kurtosis (tailing)
+    kurtosis = stats.kurtosis(data)
+    print("Kurtosis (should be 0): {}".format(kurtosis))
+    print("\n")
+
     # /// define mu and sigma
-    mu    = np.mean(data)  # mean of distribution
+    mu = np.mean(data)  # mean of distribution
     sigma = np.std(data)   # standard deviation of distribution
 
     # /// define bins
@@ -70,7 +153,9 @@ def plot_histogram(data, key, label=None):
 
 def plot_xy(xvals, yvals, xkey, ykey, linreg=False):
     """
-    Plot y-values against x-values
+    Plot y-values against x-values.
+
+    Plot the x against the y values.
     """
     # window layout#
     xyfig = plt.figure()
@@ -84,6 +169,11 @@ def plot_xy(xvals, yvals, xkey, ykey, linreg=False):
 
     if linreg is True:
         slope, intercept, r_value, p_value, std_err = stats.linregress(xvals, yvals)
+        print("{:<10s} {:> 4.12f}".format("Slope:", slope))
+        print("{:<10s} {:> 4.12f}".format("Intercept:", intercept))
+        print("{:<10s} {:> 4.12f}".format("R:", r_value))
+        print("{:<10s} {:> 4.12f}".format("P:", p_value))
+        print("{:<10s} {:> 4.12f}".format("Std.err.:", std_err))
 
     plt.plot(xvals, yvals, "r-", antialiased=True)
     plt.show()
