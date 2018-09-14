@@ -167,10 +167,6 @@ def check_energy_convergence(logfiles,
         > skewness, pvalue, zscore
         > data          list; all data for keyword from all files given
     """
-    if debug:
-        print("***check_energy_convergence", logfiles)
-
-    #normal_distribution = False
     data = []
 
     # gather all values from all logfiles given
@@ -181,7 +177,7 @@ def check_energy_convergence(logfiles,
     num_values = len(data)
     percentage /= 100  # percentage to per cent
     testdata = data[-int(percentage * num_values):]
-
+    len_testdata = len(testdata)
     min_value_testdata = min(testdata)
 
     if debug is True:
@@ -190,13 +186,15 @@ def check_energy_convergence(logfiles,
                                                           min_value_testdata))
 
     # normality tests
-    alpha = 0.05  # alpha helps interpreting the p-value from the normality test at hand
+    p_alpha = 0.05  # alpha helps interpreting the p-value from the normality test at hand
 
     # Shapiro-Wilk Test (only for ~ 2000 samples)
-    if len(testdata) <= 2000:
-        write_to_log("Shapiro-Wilk Test")
+    normal_shapiro = False
+
+    if len_testdata <= 2000:
+        write_to_log("Shapiro-Wilk Test:\n")
         stat_shapiro, p_shapiro = scipy.stats.shapiro(testdata)
-        normal_shapiro = p_shapiro > alpha
+        normal_shapiro = p_shapiro > p_alpha
 
         if normal_shapiro:
             write_to_log("Sample looks Gaussian (fail to reject H0)\n")
@@ -204,9 +202,9 @@ def check_energy_convergence(logfiles,
             write_to_log("Sample does not look Gaussian (reject H0)\n")
 
     # D'Agostino's K^2 Test
-    write_to_log("D'Agostino's K^2 Test")
+    write_to_log("D'Agostino's K^2 Test:\n")
     stat_agostino, p_agostino = scipy.stats.normaltest(testdata)
-    normal_agostino = p_agostino > alpha
+    normal_agostino = p_agostino > p_alpha
 
     if normal_agostino:
         write_to_log("Sample looks Gaussian (fail to reject H0)\n")
@@ -214,7 +212,7 @@ def check_energy_convergence(logfiles,
         write_to_log("Sample does not look Gaussian (reject H0)\n")
 
     # Anderson-Darling Test
-    write_to_log("Anderson-Darling Test")
+    write_to_log("Anderson-Darling Test:\n")
     result_anderson = scipy.stats.anderson(testdata, dist="norm")
     write_to_log("Statistic: {}".format(result_anderson.statistic))
 
@@ -238,31 +236,37 @@ def check_energy_convergence(logfiles,
     # Compute the skewness of a data set, For normally distributed data,
     # the skewness should be about 0
     skewness = scipy.stats.skew(testdata)
-    write_to_log("Skewness (should be 0): {:> 4.12f}".format(skewness))
+    write_to_log("Skewness (should be 0): {:> .12f}".format(skewness))
 
     # determine if the skewness is close enough to 0 (statistically speaking)
     stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
-    write_to_log("P-Value (skewness, should > 0.05): {:> 4.12f}".format(p_skewness))
+    write_to_log("P-Value (skewness, should > 0.05): {:> .12f}".format(p_skewness))
+    normal_skewness = (-0.3 < skewness < 0.3) and (p_skewness > 0.05)
 
-    #statistic_normality, pvalue_normality = scipy.stats.normaltest(testdata)
+    # determine if the kurtosis is close enough to 0 (statistically speaking)
+    kurtosis = scipy.stats.kurtosis(testdata)
 
-    # if debug is True:
-    #     print(("***Info: "
-    #            "Skewness {}, "
-    #            "Pvalue (skewness) {}, "
-    #            "Pvalue (normality) {}").format(skewness,
-    #                                            pvalue_skewness,
-    #                                            pvalue_normality))
+    if len_testdata > 20:
+        stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(len_testdata)
+        normal_kurtosis = (kurtosis < 0.2) and (p_kurtosis > 0.05)
+        write_to_log("Statistic (Kurtosis): {:> 4.12f}".format(stat_kurtosis))
+        write_to_log("P-Value (Kurtosis): {:> 4.12f}".format(p_kurtosis))
+        write_to_log("\n")
+    else:
+        write_to_log("Need more than 20 values for Kurtosis-Test!")
 
-    # # skewness ~ 0 with p-value <= 0.5 (normal distribution achieved)
-    # if (skewness < 0.3 and skewness > -0.3) and pvalue_skewness >= 0.05 and pvalue_normality > 0.05:
-    #     normal_distribution = True
+    # only use tests that are allowed for the amount of given values for the shape and normality
+    if len_testdata > 20:
+        normal_shape = normal_skewness and normal_kurtosis
+    else:
+        normal_shape = normal_skewness
 
-    # #if (skewness < 0.3 and skewness > -0.3) and pvalue_normality <= 0.10:
-    # #    normal_distribution = True
+    if len_testdata <= 2000:
+        normal_distributed = normal_shape and normal_shapiro and normal_agostino and normal_anderson
+    else:
+        normal_distributed = normal_shape and normal_agostino and normal_anderson
 
-    # return (skewness, pvalue_skewness, pvalue_normality,
-    #         normal_distribution, data, min_value_testdata)
+    return (normal_distributed, min_value_testdata)
 
 
 def check_rmsd_convergence(dcdfiles):
@@ -1662,7 +1666,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # load last simulation frame
                 status_anneal_agg = False
-                normal_distributed_pe_quench = False
+                normal_distributed_pe_anneal = False
                 pe = None
 
                 if rank == 0:
@@ -1693,22 +1697,12 @@ for curcycle, idx_lmpa in remaining_cycles:
                                                              keyword="c_pe",
                                                              percentage=percentage_to_check,
                                                              debug=True)
-                    skew = energy_result[0]
-                    p_skew = energy_result[1]
-                    p_normal = energy_result[2]
-                    #status_normal_dist = energy_result[3]
-                    normal_distributed_pe_quench = energy_result[3]
-                    min_pe = energy_result[5]
-
-                    # write results to the logfile
-                    write_to_log("Skewness {} ".format(skew))
-                    write_to_log("Pvalue (skewness) {} ".format(p_skew))
-                    write_to_log("Pvalue (normality) {}\n\n".format(p_normal))
-                    del (skew, p_skew, p_normal)
+                    normal_distributed_pe_anneal = energy_result[0]
+                    min_pe = energy_result[1]
 
                 del anneal_dcd
                 status_anneal_agg = comm.bcast(status_anneal_agg, 0)
-                normal_distributed_pe_quench = comm.bcast(normal_distributed_pe_quench, 0)
+                normal_distributed_pe_anneal = comm.bcast(normal_distributed_pe_anneal, 0)
 
                 #========================================#
                 # check outcome of last annealing attempt
@@ -1722,7 +1716,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         print("***Productive-Anneal Warning: Aggregate got dissolved! Annealing failed!")
                         time.sleep(5)
                     break
-                elif normal_distributed_pe_quench is True:  # aggregate ok, energy ok
+                elif normal_distributed_pe_anneal is True:  # aggregate ok, energy ok
                     anneal_success = True
                     break
                 else:  # aggregate ok, energy not yet

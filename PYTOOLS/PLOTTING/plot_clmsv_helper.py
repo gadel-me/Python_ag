@@ -96,6 +96,7 @@ def plot_histogram(data, key, label=None):
             print("{:> .3f}: {:> .3f}, data does not look normal (reject H0)".format(sl_anderson, cv_anderson))
 
     print("\n")
+
     # Compute the skewness of a data set, For normally distributed data,
     # the skewness should be about 0
     skewness = stats.skew(data)
@@ -105,11 +106,21 @@ def plot_histogram(data, key, label=None):
     stat_skewness, p_skewness = stats.skewtest(data)
     print("Statistic (Skewness): {:> 4.12f}".format(stat_skewness))
     print("P-Value (skewness): {:> 4.12f}".format(p_skewness))
+    print("\n")
 
-    # kurtosis (tailing)
+    # Compute the kurtosis (tailing) of a data set, For normally distributed data,
+    # the kurtosis should be about 0
     kurtosis = stats.kurtosis(data)
     print("Kurtosis (should be 0): {}".format(kurtosis))
-    print("\n")
+
+    # determine if the kurtosis is close enough to 0 (statistically speaking)
+    if len(data) > 20:
+        stat_kurtosis, p_kurtosis = stats.kurtosistest(data)
+        print("Statistic (Kurtosis): {:> 4.12f}".format(stat_kurtosis))
+        print("P-Value (Kurtosis): {:> 4.12f}".format(p_kurtosis))
+        print("\n")
+    else:
+        print("Need more than 20 values for Kurtosis-Test!")
 
     # /// define mu and sigma
     mu = np.mean(data)  # mean of distribution
