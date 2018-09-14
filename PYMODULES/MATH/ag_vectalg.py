@@ -177,6 +177,7 @@ def get_plane(vt_1, vt_2, vt_p=[0, 0, 0]):
 def get_point_plane_dist(p, a, b, c, d, distance_sign_only=False):
     """
     Calculate the distance from a point p to the plane defined by a, b, c and d.
+
     Sources: https://en.wikipedia.org/wiki/Plane_(mathematics)#Describing_a_plane_through_three_points
 
     Input:
@@ -187,8 +188,8 @@ def get_point_plane_dist(p, a, b, c, d, distance_sign_only=False):
                                side of the cube the point is)
     """
     if distance_sign_only is True:
-        distance = a*p[0]+b*p[1]+c*p[2]-d
+        distance = a * p[0] + b * p[1] + c * p[2] - d
     else:
-        distance = abs(a*p[0]+b*p[1]+c*p[2]-d)/math.sqrt(a**2+b**2+c**2)
+        distance = abs(a * p[0] + b * p[1] + c * p[2] - d) / math.sqrt(a**2 + b**2 + c**2)
 
     return distance

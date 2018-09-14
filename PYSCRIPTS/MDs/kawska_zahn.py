@@ -37,6 +37,7 @@ import md_box as mdb
 import ag_unify_md as agum
 import ag_geometry as agm
 import ag_unify_log as agul
+import ag_vectalg as agv
 
 """
 Kawska Zahn Approach with lammps. Do not use neigh yes since it leads to segment-
@@ -248,7 +249,7 @@ def check_energy_convergence(logfiles,
 
     if len_testdata > 20:
         stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(len_testdata)
-        normal_kurtosis = (kurtosis < 0.2) and (p_kurtosis > 0.05)
+        normal_kurtosis = (-0.2 < kurtosis < 0.2) and (p_kurtosis > 0.05)
         write_to_log("Statistic (Kurtosis): {:> 4.12f}".format(stat_kurtosis))
         write_to_log("P-Value (Kurtosis): {:> 4.12f}".format(p_kurtosis))
         write_to_log("\n")
@@ -345,6 +346,37 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
     #pdb.set_trace()
 
     return aggregate_ok
+
+
+def cut_solvent_box(solvent_data, box, output_name):
+    """
+    Cut a smaller solvent box from a bigger one that will be used during the simulation.
+
+    Given a (in the best case) larger solvent box, a smaller one will be cut.
+    Having only as many solvent molecules as absolutely necessary reduces the
+    calculation time. This is possible since the potential energy for a group
+    of atoms may be calculated with lammps. The center of the box will be at
+    the origin.
+
+    > solvent_data      str; lammps data file of the solvent
+    > box               Box; size of the box to cut out
+    > output_name       str; name of new lammps data file with cut coordinates
+    """
+    solvent = process_data(solvent_data)
+
+    # generate planes that describe the box
+    cart_box = box.box_lmp2cart()
+    plane_ab = agv.get_plane(cart_box.crt_a, cart_box.crt_b)
+    plane_ab_c = agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)
+    plane_ac = agv.get_plane(cart_box.crt_a, cart_box.crt_c)
+    plane_ac_b = agv.get_plane(cart_box.crt_a, cart_box.crt_c, cart_box.crt_b)
+    plane_bc = agv.get_plane(cart_box.crt_b, cart_box.crt_c)
+    plane_bc_a = agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)
+    solvent.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ac, plane_ac_b, plane_bc, plane_bc_a)
+
+    # def new box vectors by given box angles
+    solvent.ts_boxes[0] = box
+    solvent.write_lmpdat(output_name)
 
 
 #==============================================================================#
@@ -616,6 +648,7 @@ for curcycle, idx_lmpa in remaining_cycles:
     quench_log = quench_dir + "quench_{}.lmplog".format(curcycle)
 
     # anneal -> solvent
+    cut_solv_out  = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
     void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmpdat"
     void_solv_rst = anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
     void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
@@ -806,7 +839,6 @@ for curcycle, idx_lmpa in remaining_cycles:
                     # write successful steps to log file
                     write_to_log("\tSphere-radius: {}\n".format(kwz_radius))
                     write_to_log("\tOutput-File: {}\n\n".format(sysprep_out))
-
                     del (main_sys, kwz_radius)
 
             #===================================================================
@@ -984,13 +1016,16 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # solvent
                 if rank == 0:
-                    solvent_sys = process_data(args.lmps)
+                    # cut smaller solvent box from big solvent box, use box vectors
+                    # from solvate system
+                    cut_solvent_box(args.lmps, solvate_sys.ts_boxes[-1], cut_solv_out)
+                    solvent_sys = process_data(cut_solv_out)
                     natoms_solvent_sys = len(solvent_sys.atoms)
 
-                    # read geometry from previous annealing
-                    if os.path.isfile(pre_solvent_anneal_out) is True:
-                        solvent_sys.ts_coords = []
-                        solvent_sys.read_xyz(pre_solvent_anneal_out)
+                    # read geometry from previous annealing (deprecated since new boxes are cut for each run)
+                    #if os.path.isfile(pre_solvent_anneal_out) is True:
+                    #    solvent_sys.ts_coords = []
+                    #    solvent_sys.read_xyz(pre_solvent_anneal_out)
 
                     # solute + solvent
                     solution_sys = copy.deepcopy(solvate_sys)
@@ -1052,7 +1087,8 @@ for curcycle, idx_lmpa in remaining_cycles:
                     elif os.path.isfile(pre_solvent_anneal_out) is True:  # output from previous run
                         void_lmp.command("read_data {}".format(void_solv_out))
                     else:  # first run with solvent
-                        void_lmp.command("read_data {}".format(args.lmps))
+                        #void_lmp.command("read_data {}".format(args.lmps))
+                        void_lmp.command("read_data {}".format(cut_solv_out))
 
                     #TODO apply a proper fix for creating the voids using the
                     #TODO right pair coefficients from the right files

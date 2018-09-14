@@ -823,7 +823,6 @@ class Universe(object):
         If no box vectors are given, define (a) rectangular box(es) by
         given atomic coordinates.
         """
-
         for cid, cframe in enumerate(self.ts_coords):
             # (re)define initial coordinates
             x_smallest, y_smallest, z_smallest = 1e20, 1e20, 1e20
@@ -1687,12 +1686,13 @@ class Universe(object):
         Input:
             > inverse_cut   boolean; decide whether atoms inside (True) or out-
                             side (False) the box are accepted
-            > surfaces      tuple; contains all plane-variables (a, b, c, d),
+            > surfaces      tuple; contains all (!) plane-variables (a, b, c, d),
                             mind the sign for each plane since it determines
-                            which atom is in- or outside!
+                            which atom is in- or outside! Create plane-variables
+                            using the get_plane function from the ag_vectalg module.
         """
         # define some containers for atoms inside and outside the box
-        inside_atoms  = []
+        inside_atoms = []
         outside_atoms = []
 
         # get atoms that are inside our defined box
