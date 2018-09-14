@@ -6,6 +6,9 @@ lammps as the driver for molecular dynamics simulations. Equilibration is
 checked and the simulation time is elongated if the system has not equilibrated
 yet.
 
+#TODO void_solv_0_out.lmpdat should not be the name for the solvated system
+#TODO seems like a bug
+
 #TODO Implement using the gpu for small systems only if a certain number of
 #TODO atoms exists.
 
@@ -1084,8 +1087,8 @@ for curcycle, idx_lmpa in remaining_cycles:
                     # load last void state
                     if os.path.isfile(void_solv_rst) is True:  # void run was aborted, restart file written; start from here
                         void_lmp.command("read_restart {}".format(void_solv_rst))
-                    elif os.path.isfile(pre_solvent_anneal_out) is True:  # output from previous run
-                        void_lmp.command("read_data {}".format(void_solv_out))
+                    #elif os.path.isfile(pre_solvent_anneal_out) is True:  # output from previous run
+                    #    void_lmp.command("read_data {}".format(void_solv_out))
                     else:  # first run with solvent
                         #void_lmp.command("read_data {}".format(args.lmps))
                         void_lmp.command("read_data {}".format(cut_solv_out))
