@@ -107,7 +107,7 @@ class Universe(object):
             if atm_keyword == "atm_key":
                 self.atoms = natsorted(self.atoms, key=mduh.get_atm_key)
             elif atm_keyword == "atm_grp":
-                self.atoms = natsorted(self.atoms, key=mduh.get_atm_atm_grp)
+                self.atoms = natsorted(self.atoms, key=mduh.get_atm_grp)
             elif atm_keyword == "sitnam":
                 self.atoms = natsorted(self.atoms, key=mduh.get_atm_sitnam)
             elif atm_keyword == "res":
@@ -182,6 +182,13 @@ class Universe(object):
             iimp.imp_id = cimp_id
 
         # /// refresh molecules
+        for molecule_idx, molecule in enumerate(self.molecules):
+            molecule = list(molecule)
+
+            for catm_idx, catm_id in enumerate(molecule):
+                molecule[catm_idx] = assigned_atm_ids[catm_id]
+
+            self.molecules[molecule_idx] = set(molecule)
 
     def delete_atoms(self, *atoms2delete):
         """
@@ -1111,7 +1118,6 @@ class Universe(object):
         # remove duplicates
         close_contacts = set(close_contacts)
 
-        #pdb.set_trace()
         #if get_aggregates is True:
         #    print("***Info: Connected groups: ", connected_groups)
 
@@ -1123,7 +1129,6 @@ class Universe(object):
             connections = to_graph(connected_groups)
             aggregates = connected_components(connections)
             aggregates = [i for i in aggregates]  # generator to list
-            #pdb.set_trace()
             return (close_contacts, aggregates)
 
         return close_contacts
@@ -1516,7 +1521,7 @@ class Universe(object):
         """
         Programs, such as lammps, need (why so ever) to have the integers in
         data-files to run from 1-N. Since other programs (like VMD) have starting
-        indices with 0, it is easier to convert the internal structure (starting
+        indices at 0, it is easier to convert the internal structure (starting
         with 0) to the one desired.
 
         Input:
@@ -1717,6 +1722,8 @@ class Universe(object):
         else:
             # delete atoms which are inside the box
             self.delete_atoms(*inside_atoms)
+
+        self.refresh()
 
     def find_h_bonds(self, frame_id, distance):
         """

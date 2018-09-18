@@ -346,12 +346,10 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
         if debug is True:
             print("***Check Aggregate Info: Aggregate looks fine!")
 
-    #pdb.set_trace()
-
     return aggregate_ok
 
 
-def cut_solvent_box(solvent_data, box, output_name):
+def cut_solvent_box(solvent_data, box, output_name, dcd_lammps=None):
     """
     Cut a smaller solvent box from a bigger one that will be used during the simulation.
 
@@ -365,22 +363,46 @@ def cut_solvent_box(solvent_data, box, output_name):
     > box               Box; size of the box to cut out
     > output_name       str; name of new lammps data file with cut coordinates
     """
-    solvent = process_data(solvent_data)
+    solvent = process_data(solvent_data, dcd_lammps)
 
     # generate planes that describe the box
-    cart_box = box.box_lmp2cart()
+    cart_box = copy.deepcopy(box)
+    cart_box.box_lmp2cart()
+
+    # define planes which form the box to cut (plane vectors always need the same
+    # origin or they will be shifted)
     plane_ab = agv.get_plane(cart_box.crt_a, cart_box.crt_b)
-    plane_ab_c = agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)
-    plane_ac = agv.get_plane(cart_box.crt_a, cart_box.crt_c)
-    plane_ac_b = agv.get_plane(cart_box.crt_a, cart_box.crt_c, cart_box.crt_b)
+    plane_ca = agv.get_plane(cart_box.crt_c, cart_box.crt_a)
     plane_bc = agv.get_plane(cart_box.crt_b, cart_box.crt_c)
-    plane_bc_a = agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)
-    solvent.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ac, plane_ac_b, plane_bc, plane_bc_a)
+
+    # opposite planes to ab, ca and bc
+    plane_ab_c = [-1 * i for i in agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)]
+    plane_ca_b = [-1 * i for i in agv.get_plane(cart_box.crt_c, cart_box.crt_a, cart_box.crt_b)]
+    plane_bc_a = [-1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)]
+
+    # cut plane
+    solvent.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
+
+    # enlarge box so atoms will not clash
+    #pdb.set_trace()
+    cart_box.box_cart2lat()
+    cart_box.ltc_a += 4
+    cart_box.ltc_b += 4
+    cart_box.ltc_c += 4
+    cart_box.box_lat2lmp()
 
     # def new box vectors by given box angles
-    solvent.ts_boxes[0] = box
-    solvent.write_lmpdat(output_name)
+    solvent.ts_boxes[0] = cart_box
 
+    solvent.ts_boxes[0].lmp_xy = None
+    solvent.ts_boxes[0].lmp_xz = None
+    solvent.ts_boxes[0].lmp_yz = None
+
+    solvent.mols_to_grps()
+    solvent.change_indices(incr=1, mode="increase")
+    solvent.write_lmpdat(output_name, cgcmm=True)
+    write_to_log("Box cut!")
+    #return solvent
 
 #==============================================================================#
 # Setup MPI
@@ -780,6 +802,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         del add_sys
 
                         # add new orthogonal box
+                        #box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
                         box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
 
                         # add safety distance to box diameter of small molecules
@@ -815,7 +838,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # replace new atoms if they clash with atoms from the main system
                         # (which should not happen, just in case we grow an ellipsoid)
                         close_atms = sorted(close_atms)
-                        #pdb.set_trace()
+
 
                         # check if new atoms were placed too near to the main system
                         try:
@@ -1021,7 +1044,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                 if rank == 0:
                     # cut smaller solvent box from big solvent box, use box vectors
                     # from solvate system
-                    cut_solvent_box(args.lmps, solvate_sys.ts_boxes[-1], cut_solv_out)
+                    if not os.path.isfile(cut_solv_out):
+                        cut_solvent_box(args.lmps, solvate_sys.ts_boxes[-1], cut_solv_out)
+
                     solvent_sys = process_data(cut_solv_out)
                     natoms_solvent_sys = len(solvent_sys.atoms)
 
@@ -1091,6 +1116,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                     #    void_lmp.command("read_data {}".format(void_solv_out))
                     else:  # first run with solvent
                         #void_lmp.command("read_data {}".format(args.lmps))
+                        #pdb.set_trace()
                         void_lmp.command("read_data {}".format(cut_solv_out))
 
                     #TODO apply a proper fix for creating the voids using the

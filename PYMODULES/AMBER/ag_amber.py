@@ -437,11 +437,14 @@ class AmberStuff(mdu.Universe):
             pass
 
         # delete unneeded variables (at least at the moment there is no need)
-        del section_number_excluded_atoms
-        del section_scee_scale_factor
-        del section_scnb_scale_factor
-        del section_solty
-        del section_radii
+        try:
+            del section_number_excluded_atoms
+            del section_scee_scale_factor
+            del section_scnb_scale_factor
+            del section_solty
+            del section_radii
+        except UnboundLocalError:
+            pass
 
         # convert amber charges to normal ones
         print("***Prmtop-Info: Converting prmtop-charges.")
