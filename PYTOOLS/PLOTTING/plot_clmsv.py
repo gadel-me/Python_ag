@@ -19,8 +19,7 @@ parser.add_argument("clmsv",
                     metavar="foo.clmsv",
                     action="store",
                     help="Column separated files containing values " +
-                         "for several keywords"
-                    )
+                         "for several keywords")
 
 
 parser.add_argument("-xkey",
