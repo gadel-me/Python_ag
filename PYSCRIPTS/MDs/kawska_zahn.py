@@ -383,8 +383,7 @@ def cut_solvent_box(solvent_data, box, output_name, dcd_lammps=None):
     # cut plane
     solvent.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
 
-    # enlarge box so atoms will not clash
-    #pdb.set_trace()
+    # enlarge box a little so atoms at the edge will not clash due to pbc
     cart_box.box_cart2lat()
     cart_box.ltc_a += 4
     cart_box.ltc_b += 4
@@ -506,20 +505,21 @@ parser.add_argument("-pa",
 # quenching
 #==========#
 
-parser.add_argument("-quench_temp",
+parser.add_argument("-quench_temp_start",
                     type=int,
-                    default=5
-                    )
+                    default=5)
+
+parser.add_argument("-quench_temp_stop",
+                    type=int,
+                    default=5)
 
 parser.add_argument("-quench_steps",
                     type=int,
-                    default=250000
-                    )
+                    default=250000)
 
 parser.add_argument("-quench_logsteps",
                     type=int,
-                    default=1000
-                    )
+                    default=1000)
 
 #==========#
 # annealing
@@ -527,23 +527,19 @@ parser.add_argument("-quench_logsteps",
 
 parser.add_argument("-void_solvent_steps",
                     type=int,
-                    default=500
-                    )
+                    default=500)
 
 parser.add_argument("-start_relax_solvent_temp",
                     type=int,
-                    default=10
-                    )
+                    default=10)
 
 parser.add_argument("-stop_relax_solvent_temp",
                     type=int,
-                    default=10
-                    )
+                    default=10)
 
 parser.add_argument("-relax_solvent_steps",
                     type=int,
-                    default=50000
-                    )
+                    default=50000)
 
 parser.add_argument("-start_equil_anneal_temp",
                     type=int,
@@ -556,8 +552,7 @@ parser.add_argument("-stop_equil_anneal_temp",
 
 parser.add_argument("-equil_anneal_steps",
                     type=int,
-                    default=500000
-                    )
+                    default=500000)
 
 parser.add_argument("-equil_anneal_ensemble",
                     type=str,
@@ -566,8 +561,7 @@ parser.add_argument("-equil_anneal_ensemble",
 
 parser.add_argument("-anneal_steps",
                     type=int,
-                    default=2000000
-                    )
+                    default=2000000)
 
 parser.add_argument("-additional_anneal_steps",
                     type=int,
@@ -579,8 +573,7 @@ parser.add_argument("-anneal_logsteps",
 
 parser.add_argument("-requench_steps",
                     type=int,
-                    default=150000
-                    )
+                    default=150000)
 
 args = parser.parse_args()
 
@@ -839,7 +832,6 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # (which should not happen, just in case we grow an ellipsoid)
                         close_atms = sorted(close_atms)
 
-
                         # check if new atoms were placed too near to the main system
                         try:
                             if close_atms[-1] > natoms_main_sys:
@@ -903,14 +895,15 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_lmp.command("boundary f f f")
 
                 # define simulation temps
-                quench_temp = args.quench_temp
+                quench_temp_start = args.quench_temp_start
+                quench_temp_stop = args.quench_temp_stop
 
                 # read data or restart file
                 if os.path.isfile(quench_rst) is True:
                     quench_lmp.command("read_restart {}".format(quench_rst))
                 else:
                     quench_lmp.command("read_data {}".format(sysprep_out))
-                    quench_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(quench_temp))
+                    quench_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(quench_temp_start))
 
                 if args.pair_coeffs is not None:
                     quench_lmp.file(args.pair_coeffs)
@@ -921,13 +914,14 @@ for curcycle, idx_lmpa in remaining_cycles:
                 #quench_lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(100))
 
                 # barostatting, thermostatting
-                quench_lmp.command("fix ensemble_quench loose nvt temp {0} {0} 0.1".format(quench_temp))
+                quench_lmp.command("fix ensemble_quench loose nvt temp {} {} 0.1".format(quench_temp_start,
+                                                                                         quench_temp_stop))
 
                 # set an additional push to the added atoms that should be docked
                 # towards the origin at (0/0/0)
                 # (prevents losing atoms due to being localized outside the cutoff)
                 if rank == 0:
-                    cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys+1:])
+                    cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys + 1:])
                     cog /= np.linalg.norm(cog, axis=0)  # unit vector
                     cog *= -1e-4
                 else:
@@ -1429,10 +1423,10 @@ for curcycle, idx_lmpa in remaining_cycles:
                     # berendsen thermo- and barostatting
                     #relax_solvent_lmp.command(("fix fix_nve_relax_solvent {} nve").format("solvent"))
                     #relax_solvent_lmp.command(("fix fix_temp_berendsen_relax_solvent {} "
-                    #                           "temp/berendsen {} {} 0.1").format("solvent",
+                    #                           "temp/berendsen {} {} 0.5").format("solvent",
                     #                          start_relax_temp, stop_relax_temp))
                     #relax_solvent_lmp.command(("fix fix_press_berendsen_relax_solvent {} "
-                    #                           "press/berendsen iso 1.0 1.0 1.0").format("solvent"))
+                    #                           "press/berendsen iso 1.0 1.0 50.0").format("solvent"))
 
                     # hoover-nose thermo- and barostatting
                     relax_solvent_lmp.command(("fix ensemble_relax_solvent {} "
