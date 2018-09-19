@@ -932,7 +932,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_lmp.command(("fix group_loose_addforce "
                                     "loose addforce {0} {1} {2} every 1").format(*cog))
 
-                del (quench_temp)
+                del (quench_temp_start, quench_temp_stop)
 
                 # logging of thermodynamic data
                 quench_lmp.command("thermo_style custom " + " ".join(thermargs))
@@ -942,7 +942,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # trajectory
                 quench_lmp.command("dump QUENCH_DUMP all dcd {} {}".format(
-                                   args.quench_logsteps, quench_dcd))
+                    args.quench_logsteps, quench_dcd))
                 # unwrap trajectory coordinates
                 quench_lmp.command("dump_modify QUENCH_DUMP unwrap yes")
 
