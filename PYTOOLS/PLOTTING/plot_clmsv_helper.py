@@ -5,7 +5,7 @@ import scipy.stats as stats
 import numpy as np
 import math
 from statsmodels.graphics.gofplots import qqplot
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.graphics.tsaplots import plot_acf
 import pdb
 
 
@@ -135,11 +135,12 @@ def plot_histogram(data, key, label=None):
 
     # /// define mu and sigma
     mu = np.mean(data)  # mean of distribution
+    median = np.median(data)
     sigma = np.std(data)   # standard deviation of distribution
 
     # /// define bins
     num_bins = np.sqrt(len(data))
-    num_bins = math.ceil(num_bins)  # only int
+    num_bins = int(num_bins)  # only int
 
     if num_bins > 200:
         num_bins = 200  # cap number of bins to max. 200
@@ -149,20 +150,23 @@ def plot_histogram(data, key, label=None):
     x_min = data[0]
     x_max = data[-1]
     x_range = np.linspace(x_min, x_max, num_bins)
+
     plt.xlabel("delta", fontsize=10, fontweight='bold')
     plt.ylabel("Probability density", fontsize=10, fontweight='bold')
 
     # histogram
-    n, bins, patches = plt.hist(data, bins=x_range, normed=True, color="#E6E6FA",
+    n, bins, patches = plt.hist(data, bins=x_range, density=True, color="#E6E6FA",
                                 align="mid", cumulative=False)
 
     # define best fit line for given x_range, mu and sigma
     pdf_x_values = bins
     pdf_y_values = mlab.normpdf(pdf_x_values, mu, sigma)
-    plt.plot(pdf_x_values, pdf_y_values, "r--", linewidth=0.5)
+    plt.plot(pdf_x_values, pdf_y_values, "r--", linewidth=0.5, alpha=0.5,
+             label="Fitted data")
 
     # line that goes through mu (=max. of gauss-function)
-    plt.axvline(x=mu, linewidth=0.5, color="red", alpha=1.0)
+    plt.axvline(x=mu, linewidth=0.5, color="red", alpha=3.0, label="average")
+    plt.axvline(x=median, linewidth=0.5, color="green", alpha=3.0, label="median")
 
     # Tweak spacing to prevent clipping of ylabel
     plt.subplots_adjust(left=0.15)
@@ -170,6 +174,29 @@ def plot_histogram(data, key, label=None):
     # Set a title for current subplot
     plt.title("Histogram of %r $\mu=%.4f$ $\sigma=%.4f$" % (key, mu, sigma),
               fontweight='bold', fontsize=11)
+
+    # chi square test to check the quality of the fit
+    histo, bin_edges = np.histogram(data, bins=num_bins, normed=False)
+    a1, b1 = stats.norm.fit(data)
+    cdf = stats.norm.cdf(bin_edges, a1, b1)
+    #scaling_factor = len(data) * (x_max - x_min) / num_bins
+    scaling_factor = len(data)
+    # expected frequencies (haufigkeiten)
+    expected_values = scaling_factor * np.diff(cdf)
+    chisquare_results = stats.chisquare(histo, f_exp=expected_values, ddof=2)
+    print(chisquare_results, "\n")
+    #pdb.set_trace()
+
+    # Kolmogorov-Smirnov test for goodness of fit
+    kstest_results = stats.kstest(data, "norm")
+    print(kstest_results)
+
+    #if kstest_results[1] > 0.05:
+    #    print("{} > 0.05: Normal distribution seems identical to given distribution (failed to reject H0)\n".format(kstest_results[1]))
+    #else:
+    #    print("{} < 0.05: Normal distribution is not identical to given distribution (reject H0)\n".format(kstest_results[1]))
+
+    plt.legend()
     plt.show()
 
 
