@@ -63,6 +63,17 @@ group_dor2.add_argument("-linreg",
                         help="plot the linear regression"
                         )
 
+group_dor2.add_argument("-acf",
+                        dest="acf",
+                        action="store_true",
+                        default=False,
+                        help="Plot the autocorelation function.")
+
+parser.add_argument("-qqplot",
+                    action="store_true",
+                    default=False,
+                    help="calculate the median from '-start' to '-stop' of the y-values")
+
 group_dor2.add_argument("-histo",
                         "--histogram",
                         dest="histo",
@@ -84,12 +95,6 @@ parser.add_argument("-mean",
                     )
 
 parser.add_argument("-median",
-                    action="store_true",
-                    default=False,
-                    help="calculate the median from '-start' to '-stop' of the y-values"
-                    )
-
-parser.add_argument("-qqplot",
                     action="store_true",
                     default=False,
                     help="calculate the median from '-start' to '-stop' of the y-values"
@@ -198,8 +203,8 @@ while keep_plotting in ["Yes", "Y", "yes", "y", ""]:
 
     xvals = data[args.xkey][args.fst:args.lst:every]
 
-    # y-key
-    if args.histo is False and args.qqplot is False:
+    # ask for y-key
+    if args.linreg is True:
         while wrong_ykey:
             args.ykey = pcsvh.ask4keyword("y-values", keys)
 
@@ -223,6 +228,8 @@ while keep_plotting in ["Yes", "Y", "yes", "y", ""]:
         pcsvh.plot_histogram(xvals, args.xkey)
     elif args.qqplot is True:
         pcsvh.plot_qq(xvals, args.xkey)
+    elif args.acf is True:
+        pcsvh.plot_autocorrelation_function(xvals, args.xkey)
     else:
         pcsvh.plot_xy(xvals, yvals, args.xkey, args.ykey, args.linreg)
 

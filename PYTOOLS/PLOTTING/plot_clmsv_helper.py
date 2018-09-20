@@ -5,6 +5,7 @@ import scipy.stats as stats
 import numpy as np
 import math
 from statsmodels.graphics.gofplots import qqplot
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import pdb
 
 
@@ -48,6 +49,16 @@ def plot_qq(data, key):
     qqplot(data, line='s')
     # Set a title for current subplot
     plt.title("QQ-Plot {}".format(key), fontweight='bold', fontsize=11)
+    plt.show()
+
+
+def plot_autocorrelation_function(data, key):
+    """
+    Plot the autocorrelation function.
+
+    Sources: https://machinelearningmastery.com/gentle-introduction-autocorrelation-partial-autocorrelation/
+    """
+    plot_acf(data, title="Autocorellation Function {}".format(key))
     plt.show()
 
 

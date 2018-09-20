@@ -205,6 +205,8 @@ def check_energy_convergence(logfiles,
         else:
             write_to_log("Sample does not look Gaussian (reject H0)\n")
 
+        write_to_log("\n")
+
     # D'Agostino's K^2 Test
     write_to_log("D'Agostino's K^2 Test:\n")
     stat_agostino, p_agostino = scipy.stats.normaltest(testdata)
@@ -215,10 +217,12 @@ def check_energy_convergence(logfiles,
     else:
         write_to_log("Sample does not look Gaussian (reject H0)\n")
 
+    write_to_log("\n")
+
     # Anderson-Darling Test
     write_to_log("Anderson-Darling Test:\n")
     result_anderson = scipy.stats.anderson(testdata, dist="norm")
-    write_to_log("Statistic: {}".format(result_anderson.statistic))
+    write_to_log("\t> Statistic: {}\n".format(result_anderson.statistic))
 
     for idx in range(len(result_anderson.critical_values)):
         sl_anderson = result_anderson.significance_level[idx]
@@ -233,31 +237,36 @@ def check_energy_convergence(logfiles,
             break
 
         if normal_anderson:
-            write_to_log("{:> .3f}: {:> .3f}, data looks normal (fail to reject H0)".format(sl_anderson, cv_anderson))
+            write_to_log("\t> {:> .3f}: {:> .3f}, data looks normal (fail to reject H0)\n".format(sl_anderson, cv_anderson))
         else:
-            write_to_log("{:> .3f}: {:> .3f}, data does not look normal (reject H0)".format(sl_anderson, cv_anderson))
+            write_to_log("\t> {:> .3f}: {:> .3f}, data does not look normal (reject H0)\n".format(sl_anderson, cv_anderson))
+
+    write_to_log("\n")
 
     # Compute the skewness of a data set, For normally distributed data,
     # the skewness should be about 0
     skewness = scipy.stats.skew(testdata)
-    write_to_log("Skewness (should be 0): {:> .12f}".format(skewness))
+    write_to_log("Skewness (should be 0): {:> .12f}\n".format(skewness))
 
     # determine if the skewness is close enough to 0 (statistically speaking)
     stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
-    write_to_log("P-Value (skewness, should > 0.05): {:> .12f}".format(p_skewness))
+    write_to_log("P-Value (skewness, should be > 0.05): {:> .12f}\n".format(p_skewness))
+    write_to_log("\n")
     normal_skewness = (-0.3 < skewness < 0.3) and (p_skewness > 0.05)
 
     # determine if the kurtosis is close enough to 0 (statistically speaking)
     kurtosis = scipy.stats.kurtosis(testdata)
 
     if len_testdata > 20:
-        stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(len_testdata)
+        stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(testdata)
         normal_kurtosis = (-0.2 < kurtosis < 0.2) and (p_kurtosis > 0.05)
-        write_to_log("Statistic (Kurtosis): {:> 4.12f}".format(stat_kurtosis))
-        write_to_log("P-Value (Kurtosis): {:> 4.12f}".format(p_kurtosis))
+        write_to_log("Statistic (Kurtosis): {:> 4.12f}\n".format(stat_kurtosis))
+        write_to_log("P-Value (Kurtosis): {:> 4.12f}\n".format(p_kurtosis))
         write_to_log("\n")
     else:
-        write_to_log("Need more than 20 values for Kurtosis-Test!")
+        write_to_log("Need more than 20 values for Kurtosis-Test!\n")
+
+    write_to_log("\n")
 
     # only use tests that are allowed for the amount of given values for the shape and normality
     if len_testdata > 20:
@@ -527,7 +536,7 @@ parser.add_argument("-quench_logsteps",
 
 parser.add_argument("-void_solvent_steps",
                     type=int,
-                    default=500)
+                    default=2000)  # 500
 
 parser.add_argument("-start_relax_solvent_temp",
                     type=int,
@@ -1119,17 +1128,17 @@ for curcycle, idx_lmpa in remaining_cycles:
                         void_lmp.file(args.solvent_paircoeffs)
 
                     # load further lammps settings
-                    void_lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+                    #void_lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
                     void_lmp.command("thermo_style custom " + " ".join(thermargs))
                     void_lmp.command("thermo_modify lost warn flush yes")
                     void_lmp.command("thermo {}".format(args.logsteps))
 
                     # write restart, dcd files
-                    void_lmp.command("restart {0} {1} {1}".format(args.logsteps*50, void_solv_rst))
+                    void_lmp.command("restart {0} {1} {1}".format(args.logsteps * 50, void_solv_rst))
                     void_lmp.command("dump void_dcd all dcd {} {}".format(args.logsteps, void_solv_dcd))
                     void_lmp.command("dump_modify void_dcd unwrap yes")
                     void_lmp.command(("fix create_void {} npt temp {} {} 0.1 "
-                                      "iso 1.0 1.0 1").format("all", 10, 10))
+                                      "iso 1.0 1.0 1").format("all", 50, 50))
 
                     void_steps = args.void_solvent_steps
                     # create magnifying voids (reduces risk of entrapped solvent molecules)
@@ -1411,38 +1420,40 @@ for curcycle, idx_lmpa in remaining_cycles:
                     relax_solvent_lmp.command("thermo {}".format(args.logsteps))
                     relax_solvent_lmp.command("dump dump_relax_solvent all dcd {} {}".format(args.logsteps, relax_solv_dcd))
                     relax_solvent_lmp.command("dump_modify dump_relax_solvent unwrap yes")
-                    relax_solvent_lmp.command(("fix ic_prevention all momentum {} "
-                                               "linear 1 1 1 angular rescale").format(100))
+                    # no ice cube prevention or molecules cannot move away properly
+                    #relax_solvent_lmp.command(("fix ic_prevention all momentum {} "
+                    #                           "linear 1 1 1 angular rescale").format(100))
                     # lammps indices start with 1 -> '<=' number atoms of solvate sys
                     relax_solvent_lmp.command("group solvate id <= {}".format(natoms_solvate_sys))
                     relax_solvent_lmp.command("group solvent id > {}".format(natoms_solvate_sys))
-                    relax_solvent_lmp.command("restart {} {} {}".format(args.logsteps*25,
+                    relax_solvent_lmp.command("restart {} {} {}".format(args.logsteps * 25,
                                                                         relax_solv_rst,
                                                                         relax_solv_rst))
 
                     # berendsen thermo- and barostatting
-                    #relax_solvent_lmp.command(("fix fix_nve_relax_solvent {} nve").format("solvent"))
-                    #relax_solvent_lmp.command(("fix fix_temp_berendsen_relax_solvent {} "
-                    #                           "temp/berendsen {} {} 0.5").format("solvent",
-                    #                          start_relax_temp, stop_relax_temp))
-                    #relax_solvent_lmp.command(("fix fix_press_berendsen_relax_solvent {} "
-                    #                           "press/berendsen iso 1.0 1.0 50.0").format("solvent"))
+                    integrator = "fix solvent_integrator {} nve"
+                    thermostat = "fix thermostat {} temp/berendsen {} {} 0.5"
+                    barostat = "fix barostat {} press/berendsen iso 40.0 1.0 50"
+                    relax_solvent_lmp.command(integrator.format("solvent"))
+                    relax_solvent_lmp.command(thermostat.format("solvent", start_relax_temp,
+                                                                stop_relax_temp))
+                    relax_solvent_lmp.command(barostat.format("solvent"))
 
                     # hoover-nose thermo- and barostatting
-                    relax_solvent_lmp.command(("fix ensemble_relax_solvent {} "
-                                               "npt temp {} {} 0.1 "
-                                               "iso 1.0 1.0 1").format("solvent",
-                                                                       start_relax_temp,
-                                                                       stop_relax_temp))
+                    #relax_solvent_lmp.command(("fix ensemble_relax_solvent {} "
+                    #                           "npt temp {} {} 0.5 "
+                    #                           "iso 40.0 1.0 5").format("solvent",
+                    #                                                   start_relax_temp,
+                    #                                                   stop_relax_temp))
 
                     relaxation_steps = args.relax_solvent_steps
                     relax_solvent_lmp.command("run {} upto".format(relaxation_steps))
                     del relaxation_steps
                     relax_solvent_lmp.command("undump dump_relax_solvent")
-                    relax_solvent_lmp.command("unfix ensemble_relax_solvent")
-                    #relax_solvent_lmp.command("unfix fix_nve_relax_solvent")
-                    #relax_solvent_lmp.command("unfix fix_temp_berendsen_relax_solvent")
-                    #relax_solvent_lmp.command("unfix fix_press_berendsen_relax_solvent")
+                    #relax_solvent_lmp.command("unfix ensemble_relax_solvent")
+                    relax_solvent_lmp.command("unfix solvent_integrator")
+                    relax_solvent_lmp.command("unfix thermostat")
+                    relax_solvent_lmp.command("unfix barostat")
                     relax_solvent_lmp.command("unfix ic_prevention")
                     relax_solvent_lmp.command("reset_timestep 0")
                     relax_solvent_lmp.command("write_restart {}".format(relax_solv_out))
@@ -1546,8 +1557,8 @@ for curcycle, idx_lmpa in remaining_cycles:
                 equil_anneal_lmp.command("unfix fix_temp_berendsen_equil_anneal")
                 equil_anneal_lmp.command(("fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.1").format("all", stop_anneal_temp, stop_anneal_temp))
 
-                if last_step < equil_steps+(equil_steps//5):
-                    equil_anneal_lmp.command("run {}".format(equil_steps//5))
+                if last_step < equil_steps + (equil_steps // 5):
+                    equil_anneal_lmp.command("run {}".format(equil_steps // 5))
 
                 del (equil_steps, last_step)
                 equil_anneal_lmp.command("reset_timestep 0")
