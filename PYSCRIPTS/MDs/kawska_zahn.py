@@ -120,6 +120,11 @@ def check_energy_convergence(logfiles,
                              percentage=100,
                              debug=False):
     """
+    TODO No matter the outcome, save an image of the qq plot with the
+    TODO respective data after several attempts to achieve normality.
+    TODO The bigger the sample size the more probable it is that the normal
+    TODO tests state to wrongly reject H0.
+
     Calculate the skewness, p-value and z-score, to check if the values
     of 'keyword' are normally distributed (i.e. the MD-Simulation run ended
     successfully). "Generally speaking, the p-value is the probability of an
@@ -201,9 +206,9 @@ def check_energy_convergence(logfiles,
         normal_shapiro = p_shapiro > p_alpha
 
         if normal_shapiro:
-            write_to_log("Sample looks Gaussian (fail to reject H0)\n")
+            write_to_log("{} > {}: Sample looks Gaussian (fail to reject H0)\n".format(p_shapiro, p_alpha))
         else:
-            write_to_log("Sample does not look Gaussian (reject H0)\n")
+            write_to_log("{} < {}: Sample does not look Gaussian (reject H0)\n".format(p_shapiro, p_alpha))
 
         write_to_log("\n")
 
@@ -231,22 +236,21 @@ def check_energy_convergence(logfiles,
         # check if the null hypothesis can be rejected (H0: normal distributed)
         normal_anderson = result_anderson.statistic < cv_anderson
 
-        # if H0 can be rejected: stop further testing and assume distribution
-        # is not normal if significance level is below 10 %
-        if normal_anderson is False and sl_anderson < 10:
-            break
-
         if normal_anderson:
             write_to_log("\t> {:> .3f}: {:> .3f}, data looks normal (fail to reject H0)\n".format(sl_anderson, cv_anderson))
         else:
             write_to_log("\t> {:> .3f}: {:> .3f}, data does not look normal (reject H0)\n".format(sl_anderson, cv_anderson))
+
+        # if H0 is ok at any confidence level, stop further testing
+        if normal_anderson is True:
+            break
 
     write_to_log("\n")
 
     # Compute the skewness of a data set, For normally distributed data,
     # the skewness should be about 0
     skewness = scipy.stats.skew(testdata)
-    write_to_log("Skewness (should be 0): {:> .12f}\n".format(skewness))
+    write_to_log("Skewness (should be -0.3 < skewness < 0.3): {:> .12f}\n".format(skewness))
 
     # determine if the skewness is close enough to 0 (statistically speaking)
     stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
@@ -255,29 +259,44 @@ def check_energy_convergence(logfiles,
     normal_skewness = (-0.3 < skewness < 0.3) and (p_skewness > 0.05)
 
     # determine if the kurtosis is close enough to 0 (statistically speaking)
-    kurtosis = scipy.stats.kurtosis(testdata)
+    normal_kurtosis = False
 
     if len_testdata > 20:
+        kurtosis = scipy.stats.kurtosis(testdata)
+        write_to_log("Kurtosis (should be -0.3 < kurtosis < 0.3): {:> .12f}\n".format(kurtosis))
         stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(testdata)
-        normal_kurtosis = (-0.2 < kurtosis < 0.2) and (p_kurtosis > 0.05)
+        normal_kurtosis = (-0.3 < kurtosis < 0.3) and (p_kurtosis > 0.05)
         write_to_log("Statistic (Kurtosis): {:> 4.12f}\n".format(stat_kurtosis))
-        write_to_log("P-Value (Kurtosis): {:> 4.12f}\n".format(p_kurtosis))
+        write_to_log("P-Value (Kurtosis, should be > 0.05): {:> 4.12f}\n".format(p_kurtosis))
         write_to_log("\n")
     else:
         write_to_log("Need more than 20 values for Kurtosis-Test!\n")
 
     write_to_log("\n")
 
+    # chi squared test
+    num_bins = int(np.sqrt(len(data)))
+    histo, bin_edges = np.histogram(data, bins=num_bins, normed=False)
+    a1, b1 = scipy.stats.norm.fit(data)
+    cdf = scipy.stats.norm.cdf(bin_edges, a1, b1)
+    #scaling_factor = len(data) * (x_max - x_min) / num_bins
+    scaling_factor = len(data)
+    # expected frequencies (haufigkeiten)
+    expected_values = scaling_factor * np.diff(cdf)
+    chisquare_results = scipy.stats.chisquare(histo, f_exp=expected_values, ddof=2)
+    #write_to_log(chisquare_results[1], "\n")
+
     # only use tests that are allowed for the amount of given values for the shape and normality
     if len_testdata > 20:
-        normal_shape = normal_skewness and normal_kurtosis
+        normal_shape = normal_skewness or normal_kurtosis
     else:
         normal_shape = normal_skewness
 
+    # accept normal distribution if any test states is is normally distributed
     if len_testdata <= 2000:
-        normal_distributed = normal_shape and normal_shapiro and normal_agostino and normal_anderson
+        normal_distributed = normal_shape and (normal_shapiro or normal_agostino or normal_anderson)
     else:
-        normal_distributed = normal_shape and normal_agostino and normal_anderson
+        normal_distributed = normal_shape and (normal_agostino or normal_anderson)
 
     return (normal_distributed, min_value_testdata)
 

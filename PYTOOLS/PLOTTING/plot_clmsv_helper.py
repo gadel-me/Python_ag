@@ -67,6 +67,7 @@ def plot_histogram(data, key, label=None):
     Plot a histogram using given data
     """
     alpha = 0.05
+    #data = stats.zscore(data)
 
     # Shapiro-Wilk Test (only for ~ 2000 samples)
     if len(data) <= 2000:
@@ -189,7 +190,12 @@ def plot_histogram(data, key, label=None):
 
     # Kolmogorov-Smirnov test for goodness of fit
     kstest_results = stats.kstest(data, "norm")
-    print(kstest_results)
+    print(kstest_results, "\n")
+
+    #z_scores = stats.zscore(data)
+    # Kolmogorov-Smirnov test for goodness of fit
+    #zscore_kstest_results = stats.kstest(z_scores, "norm")
+    #print(zscore_kstest_results, "\n")
 
     #if kstest_results[1] > 0.05:
     #    print("{} > 0.05: Normal distribution seems identical to given distribution (failed to reject H0)\n".format(kstest_results[1]))
