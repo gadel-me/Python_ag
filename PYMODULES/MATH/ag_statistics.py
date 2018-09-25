@@ -5,7 +5,7 @@ All normality tests test against normal distribution, therefor they can only fai
 to reject normality but they never accept normality.
 
 Keep in mind  when dealing with big amounts of data even small deviations from
-normality lead to a false rejection of H0.
+normality may lead to a false rejection of H0.
 
 Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
         https://www.rdocumentation.org/packages/TeachingDemos/versions/2.10/topics/SnowsPenultimateNormalityTest
@@ -15,11 +15,12 @@ Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-te
 """
 
 from __future__ import print_function, division
-import os
-import math
-import shutil as sl
-import numpy as np
+#import os
+#import math
+#import shutil as sl
+#import numpy as np
 import scipy.stats
+import statsmodels.api as sm
 
 
 def _print_result(p_value, alpha, statistic, test_name, filename=None):
@@ -34,8 +35,12 @@ def _print_result(p_value, alpha, statistic, test_name, filename=None):
         > filename      None or str; print or write results to a file
     """
     # strings to print
-    fail_reject_h0 = "{:> .5f} > {:> .5f}: Sample looks Gaussian (fail to reject H0)\n".format(p_value, alpha)
-    reject_h0 = "{:> .5f} < {:> .5f}: Sample does not look Gaussian (reject H0)\n".format(p_value, alpha)
+    fail_reject_h0 = "{:> .5f} > {:> .5f}: Sample looks Gaussian (fail to reject H0)\n".format(
+        p_value, alpha
+    )
+    reject_h0 = "{:> .5f} < {:> .5f}: Sample does not look Gaussian (reject H0)\n".format(
+        p_value, alpha
+    )
     statistic_str = "Statistic: {:> .8f}".format(statistic)
 
     if filename is None:
@@ -65,7 +70,7 @@ def _print_result(p_value, alpha, statistic, test_name, filename=None):
                 f_open.write(reject_h0)
 
 
-def test_normality(test, data, alpha=0.05, filename=None):
+def test_normality(data, test, alpha=0.05, filename=None):
     """
     Carry out a Shapiro-Wilk, Agostino K^2, Anderson-Darling, ... Test.
 
@@ -105,7 +110,7 @@ def test_normality(test, data, alpha=0.05, filename=None):
         test_name = "Shapiro-Wilk"
 
         # abort if > 2000 values
-        if len(data) > 2000:
+        if len(data) > 5000:
             raise Warning("More than 2000 values given!")
 
         stat, p_value = scipy.stats.shapiro(data)
@@ -127,7 +132,9 @@ def test_normality(test, data, alpha=0.05, filename=None):
             _print_result(cv_anderson, stat, stat, test_name, filename)
 
             # if H0 is ok at any confidence level, stop further testing
-            if (cv_anderson > result_anderson.statistic) and (alpha_anderson == alpha):
+            if (cv_anderson > result_anderson.statistic) and (
+                alpha_anderson == alpha
+            ):
                 return cv_anderson > result_anderson.statistic
 
         # anderson darling is false if it rejected H0 for all significance levels
@@ -147,7 +154,7 @@ def test_normality(test, data, alpha=0.05, filename=None):
     return p_value > alpha
 
 
-def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3, filename=None):
+def test_gauss_shape(data, test, min_val=-0.3, max_val=0.3, filename=None):
     """
     Carry out the Kurtosis or Skewness test.
 
@@ -185,6 +192,22 @@ def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3, filename=None):
 
     if filename is not None:
         with open(filename, "a") as f_open:
-            f_open.write("{}: {} < {: .3f} < {}".format(test, min_val, value, max_val))
+            f_open.write(
+                "minimum: {1} - {0}: {2: .3f} < maximum: {3}".format(
+                    test, min_val, value, max_val
+                )
+            )
 
     return min_val <= value <= max_val
+
+
+def qq_plot(data):
+    """
+    Get data for a QQ-Plot and do a linear regression with it.
+
+    Perform a Quantile Quantile-Plot and perform a linear regression to get the R^2 value afterwards.
+    If R^2 matches well the line, the data obviously comes from a normal distribution.
+
+    Sources:    http://onlinestatbook.com/2/advanced_graphs/q-q_plots.html
+    """
+    sm.qqplot(data, loc=4, scale=3, line="s")
