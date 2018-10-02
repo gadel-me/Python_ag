@@ -1751,6 +1751,13 @@ class Universe(object):
 
         self.refresh()
 
+    def reset_cells(self):
+        """
+        """
+        self.ts_coords = []
+        self.ts_boxes = []
+        self.ts_lnk_cls = []
+
     def find_h_bonds(self, frame_id, distance):
         """
         Find H-Bonds.
