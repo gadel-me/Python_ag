@@ -5,6 +5,7 @@ import numpy as np
 import rmsd
 import ag_vectalg as agv
 import Transformations as cgt
+import pdb
 
 __version__ = "2017-03-30"
 
@@ -366,37 +367,20 @@ def get_molecule_radius(coords, buffering=0):
     return radius
 
 
-def get_rmsd(coords, reference_coords):
+def get_rmsd(coords, reference):
     """
     Calculate the rmsd of the given coordinates compared to a reference.
 
     Input:
         > coords        list[np.array, np.array, ...]; coordinates to be compared
                         vs. the reference coordinates
-        > reference_coords     list[np.array, np.array, ...]; reference to compare
+        > reference     list[np.array, np.array, ...]; reference to compare
                         coordinates to
 
     Sources:   https://pypi.org/project/rmsd/
     """
-    # translate coordinates so they fit better together
+    # translate center of geometry to the origin for reference and
+    # current frame
     coords -= rmsd.centroid(coords)
-    reference_coords -= rmsd.centroid(reference_coords)
-    return rmsd.kabsch(coords, reference_coords)
-
-
-def get_rmsds(trajectory, reference):
-    """
-    Calculate the rmsd of all coordinates from a trajectory against the reference.
-
-    Input:
-        > trajectory    List[List[np.array, np.array, ...]]; list of a list of
-                        coordinates
-        > reference
-    """
-    rmsds = []
-
-    for frame in trajectory:
-        cur_rmsd = get_rmsd(frame, reference)
-        rmsds.append(cur_rmsd)
-
-    return rmsds
+    reference -= rmsd.centroid(reference)
+    return rmsd.kabsch_rmsd(coords, reference)

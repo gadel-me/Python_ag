@@ -12,40 +12,46 @@ Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-te
         https://stackoverflow.com/questions/7781798/seeing-if-data-is-normally-distributed-in-r/7788452#7788452
         https://medium.com/@rrfd/testing-for-normality-applications-with-python-6bf06ed646a9
         https://www.crashkurs-statistik.de/vorgehen-bei-hypothesentests/
+        http://onlinestatbook.com/2/advanced_graphs/q-q_plots.html
+        http://desktop.arcgis.com/en/arcmap/latest/extensions/geostatistical-analyst/normal-qq-plot-and-general-qq-plot.htm
 """
 
 from __future__ import print_function, division
-#import os
-#import math
-#import shutil as sl
-#import numpy as np
 import scipy.stats
-import statsmodels.api as sm
+#import pdb
 
 
 def _print_result(p_value, alpha, statistic, test_name, filename=None):
     """
     Print test results using this helper function.
 
-        > test_result   bool; result of the normality test
-        > p_value       float; p-value to fail to reject H0
-        > alpha         float; threshold to reject/fail to reject H0
-        > statistic     float; statistical value of test
-        > test_name     str; name of the test that was carried out
-        > filename      None or str; print or write results to a file
+    Parameters:
+        > test_result   bool;
+                        result of the normality test
+        > p_value       float;
+                        p-value to fail to reject H0
+        > alpha         float;
+                        threshold to reject/fail to reject H0
+        > statistic     float;
+                        statistical value of test
+        > test_name     str;
+                        name of the test that was carried out
+        > filename      str;
+                        optional; print or write results to a file
+
     """
     # strings to print
-    fail_reject_h0 = "{:> .5f} > {:> .5f}: Sample looks Gaussian (fail to reject H0)\n".format(
+    fail_reject_h0 = "{: >.5f} (P-value) > {:>.5f}; Sample looks Gaussian (fail to reject H0)\n".format(
         p_value, alpha
     )
-    reject_h0 = "{:> .5f} < {:> .5f}: Sample does not look Gaussian (reject H0)\n".format(
+    reject_h0 = "{: >.5f} (P-value) < {:>.5f}; Sample does not look Gaussian (reject H0)\n".format(
         p_value, alpha
     )
     statistic_str = "Statistic: {:> .8f}".format(statistic)
 
     if filename is None:
-        print(statistic_str)
         print(test_name)
+        print(statistic_str)
     else:
         with open(filename, "a") as f_open:
             f_open.write(test_name)
@@ -70,7 +76,7 @@ def _print_result(p_value, alpha, statistic, test_name, filename=None):
                 f_open.write(reject_h0)
 
 
-def test_normality(data, test, alpha=0.05, filename=None):
+def test_normality(test, data, alpha=0.05, filename=None):
     """
     Carry out a Shapiro-Wilk, Agostino K^2, Anderson-Darling, ... Test.
 
@@ -90,7 +96,7 @@ def test_normality(data, test, alpha=0.05, filename=None):
     to be accepted and only works for a sample size smaller than 2000.
 
     Input:
-        > test     str; name of the test to be carried out. The following
+        > test          str; name of the test to be carried out. The following
                         are allowed: "shapiro", "agostino", "anderson",
                         "skewness", "kurtosis"
         > data          list or np-array; the data set to test
@@ -117,9 +123,8 @@ def test_normality(data, test, alpha=0.05, filename=None):
     elif test == "agostino":
         test_name = "D'Agostino's K^2"
         stat, p_value = scipy.stats.normaltest(data)
-        _print_result(p_value, alpha, stat, test_name, filename)
     elif test == "anderson":
-        # returns true or false
+        # returns true or false since it has several levels of significance
         test_name = "Anderson-Darling"
         result_anderson = scipy.stats.anderson(data, dist="norm")
         stat = result_anderson.statistic
@@ -129,12 +134,10 @@ def test_normality(data, test, alpha=0.05, filename=None):
             cv_anderson = result_anderson.critical_values[idx]
 
             # check if the null hypothesis can be rejected (H0: normal distributed)
-            _print_result(cv_anderson, stat, stat, test_name, filename)
+            #_print_result(cv_anderson, stat, stat, test_name, filename)
 
             # if H0 is ok at any confidence level, stop further testing
-            if (cv_anderson > result_anderson.statistic) and (
-                alpha_anderson == alpha
-            ):
+            if (cv_anderson > result_anderson.statistic) and (alpha_anderson == alpha):
                 return cv_anderson > result_anderson.statistic
 
         # anderson darling is false if it rejected H0 for all significance levels
@@ -144,6 +147,7 @@ def test_normality(data, test, alpha=0.05, filename=None):
         test_name = "Skewness"
         stat, p_value = scipy.stats.skewtest(data)
     elif test == "kurtosis":
+        test_name = "Kurtosis"
         stat, p_value = scipy.stats.kurtosistest(data)
     elif test == "chi_square":
         pass
@@ -154,7 +158,7 @@ def test_normality(data, test, alpha=0.05, filename=None):
     return p_value > alpha
 
 
-def test_gauss_shape(data, test, min_val=-0.3, max_val=0.3, filename=None):
+def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3, filename=None):
     """
     Carry out the Kurtosis or Skewness test.
 
@@ -166,9 +170,12 @@ def test_gauss_shape(data, test, min_val=-0.3, max_val=0.3, filename=None):
              https://en.wikipedia.org/wiki/Skewness
 
     Input:
-        > test  str; skewness/kurtosis
-        > min_val   float; minimum, skewness/kurtosis should not be smaller than this
-        > max_val   float; maximum, skewness/kurtosis should not be larger than this
+        > test      str;
+                    skewness/kurtosis/qq
+        > min_val   float;
+                    minimum, skewness/kurtosis should not be smaller than this
+        > max_val   float;
+                    maximum, skewness/kurtosis should not be larger than this
 
     Returns:
         bool; True (skewness or kurtosis is between min and max) or False (is not)
@@ -178,36 +185,36 @@ def test_gauss_shape(data, test, min_val=-0.3, max_val=0.3, filename=None):
         NameError; wrong name for test
 
     """
-    if test == "skewness":
-        value = scipy.stats.skew(data)
-    elif test == "kurtosis":
+    if test == "skewness" or test == "kurtosis":
+        # kurtosis only valid if sample is larger than 20
+        if test == "skewness":
+            value = scipy.stats.skew(data)
+        elif test == "kurtosis":
 
-        if len(data) > 20:
-            value = scipy.stats.kurtosis(data)
+            if len(data) > 20:
+                value = scipy.stats.kurtosis(data)
+            else:
+                raise Warning("Kurtosis needs at least 20 values!")
+
         else:
-            raise Warning("Kurtosis needs at least 20 values!")
+            raise NameError("Test named '{}' not known!".format(test))
 
+        result_str = "minimum: {1}; {0}: {2: .3f}; maximum: {3}".format(test, min_val, value,
+                                                                        max_val)
+        result = min_val <= value <= max_val
+    elif test == "qq":
+        value = scipy.stats.probplot(data, dist="norm", fit=True)
+        result_str = "QQ - Straight line\nslope: {}, interecept: {}, r^2: {}".format(value[1][0], value[1][1],
+                                                                                     value[1][2]**2)
+        result = value[1][2]**2 > 0.99
     else:
         raise NameError("Test named '{}' not known!".format(test))
 
+    # print results to file or console
     if filename is not None:
         with open(filename, "a") as f_open:
-            f_open.write(
-                "minimum: {1} - {0}: {2: .3f} < maximum: {3}".format(
-                    test, min_val, value, max_val
-                )
-            )
+            f_open.write(result_str)
+    else:
+        print(result_str)
 
-    return min_val <= value <= max_val
-
-
-def qq_plot(data):
-    """
-    Get data for a QQ-Plot and do a linear regression with it.
-
-    Perform a Quantile Quantile-Plot and perform a linear regression to get the R^2 value afterwards.
-    If R^2 matches well the line, the data obviously comes from a normal distribution.
-
-    Sources:    http://onlinestatbook.com/2/advanced_graphs/q-q_plots.html
-    """
-    sm.qqplot(data, loc=4, scale=3, line="s")
+    return result

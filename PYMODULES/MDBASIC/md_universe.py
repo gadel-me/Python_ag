@@ -1668,17 +1668,43 @@ class Universe(object):
         M_trans_main = cgt.translation_matrix(destination - cur_cog)
         self.mm_atm_coords(0, M_trans_main, copy, *atm_idxs)
 
-    def get_rmsd(self, frame_id_1, frame_id_2, *atm_idxs):
+    def get_rmsds(self, ref_id, frame_ids, atm_idxs):
         """
         Calculate the RMSD between two frames.
+
         Sources: https://pypi.python.org/pypi/rmsd
+
+        Parameters:
+            > ref_id  int;
+                    ID of reference frame
+            > frame_ids     list of int;
+                            all frame ids to calculate rmsd for
+            > atm_idxs      list of int;
+                            all atom indices to calculate rmsd for
+
+        Returns:
+            > rmsd      list of float;
+                        rmsd values
+
         """
-        P = np.array([self.ts_coords[frame_id_1][i] for i in atm_idxs])
-        Q = np.array([self.ts_coords[frame_id_2][i] for i in atm_idxs])
-        P -= rmsd.centroid(P)
-        Q -= rmsd.centroid(Q)
-        pq_rmsd = rmsd.kabsch_rmsd(P, Q)
-        return pq_rmsd
+        rmsds = []
+        all_atoms = len(atm_idxs) == len(self.atoms)
+
+        if all_atoms:
+            reference = self.ts_coords[ref_id]
+        else:
+            reference = np.array([self.ts_coords[ref_id][i] for i in atm_idxs])
+
+        for frame_id in frame_ids:
+            if all_atoms:
+                selected = self.ts_coords[frame_id]
+            else:
+                selected = np.array([self.ts_coords[frame_id][i] for i in atm_idxs])
+
+            aligned_rmsd = agm.get_rmsd(selected, reference)
+            rmsds.append(aligned_rmsd)
+
+        return rmsds
 
     def cut_shape(self, frame_id=-1, inverse_cut=True, *shape_surfaces):
         """
@@ -1737,3 +1763,27 @@ class Universe(object):
         if self.ts_lnk_cls != []:
             print("***Info: Creating linked cells.")
             self.create_linked_cells(frame_id)
+
+    #def get_rmsds(self, reference_id, *frame_ids):
+    #    """
+    #    Calculate rmsd values of frame ids against frame id.
+#
+    #    Parameters:
+    #        > reference_id    int;
+    #                    ID of reference frame
+    #        > frame_ids tuple of ints;
+    #                    IDs of all frame to calculate the rmsd from
+#
+    #    Returns:
+    #        > rmsds     list of floats;
+    #                    All RMSD values of all frames given
+#
+    #    """
+    #    rmsds = []
+#
+    #    for frame_id in frame_ids:
+    #        cur_rmsd = agm.get_rmsd(self.ts_coords[frame_id],
+    #                                self.ts_coords[reference_id])
+    #        rmsds.append(cur_rmsd)
+#
+    #    return rmsds
