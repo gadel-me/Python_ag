@@ -152,6 +152,20 @@ def _read_system(lmpdat, dcd=None, frame_idx=-1):
     return md_sys
 
 
+def merge_sys(sys_a, sys_b, frame_id_a=-1, frame_id_b=-1, pair_coeffs=False):
+    """
+    """
+    sys_both = copy.deepcopy(sys_a)
+    sys_both.extend_universe(sys_b, u1_frame_id=frame_id_a, u2_frame_id=frame_id_b, mode="merge")
+
+    if pair_coeffs is True:
+        sys_both.mix_pair_types(mode="ii", mix_style="arithmetic")
+
+    sys_both.fetch_molecules_by_bonds()
+    sys_both.mols_to_grps()
+    return sys_both
+
+
 def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=False):
     """
     Check if several molecules form an aggregate.
@@ -610,35 +624,89 @@ def create_settings(lmp_ptr, lmp_settings):
     #                                                                      lmp_settings.tstop))
 
 
-def set_spheres_1(lmp, nmols, radii, cogs, runsteps):
+def fix_indent_ids(radii, cogs, group_name):
     """
+    Create the strings that are used as IDs for the lammps fix indent command.
+
+    Parameters
+    ----------
+    group_name : str
+        Name for the group, e.g. molecule or atom
+    radii : list of floats
+        Radii of all molecules to create a sphere around
+    cogs : list of floats
+        Centers of geometry of all molecules, i.e. center of each sphere
+
+    Returns
+    -------
+    indent_fixes : list of lists
+        Contains all ready up fixes for the lammps indent fix
+
     """
-    fix_names = ["void_indent_molecule_{}".format(idx) for idx in xrange(nmols)]
-    fix = "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out"
+    fix_str = "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out"
+    indent_fixes = []
 
-    #=============================================#
-    # initial spheres around all solvate molecules
-    #=============================================#
-
-    for run in xrange(1, 12):
+    for scaling_factor in xrange(1, 14):
         # set fixes for void_indent
-        for fix_name, sphere, cog in zip(fix_names, radii, cogs):
-            grown_sphere = (sphere * 0.1 * run)
-            molecule_void_fix = fix.format(fix_name, grown_sphere, c=cog)
-            lmp.command(molecule_void_fix)
+        for idx, (sphere, cog) in enumerate(zip(radii, cogs)):
+            fix_name = "{}_{}_fix_indent".format(group_name, idx)
+            grown_sphere = (sphere * 0.1 * scaling_factor)
+            cur_fix_str = fix_str.format(fix_name, grown_sphere, c=cog)
+            indent_fixes.append(cur_fix_str)
 
+    return indent_fixes
+
+
+def lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
+    """
+    Perform indentation runs to grow spheres around certain molecules.
+
+    Parameters
+    ----------
+    lmp : lammps-object
+    indents : list of lists of str
+    runsteps : int
+    keep_last_fixes : bool
+
+    """
+    # make sphere grow (i.e. create and delete fixes for fix indent)
+    for indent_fixes in indents[:-1]:
+        for indent_fix in indent_fixes:
+            lmp.command(indent_fix)
         lmp.command("run {}".format(runsteps))
 
-        # delete all fixes except for the last run
-        if run < 11:
-            for fix_name in fix_names:
-                lmp.command("unfix {0}".format(fix_name))
+        for indent_fix in indent_fixes:
+            lmp.command("unfix {}".format(indent_fix))
+
+    # last run for sphere growth
+    for indent_fix in indents[-1]:
+        lmp.command(indent_fix)
+    lmp.command("run {}".format(runsteps))
+
+    # unfix last fixes
+    if keep_last_fixes is False:
+        for indent_fix in indents[-1]:
+            lmp.command("unfix {}".format(indent_fix))
 
 
-def check_clashes(sys_both, sys_a, sys_b, dcd_b):
+def check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
     """
+    Check for imaginary clashes between atoms of two systems before combining them.
+
+    Parameters
+    ----------
+    sys_both : Universe
+    sys_a : Universe
+    sys_b : Universe
+
+    Returns
+    -------
+    close_atms : list of int
+        Atom ids of atoms that need additional spheres because they clash with
+        solvent atoms otherwise
+
     """
-    sys_both.reset_cells()
+    #sys_both.reset_cells()
     # read latest solvent coordinates and boxes
     sys_b.import_dcd(dcd_b)
     sys_b.read_frames(frame=-2, to_frame=-1)
@@ -653,40 +721,32 @@ def check_clashes(sys_both, sys_a, sys_b, dcd_b):
     return close_atms
 
 
-def merge(sys_a, sys_b, pair_coeffs=False):
-    """
-    """
-    sys_both = copy.deepcopy(sys_a)
-    sys_both.extend_universe(sys_b, u1_frame_id=-1, u2_frame_id=-1, mode="merge")
-    #sys_both.ts_boxes = []
-    #sys_both.ts_coords = []
-
-    if pair_coeffs is True:
-        sys_both.mix_pair_types(mode="ii", mix_style="arithmetic")
-
-    sys_both.fetch_molecules_by_bonds()
-    sys_both.mols_to_grps()
-    return sys_both
-
-
 def create_voids(lmpdat_solvate, dcd_solvate, lmpdat_solvent, lmp_settings):
     """
     """
     solvate_sys = _read_system(lmpdat_solvate, dcd_solvate)
-    nmols_solvate = len(solvate_sys.molecules)
-    natms_solvate = len(solvate_sys.atoms)
-    solvate_info = _molecules_radii(solvate_sys)
-    radii_sphere = solvate_info[0]
-    cogs_solvate = solvate_info[1]
+    #nmols_solvate = len(solvate_sys.molecules)
+    #natms_solvate = len(solvate_sys.atoms)
+    radii_mol, cogs_mol = _molecules_radii(solvate_sys)
 
     solvent_sys = _read_system(lmpdat_solvent)
-    solution_sys = merge(solvate_sys, solvent_sys)
+    solution_sys = merge_sys(solvate_sys, solvent_sys)
     solution_sys.reset_cells()
 
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
+
+    # first indentation
+    indent_strs = fix_indent_ids(radii_mol, cogs_mol, "molecule")
     create_settings(lmp, lmp_settings)
-    set_spheres_1(lmp, nmols_solvate, radii_sphere, cogs_solvate, lmp_settings.runsteps)
+    lmp_indent(lmp, indent_strs, lmp_settings.runsteps, keep_last_fixes=True)
+    check_imaginary_clashes()
+
+    # second indentation
+    close_atms = check_clashes()
+
+
+    #lmp_set_spheres_1(lmp, nmols_solvate, radii_sphere, cogs_solvate, lmp_settings.runsteps)
 
 
     #==============================================#
