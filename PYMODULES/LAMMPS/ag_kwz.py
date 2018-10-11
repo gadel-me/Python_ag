@@ -33,31 +33,13 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helper functions and variables
 #==============================================================================#
-initial_velocity = "velocity all create {} 8324798 rot yes dist gaussian"
 _sqrt_3 = math.sqrt(3)
 
 
-def lmp_thermostat(lmp, logsteps):
-    """
-    Log thermodynamic data.
-    """
-    thermargs = ["step", "temp", "press", "vol", "density",
-                 "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma",
-                 "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed",
-                 "eimp", "enthalpy"]
-    lmp.command("thermo_style custom " + " ".join(thermargs))
-    lmp.command("thermo_modify lost warn flush yes")
-    #lmp.command("thermo_modify line multi format float %g")
-    lmp.command("thermo {}".format(logsteps))
-
-
-class LammpsShortcut(object):
+class LmpShortcuts(object):
     """
     """
-    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None,
-                 pc_file=None, settings_file=None, input_lmpdat=None,
-                 input_lmprst=None, output_lmprst=None, output_lmplog=None,
-                 output_dcd=None, output_name=None, gpu=False):
+    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
         """
         """
         self.tstart = tstart
@@ -70,63 +52,97 @@ class LammpsShortcut(object):
         self.settings_file = settings_file
         self.input_lmpdat = input_lmpdat
         self.input_lmprst = input_lmprst
+        self.inter_lmprst = inter_lmprst
         self.output_lmplog = output_lmplog
         self.output_dcd = output_dcd
+        self.output_lmpdat = output_lmpdat
         self.output_lmprst = output_lmprst
         self.output_name = output_name
         self.gpu = gpu
 
-    def create_common_settings(self, lmp_ptr):
+    def read_system(self, lmp):
         """
+        Read a restart file from another stage, previous run or a data file instead.
         """
-        lmp_ptr.command("log {} append".format(self.output_lmplog))
-
-        # load gpu package
-        if self.gpu:
-            # neighbor list building on gpu (currently) leads to segmentation faults
-            lmp_ptr.command("package gpu 1 neigh yes")
-            #lmp.command("package gpu 1 neigh no")  # DEBUGGING
-            lmp_ptr.command("suffix gpu")
-
-        lmp_ptr.file(self.settings_file)
-
         # reading order: output restart -> input restart -> data
-        if os.path.isfile(self.output_lmprst) is True:
-            lmp_ptr.command("read_restart {}".format(self.output_lmprst))
-        elif os.path.isfile(self.input_lmprst) is True:
-            lmp_ptr.command("read_restart {}".format(self.input_lmprst))
+        if self.output_lmprst is not None and os.path.isfile(self.output_lmprst):
+            lmp.command("read_restart {}".format(self.output_lmprst))
+        elif self.input_lmprst is not None and os.path.isfile(self.input_lmprst):
+            lmp.command("read_restart {}".format(self.input_lmprst))
         else:
-            lmp_ptr.command("read_data {}".format(self.input_lmpdat))
+            lmp.command("read_data {}".format(self.input_lmpdat))
+            lmp.command("velocity all create {} 4928459 mom yes rot yes dist gaussian".format(self.tstart))
 
-        if self.pc_file is not None:
-            lmp_ptr.file(self.pc_file)
+    def unfix_undump(self, pylmp, lmp):
+        """
+        Remove all fixes and dumps.
+        """
+        lmp_fixes = []
+        lmp_dumps = []
 
-        lmp_thermostat(lmp_ptr, self.logsteps)
-        lmp_ptr.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+        if rank == 0:
+            for fix in pylmp.fixes:
+                lmp_fixes.append(fix["name"])
+            for dump in pylmp.dumps:
+                lmp_dumps.append(dump["name"])
 
+        lmp_fixes = comm.bcast(lmp_fixes, 0)
+        lmp_dumps = comm.bcast(lmp_dumps, 0)
+
+        for fix in lmp_fixes:
+            if "gpu" in fix:
+                continue
+            lmp.command("unfix {}".format(fix))
+
+        for dump in lmp_dumps:
+            lmp.command("undump {}".format(dump))
+
+    def thermo(self, lmp):
+        """
+        Log thermodynamic data.
+        """
+        thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
+        lmp.command("thermo_style custom " + " ".join(thermargs))
+        lmp.command("thermo_modify lost warn flush yes")
+        #lmp.command("thermo_modify line multi format float %g")
+        lmp.command("thermo {}".format(self.logsteps))
+
+    def dump(self, lmp, unwrap=True):
+        """
+        """
         # trajectory
-        lmp_ptr.command("dump trajectory all dcd {} {}".format(self.logsteps,
-                                                               self.output_dcd))
-        lmp_ptr.command("dump_modify trajectory unwrap yes")
+        lmp.command("dump trajectory all dcd {} {}".format(self.logsteps, self.output_dcd))
+        lmp.command("restart {} {} {}".format(self.logsteps*50, self.inter_lmprst, self.inter_lmprst))
 
-        # barostatting, thermostatting
-        lmp_ptr.command("fix integrator all nve")
-        lmp_ptr.command("fix thermostat all temp/berendsen {} {} 0.5".format(self.tstart,
-                                                                             self.tstop))
-        lmp_ptr.command("fix barostat all press/berendsen iso {} {} 50".format(self.pstart,
-                                                                               self.pstop))
-        #lmp_ptr.command("fix nose_hoover grp_add_sys nvt temp {0} {1} 0.1".format(self.tstart,
-        #                                                                      self.tstop))
+        if unwrap is True:
+            lmp.command("dump_modify trajectory unwrap yes")
 
-    def unfix_all(self, lmp_ptr):
+    def berendsen(self, lmp):
         """
         """
-        lmp_ptr.command("undump trajectory")
-        lmp_ptr.command("unfix ic_prevention")
-        lmp_ptr.command("unfix integrator")
-        lmp_ptr.command("unfix thermostat")
-        lmp_ptr.command("unfix barostat")
-        lmp_ptr.command("reset_timestep 0")
+        lmp.command("fix integrator all nve")
+        lmp.command("fix thermostat all temp/berendsen {} {} 0.5".format(self.tstart, self.tstop))
+        lmp.command("fix barostat all press/berendsen iso {} {} 50".format(self.pstart, self.pstop))
+
+    def use_gpu(self, lmp, neigh=True):
+        """
+        """
+        if neigh:
+            lmp.command("package gpu 1 neigh yes")
+        else:
+            lmp.command("package gpu 1 neigh no")
+
+        lmp.command("suffix gpu")
+
+    def minimize(self, lmp, style="cg", box_relax=False):
+        """
+        """
+        if box_relax:
+            lmp.command("fix box_relax all box/relax aniso {}".format(self.pstart))
+
+        lmp.command("min_style {}".format(style))
+        lmp.command("min_modify dmax 2.0")
+        lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
 
 
 def _molecules_radii(lmp_sys):
@@ -481,7 +497,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None,
 
 
 # Quenching ===================================================================#
-def quench(lmpdat_main, lmp_settings):
+def quench(lmpcuts, lmpdat_main):
     """
     """
     main_sys = _read_system(lmpdat_main)
@@ -490,43 +506,24 @@ def quench(lmpdat_main, lmp_settings):
 
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
-    lmp.command("log {} append".format(lmp_settings.output_lmplog))
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
-    # load gpu package
-    if lmp_settings.gpu:
-        # neighbor list building on gpu (currently) leads to segmentation faults
-        #lmp.command("package gpu 1 neigh yes")
-        lmp.command("package gpu 1 neigh no")  # DEBUGGING
-        lmp.command("suffix gpu")
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp, neigh=True)
 
-    # load general settings (units, boundary, dimension, atom_style, etc. pp.)
-    lmp.file(lmp_settings.settings_file)
-
+    lmp.file(lmpcuts.settings_file)
     # change box type to not be periodic
     lmp.command("boundary f f f")
+    lmpcuts.read_system(lmp)
+    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
 
-    # read data and create an initial velocity or read the restart file from
-    # a previous run
-    if os.path.isfile(lmp_settings.input_lmprst) is True:
-        lmp.command("read_restart {}".format(lmp_settings.input_lmprst))
-    else:
-        lmp.command("read_data {}".format(lmp_settings.input_lmpdat))
-        #lmp.command(initial_velocity.format(temps[0]))
-
-    # read pair coefficients from file if provided
-    if lmp_settings.pc_file is not None:
-        lmp.file(lmp_settings.pc_file)
-
-    # trajectory
-    lmp.command("dump trajectory all dcd {} {}".format(lmp_settings.logsteps,
-                                                       lmp_settings.output_dcd))
-    lmp.command("dump_modify trajectory unwrap yes")
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
 
     # intermediate restart files
-    lmp.command("restart {0} {1} {1}".format(lmp_settings.logsteps * 10,
-                                             lmp_settings.output_lmprst))
+    lmp.command("restart {0} {1} {1}".format(lmpcuts.logsteps * 10, lmpcuts.output_lmprst))
 
-    lmp_thermostat(lmp, lmp_settings.logsteps)
     # define the atoms that may move during the simulation
     lmp.command("group grp_add_sys id > {}".format(natoms_main_sys))
     lmp.command("group grp_main_sys id <= {}".format(natoms_main_sys))
@@ -541,7 +538,7 @@ def quench(lmpdat_main, lmp_settings):
     # towards the origin at (0/0/0)
     # (prevents losing atoms due to being localized outside the cutoff)
     if rank == 0:
-        prep_sys = _read_system(lmp_settings.input_lmpdat)
+        prep_sys = _read_system(lmpcuts.input_lmpdat)
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         cog *= -1
@@ -552,89 +549,56 @@ def quench(lmpdat_main, lmp_settings):
     lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 10000").format(*cog))
 
     # barostatting, thermostatting
-    lmp.command("fix nose_hoover grp_add_sys nvt temp {0} {1} 0.1".format(lmp_settings.tstart,
-                                                                          lmp_settings.tstop))
-    lmp.command("run {}".format(lmp_settings.runsteps))
+    lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
+    lmp.command("run {}".format(lmpcuts.runsteps))
     # remove pushing force
     lmp.command("unfix force")
 
     # post-optimization
-    #lmp.command("min_style fire")
     lmp.command("min_style quickmin")
-    #lmp.command("min_style cg")
-    #lmp.command("min_modify dmax 0.5")
     lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
     # write restart file
-    lmp.command("undump trajectory")
-    #lmp.command("unfix freeze")
-    lmp.command("unfix nose_hoover")
+    lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
-    lmp.command("write_restart {}".format(lmp_settings.output_lmprst))
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
 
 
 # Annealing ===================================================================#
-def relax_box(lmp_shortcut):
+def relax_box(lmpcuts):
     """
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
-    lmp.command("log {} append".format(lmp_shortcut.output_lmplog))
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
-    # load gpu package
-    if lmp_shortcut.gpu:
-        # neighbor list building on gpu (currently) leads to segmentation faults
-        lmp.command("package gpu 1 neigh yes")
-        #lmp.command("package gpu 1 neigh no")  # DEBUGGING
-        lmp.command("suffix gpu")
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp, neigh=True)
 
-    lmp.file(lmp_shortcut.settings_file)
-
-    # reading order: output restart -> input restart -> data
-    if lmp_shortcut.output_lmprst is not None and os.path.isfile(lmp_shortcut.output_lmprst) is True:
-        lmp.command("read_restart {}".format(lmp_shortcut.output_lmprst))
-    elif lmp_shortcut.input_lmprst is not None and os.path.isfile(lmp_shortcut.input_lmprst) is True:
-        lmp.command("read_restart {}".format(lmp_shortcut.input_lmprst))
-    else:
-        lmp.command("read_data {}".format(lmp_shortcut.input_lmpdat))
-        lmp.command(initial_velocity.format(lmp_shortcut.tstart))
-
-    if lmp_shortcut.pc_file is not None:
-        lmp.file(lmp_shortcut.pc_file)
-
-    lmp_thermostat(lmp, lmp_shortcut.logsteps)
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.read_system(lmp)
+    lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
 
-    # trajectory
-    lmp.command("dump trajectory all dcd {} {}".format(lmp_shortcut.logsteps,
-                                                       lmp_shortcut.output_dcd))
-    lmp.command("dump_modify trajectory unwrap yes")
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
 
     # minimize cut box if not done already
-    if lmp_shortcut.input_lmprst is None or os.path.isfile(lmp_shortcut.input_lmprst) is False:
-        lmp.command("min_style cg")
-        lmp.command("min_modify dmax 0.5")
-        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
+        lmpcuts.minimize(lmp, style="cg")
 
     # barostatting, thermostatting
-    lmp.command("fix integrator all nve/limit 0.5")
-    lmp.command("fix thermostat all temp/berendsen {} {} 0.5".format(lmp_shortcut.tstart,
-                                                                     lmp_shortcut.tstop))
-    lmp.command("fix barostat all press/berendsen iso {} {} 50".format(lmp_shortcut.pstart,
-                                                                       lmp_shortcut.pstop))
-    #lmp.command("fix nose_hoover grp_add_sys nvt temp {0} {1} 0.1".format(lmp_shortcut.tstart,
-    #                                                                      lmp_shortcut.tstop))
+    lmpcuts.berendsen(lmp)
 
-    lmp.command("run {}".format(lmp_shortcut.runsteps))
-    lmp.command("undump trajectory")
-    lmp.command("unfix ic_prevention")
-    lmp.command("unfix integrator")
-    lmp.command("unfix thermostat")
-    lmp.command("unfix barostat")
+    #lmp.command("fix nose_hoover grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
+
+    lmp.command("run {}".format(lmpcuts.runsteps))
+    lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
-    lmp.command("write_restart {}".format(lmp_shortcut.output_lmprst))
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
 
@@ -658,16 +622,19 @@ def fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
         Contains all ready up fixes for the lammps indent fix
 
     """
+    if rank == 0:
+        print(radii)
+
     fix_str = "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out"
     all_indent_fixes = []
 
     for scaling_factor in xrange(scale_start, scale_stop):
         indent_fixes = []
         # set fixes for void_indent
-        for idx, (sphere, cog) in enumerate(zip(radii, cogs)):
+        for idx, (radius, cog) in enumerate(zip(radii, cogs)):
             fix_name = "{}_{}_fix_indent".format(group_name, idx)
-            grown_sphere = (sphere * 0.1 * scaling_factor)
-            cur_fix_str = fix_str.format(fix_name, grown_sphere, c=cog)
+            grown_radius = radius * 0.1 * scaling_factor
+            cur_fix_str = fix_str.format(fix_name, grown_radius, c=cog)
             indent_fixes.append(cur_fix_str)
         all_indent_fixes.append(indent_fixes)
 
@@ -735,67 +702,52 @@ def check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
     sys_both.ts_coords.append(np.concatenate((sys_a.ts_coords[-1], sys_b.ts_coords[-1])))
     sys_both.ts_boxes = sys_b.ts_boxes
     sys_both.create_linked_cells(-1, rcut_a=2, rcut_b=2, rcut_c=2)
-    close_atms_ab = sys_both.chk_atm_dist(-1, min_dist=2.0, exclude_same_molecule=True)
+    close_atms_ab = sys_both.chk_atm_dist(-1, min_dist=1.0, exclude_same_molecule=True)
     # only get close atoms from system a
     close_atms_a = [i for i in close_atms_ab if i <= len(sys_a.atoms)]
+
+    sys_b.reset_cells()
     sys_both.reset_cells()
     return close_atms_a
 
 
-def create_voids(lmp_shortcut, lmpdat_solvate, dcd_solvate):
+def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     """
     """
+    # solvate with molecule radii and cogs
     solvate_sys = _read_system(lmpdat_solvate, dcd_solvate)
     radii_mol, cogs_mol = _molecules_radii(solvate_sys)
-    indent_strs = fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=12, scale_stop=15)
-    pdb.set_trace()
+    indent_strs = fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
 
     # load lammps and lammps settings
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
-    lmp.command("log {} append".format(lmp_shortcut.output_lmplog))
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp)
 
-    # load gpu package
-    if lmp_shortcut.gpu:
-        # neighbor list building on gpu (currently) leads to segmentation faults
-        lmp.command("package gpu 1 neigh yes")
-        #lmp.command("package gpu 1 neigh no")  # DEBUGGING
-        lmp.command("suffix gpu")
-
-    lmp.file(lmp_shortcut.settings_file)
-
-    # reading order: output restart -> input restart -> data
-    if lmp_shortcut.output_lmprst is not None and os.path.isfile(lmp_shortcut.output_lmprst) is True:
-        lmp.command("read_restart {}".format(lmp_shortcut.output_lmprst))
-    elif lmp_shortcut.input_lmprst is not None and os.path.isfile(lmp_shortcut.input_lmprst) is True:
-        lmp.command("read_restart {}".format(lmp_shortcut.input_lmprst))
-    else:
-        lmp.command("read_data {}".format(lmp_shortcut.input_lmpdat))
-
-    if lmp_shortcut.pc_file is not None:
-        lmp.file(lmp_shortcut.pc_file)
-
-    lmp_thermostat(lmp, lmp_shortcut.logsteps)
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.read_system(lmp)
+    lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
 
-    # trajectory
-    lmp.command("dump trajectory all dcd {} {}".format(lmp_shortcut.logsteps, lmp_shortcut.output_dcd))
-    lmp.command("dump_modify trajectory unwrap yes")
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
 
-    # barostatting, thermostatting
-    lmp.command("fix integrator all nve/limit 0.5")
-    lmp.command("fix thermostat all temp/berendsen {} {} 0.5".format(lmp_shortcut.tstart, lmp_shortcut.tstop))
-    lmp.command("fix barostat all press/berendsen iso {} {} 50".format(lmp_shortcut.pstart, lmp_shortcut.pstop))
+    lmpcuts.berendsen(lmp)
+    #lmp.command("unfix integrator")
+    #lmp.command("fix integrator all nve/limit 1.0")
+    lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
 
-    lmp_indent(lmp, indent_strs, lmp_shortcut.runsteps, keep_last_fixes=True)
-
-    solvent_sys = _read_system(lmp_shortcut.input_lmpdat)
+    # solution system
+    solvent_sys = _read_system(lmpcuts.input_lmpdat)
     solution_sys = merge_sys(solvate_sys, solvent_sys)
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
-    close_atoms = check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmp_shortcut.output_dcd)
+    close_atoms = check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
     cogs_atoms = [solvate_sys.ts_coords[-1][i] for i in close_atoms]
     radii_atoms = [mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)] for i in close_atoms]
 
@@ -808,12 +760,15 @@ def create_voids(lmp_shortcut, lmpdat_solvate, dcd_solvate):
     all_radii_atoms.extend(radii_atoms)
     all_cogs_atoms.extend(cogs_atoms)
 
+    factor_start = 10
+    factor_stop = factor_start + 1
+
     if close_atoms != []:
         # move solvent molecules away from close solvate atoms
-        for _ in xrange(10):
-            indent_strs = fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=2, scale_stop=3)
-            lmp_indent(lmp, indent_strs, lmp_shortcut.runsteps, keep_last_fixes=False)
-            close_atoms = check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmp_shortcut.output_dcd)
+        for _ in xrange(5):
+            indent_strs = fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
+            lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
+            close_atoms = check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
 
             # add new close atoms to present ones or stop indenting
             if close_atoms == []:
@@ -821,16 +776,34 @@ def create_voids(lmp_shortcut, lmpdat_solvate, dcd_solvate):
 
             # add further close atoms to present ones
             for atm_idx in close_atoms:
+                print(close_atoms)
                 if atm_idx not in all_close_atoms:
                     all_close_atoms.append(atm_idx)
-                    all_radii_atoms.append(mde.elements_mass_radii[solvate_sys.atoms[atm_idx].weigh])
+                    all_radii_atoms.append(mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)])
                     all_cogs_atoms.append(solvate_sys.ts_coords[-1][atm_idx])
 
-    #TODO function that unfixes all fixes to write a restart file through PyLammps
-    #lmp_shortcut.unfix_common_settings()
-    pdb.set_trace()
-    lmp.command("write_restart {}".format(lmp_shortcut.output_lmprst))
+            # dynamically grow sphere around atoms
+            factor_start += 1
+            factor_stop = factor_start + 1
+
+    lmpcuts.unfix_undump(pylmp, lmp)
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
 
+    del (solvate_sys, solvent_sys, solution_sys)
+
+    if rank == 0:
+        solvate_sys = _read_system(lmpdat_solvate, dcd_solvate)
+        solvent_sys = _read_system(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+        solution_sys = merge_sys(solvate_sys, solvent_sys)
+        solution_sys.change_indices(incr=1, mode="increase")
+        solution_sys.write_lmpdat(lmpcuts.output_lmpdat, cgcmm=True)
+
     return close_atoms == []
+
+
+def anneal_1(lmpcuts, lmpdat_solvate, dcd_solvate, lmpdat_solvent=None, dcd_solvent=None):
+    """
+    """
+    pass
