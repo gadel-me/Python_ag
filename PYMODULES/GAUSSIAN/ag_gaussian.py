@@ -2,12 +2,13 @@ from __future__ import print_function, division
 import re
 import numpy as np
 import scipy.constants
+import pdb
 import md_stars as mds
 import md_universe as mdu
 import md_elements as mde
 #import log_universe as logu
 
-__version__ = "2018-04-24"
+__version__ = "2018-10-16"
 
 """
 CURRENTLY THIS MODULE IS UNDER CONSTRUCTION AND NOT FULLY FUNCTIONAL!
@@ -15,6 +16,14 @@ Forces should also be read.
 """
 
 hartree_eV = scipy.constants.physical_constants["Hartree energy in eV"][0]
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 
 class GauStuff(mdu.Universe):
@@ -126,7 +135,8 @@ class GauStuff(mdu.Universe):
 
                 #// ROUTE SECTION (may be scattered over several files)
                 elif line.startswith("#"):
-                    if not hasattr(self, "job_settings") or overwrite is True:
+                    #pdb.set_trace()
+                    if self.job_settings == "" or overwrite is True:
 
                         # keep reading until empty line is reached, end loop
                         # when it is
@@ -166,12 +176,12 @@ class GauStuff(mdu.Universe):
             else:
                 charge_mutliplicity_line = re.findall(r'[\w]+', line)
 
-                if not hasattr(self, "gaussian_charges") or overwrite is True:
+                if self.gaussian_charges == [] or overwrite is True:
                     self.gaussian_charges = [int(i)
                                              for idx, i in enumerate(charge_mutliplicity_line)
                                              if idx % 2 == 0]
 
-                if not hasattr(self, "gaussian_multiplicities") or overwrite is True:
+                if self.gaussian_multiplicities == [] or overwrite is True:
                     self.gaussian_multiplicities = [int(i)
                                                     for idx, i in enumerate(charge_mutliplicity_line[1:])
                                                     if idx % 2 == 0]
@@ -403,7 +413,8 @@ class GauStuff(mdu.Universe):
                         if cur_atom.atm_id == cur_bond.atm_id1:
                             gau_out.write("{} {} ".format(cur_bond.atm_id2,
                                                           cur_bond.bnd_order))
-                    gau_out.write("\n"*2)
+                    gau_out.write("\n")
+                gau_out.write("\n")
 
             if modredundant is not None:
                 gau_out.write(modredundant)
@@ -411,7 +422,26 @@ class GauStuff(mdu.Universe):
 
             gau_out.write("\n"*4)
 
-    def read_gau_log(self, gau_log, save_all_scf_steps=False, overwrite=False):
+    def _read_gau_log_summary(self, result_str, overwrite=False):
+        """
+        """
+        result_str = result_str.split("\\\\")
+        atoms_coords = result_str[3].split("\\")
+        # remove first entry which is charge and multiplicity
+        atoms_coords.pop(0)
+        ts_coords = []
+
+        for atom_coords in atoms_coords:
+            atom_coords = atom_coords.split(",")
+            coords = np.array([float(i) for i in atom_coords[-3:]])
+            ts_coords.append(coords)
+
+        if overwrite is False:
+            self.ts_coords.append(ts_coords)
+        else:
+            self.ts_coords[-1] = ts_coords
+
+    def read_gau_log(self, gau_log, save_all_scf_steps=False, overwrite=False, read_summary=False):
         """
         Read the last coordinates from a gaussian log file.
 
@@ -553,6 +583,9 @@ class GauStuff(mdu.Universe):
 
             self.ts_coords.append(scf_cycle_coords[cur_cycle_min_scf_energy_idx])
             self.gaussian_other_info["scf_energies"].append(scf_cycle_energy[cur_cycle_min_scf_energy_idx])
+
+        if read_summary is True:
+            self._read_gau_log_summary(log_resume, overwrite=overwrite)
 
         # # split string by its entries
         # log_resume = log_resume.split("\\")
