@@ -16,11 +16,12 @@ from lammps import lammps, PyLammps
 import Transformations as cgt
 import md_elements as mde
 import md_box as mdb
-import ag_unify_md as agum
+#import ag_unify_md as agum
 import ag_geometry as agm
 import ag_lammps as aglmp
 import ag_unify_log as agul
 import ag_vectalg as agv
+import ag_statistics as ags
 
 #==============================================================================#
 # Setup MPI
@@ -145,190 +146,190 @@ class LmpShortcuts(object):
         lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
 
 
-def check_energy_convergence(logfiles,
-                             keyword="PotEng",
-                             percentage=100,
-                             debug=False):
-    """
-    TODO No matter the outcome, save an image of the qq plot with the
-    TODO respective data after several attempts to achieve normality.
-    TODO The bigger the sample size the more probable it is that the normal
-    TODO tests state to wrongly reject H0.
-
-    Calculate the skewness, p-value and z-score, to check if the values
-    of 'keyword' are normally distributed (i.e. the MD-Simulation run ended
-    successfully). "Generally speaking, the p-value is the probability of an
-    outcome different that what was expected given the null hypothesis - in this
-    case the probability of getting a skewness different from that of a normal
-    distribution (which is 0 because of symmetry).
-
-    Normality tests:
-
-    >   The Shapiro-Wilk test evaluates a data sample and quantifies how likely it is that the data
-        was drawn from a Gaussian distribution, named for Samuel Shapiro and Martin Wilk.
-
-    >   The D'Agostino's K^2 test calculates summary statistics from the data, namely kurtosis and
-        skewness, to determine if the data distribution departs from the normal distribution,
-        named for Ralph D'Agostino.
-        - Skew is a quantification of how much a distribution is pushed left or right,
-          a measure of asymmetry in the distribution.
-        - Kurtosis quantifies how much of the distribution is in the tail. It is a simple and commonly
-          used statistical test for normality.
-
-    >   Anderson-Darling Test is a statistical test that can be used to evaluate whether a data
-        sample comes from one of among many known data samples, named for Theodore Anderson and
-        Donald Darling.
-
-    A quick word on normality tests in general:
-        The theory for this test is based on the probability of getting a rational number from a
-        truly continuous distribution defined on the reals. The main goal of this test is to quickly
-        give a p-value for those that feel it necessary to test the uninteresting and uninformative
-        null hypothesis that the data represents an exact normal, and allows the user to then move
-        on to much more important questions, like "is the data close enough to the normal to use
-        normal theory inference?". After running this test (or better instead of running this and
-        any other test of normality) you should ask yourself what it means to test for normality
-        and why you would want to do so. Then plot the data and explore the interesting/useful
-        questions.
-
-    Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
-            https://www.rdocumentation.org/packages/TeachingDemos/versions/2.10/topics/SnowsPenultimateNormalityTest
-            https://stackoverflow.com/questions/7781798/seeing-if-data-is-normally-distributed-in-r/7788452#7788452
-
-    Input:
-        > logfiles      list; all written lammps-logfiles
-        > keyword       str; keywords from thermo-output
-        > percentage   int; number of last values in %,
-                        e.g. 80 means last 80 % of all values
-        > debug         boolean; enable debug messaging
-        > stage         str; which stage of the kwz-approach (relevant for
-                        debugging)
-    Output:
-        > skewness, pvalue, zscore
-        > data          list; all data for keyword from all files given
-    """
-    data = []
-
-    # gather all values from all logfiles given
-    log_data = agul.LogUnification()
-    log_data.read_lmplog(*logfiles)
-    data = [value for data_index in xrange(len(log_data.data)) for value in
-            log_data.data[data_index][keyword]]
-    num_values = len(data)
-    percentage /= 100  # percentage to per cent
-    testdata = data[-int(percentage * num_values):]
-    len_testdata = len(testdata)
-    min_value_testdata = min(testdata)
-
-    if debug is True:
-        print(("***Info: Smallest value of "
-               "{} % of all measured data is: {}").format(percentage * 100,
-                                                          min_value_testdata))
-
-    # normality tests
-    p_alpha = 0.05  # alpha helps interpreting the p-value from the normality test at hand
-
-    # Shapiro-Wilk Test (only for ~ 2000 samples)
-    normal_shapiro = False
-
-    if len_testdata <= 2000:
-        write_to_log("Shapiro-Wilk Test:\n")
-        stat_shapiro, p_shapiro = scipy.stats.shapiro(testdata)
-        normal_shapiro = p_shapiro > p_alpha
-
-        if normal_shapiro:
-            write_to_log("{} > {}: Sample looks Gaussian (fail to reject H0)\n".format(p_shapiro, p_alpha))
-        else:
-            write_to_log("{} < {}: Sample does not look Gaussian (reject H0)\n".format(p_shapiro, p_alpha))
-
-        write_to_log("\n")
-
-    # D'Agostino's K^2 Test
-    write_to_log("D'Agostino's K^2 Test:\n")
-    stat_agostino, p_agostino = scipy.stats.normaltest(testdata)
-    normal_agostino = p_agostino > p_alpha
-
-    if normal_agostino:
-        write_to_log("Sample looks Gaussian (fail to reject H0)\n")
-    else:
-        write_to_log("Sample does not look Gaussian (reject H0)\n")
-
-    write_to_log("\n")
-
-    # Anderson-Darling Test
-    write_to_log("Anderson-Darling Test:\n")
-    result_anderson = scipy.stats.anderson(testdata, dist="norm")
-    write_to_log("\t> Statistic: {}\n".format(result_anderson.statistic))
-
-    for idx in range(len(result_anderson.critical_values)):
-        sl_anderson = result_anderson.significance_level[idx]
-        cv_anderson = result_anderson.critical_values[idx]
-
-        # check if the null hypothesis can be rejected (H0: normal distributed)
-        normal_anderson = result_anderson.statistic < cv_anderson
-
-        if normal_anderson:
-            write_to_log("\t> {:> .3f}: {:> .3f}, data looks normal (fail to reject H0)\n".format(sl_anderson, cv_anderson))
-        else:
-            write_to_log("\t> {:> .3f}: {:> .3f}, data does not look normal (reject H0)\n".format(sl_anderson, cv_anderson))
-
-        # if H0 is ok at any confidence level, stop further testing
-        if normal_anderson is True:
-            break
-
-    write_to_log("\n")
-
-    # Compute the skewness of a data set, For normally distributed data,
-    # the skewness should be about 0
-    skewness = scipy.stats.skew(testdata)
-    write_to_log("Skewness (should be -0.3 < skewness < 0.3): {:> .12f}\n".format(skewness))
-
-    # determine if the skewness is close enough to 0 (statistically speaking)
-    stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
-    write_to_log("P-Value (skewness, should be > 0.05): {:> .12f}\n".format(p_skewness))
-    write_to_log("\n")
-    normal_skewness = (-0.3 < skewness < 0.3) and (p_skewness > 0.05)
-
-    # determine if the kurtosis is close enough to 0 (statistically speaking)
-    normal_kurtosis = False
-
-    if len_testdata > 20:
-        kurtosis = scipy.stats.kurtosis(testdata)
-        write_to_log("Kurtosis (should be -0.3 < kurtosis < 0.3): {:> .12f}\n".format(kurtosis))
-        stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(testdata)
-        normal_kurtosis = (-0.3 < kurtosis < 0.3) and (p_kurtosis > 0.05)
-        write_to_log("Statistic (Kurtosis): {:> 4.12f}\n".format(stat_kurtosis))
-        write_to_log("P-Value (Kurtosis, should be > 0.05): {:> 4.12f}\n".format(p_kurtosis))
-        write_to_log("\n")
-    else:
-        write_to_log("Need more than 20 values for Kurtosis-Test!\n")
-
-    write_to_log("\n")
-
-    # chi squared test
-    num_bins = int(np.sqrt(len(data)))
-    histo, bin_edges = np.histogram(data, bins=num_bins, normed=False)
-    a1, b1 = scipy.stats.norm.fit(data)
-    cdf = scipy.stats.norm.cdf(bin_edges, a1, b1)
-    #scaling_factor = len(data) * (x_max - x_min) / num_bins
-    scaling_factor = len(data)
-    # expected frequencies (haufigkeiten)
-    expected_values = scaling_factor * np.diff(cdf)
-    chisquare_results = scipy.stats.chisquare(histo, f_exp=expected_values, ddof=2)
-    #write_to_log(chisquare_results[1], "\n")
-
-    # only use tests that are allowed for the amount of given values for the shape and normality
-    if len_testdata > 20:
-        normal_shape = normal_skewness or normal_kurtosis
-    else:
-        normal_shape = normal_skewness
-
-    # accept normal distribution if any test states is is normally distributed
-    if len_testdata <= 2000:
-        normal_distributed = normal_shape and (normal_shapiro or normal_agostino or normal_anderson)
-    else:
-        normal_distributed = normal_shape and (normal_agostino or normal_anderson)
-
-    return (normal_distributed, min_value_testdata)
+#def check_energy_convergence(logfiles,
+#                             keyword="PotEng",
+#                             percentage=100,
+#                             debug=False):
+#    """
+#    TODO No matter the outcome, save an image of the qq plot with the
+#    TODO respective data after several attempts to achieve normality.
+#    TODO The bigger the sample size the more probable it is that the normal
+#    TODO tests state to wrongly reject H0.
+#
+#    Calculate the skewness, p-value and z-score, to check if the values
+#    of 'keyword' are normally distributed (i.e. the MD-Simulation run ended
+#    successfully). "Generally speaking, the p-value is the probability of an
+#    outcome different that what was expected given the null hypothesis - in this
+#    case the probability of getting a skewness different from that of a normal
+#    distribution (which is 0 because of symmetry).
+#
+#    Normality tests:
+#
+#    >   The Shapiro-Wilk test evaluates a data sample and quantifies how likely it is that the data
+#        was drawn from a Gaussian distribution, named for Samuel Shapiro and Martin Wilk.
+#
+#    >   The D'Agostino's K^2 test calculates summary statistics from the data, namely kurtosis and
+#        skewness, to determine if the data distribution departs from the normal distribution,
+#        named for Ralph D'Agostino.
+#        - Skew is a quantification of how much a distribution is pushed left or right,
+#          a measure of asymmetry in the distribution.
+#        - Kurtosis quantifies how much of the distribution is in the tail. It is a simple and commonly
+#          used statistical test for normality.
+#
+#    >   Anderson-Darling Test is a statistical test that can be used to evaluate whether a data
+#        sample comes from one of among many known data samples, named for Theodore Anderson and
+#        Donald Darling.
+#
+#    A quick word on normality tests in general:
+#        The theory for this test is based on the probability of getting a rational number from a
+#        truly continuous distribution defined on the reals. The main goal of this test is to quickly
+#        give a p-value for those that feel it necessary to test the uninteresting and uninformative
+#        null hypothesis that the data represents an exact normal, and allows the user to then move
+#        on to much more important questions, like "is the data close enough to the normal to use
+#        normal theory inference?". After running this test (or better instead of running this and
+#        any other test of normality) you should ask yourself what it means to test for normality
+#        and why you would want to do so. Then plot the data and explore the interesting/useful
+#        questions.
+#
+#    Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+#            https://www.rdocumentation.org/packages/TeachingDemos/versions/2.10/topics/SnowsPenultimateNormalityTest
+#            https://stackoverflow.com/questions/7781798/seeing-if-data-is-normally-distributed-in-r/7788452#7788452
+#
+#    Input:
+#        > logfiles      list; all written lammps-logfiles
+#        > keyword       str; keywords from thermo-output
+#        > percentage   int; number of last values in %,
+#                        e.g. 80 means last 80 % of all values
+#        > debug         boolean; enable debug messaging
+#        > stage         str; which stage of the kwz-approach (relevant for
+#                        debugging)
+#    Output:
+#        > skewness, pvalue, zscore
+#        > data          list; all data for keyword from all files given
+#    """
+#    data = []
+#
+#    # gather all values from all logfiles given
+#    log_data = agul.LogUnification()
+#    log_data.read_lmplog(*logfiles)
+#    data = [value for data_index in xrange(len(log_data.data)) for value in
+#            log_data.data[data_index][keyword]]
+#    num_values = len(data)
+#    percentage /= 100  # percentage to per cent
+#    testdata = data[-int(percentage * num_values):]
+#    len_testdata = len(testdata)
+#    min_value_testdata = min(testdata)
+#
+#    if debug is True:
+#        print(("***Info: Smallest value of "
+#               "{} % of all measured data is: {}").format(percentage * 100,
+#                                                          min_value_testdata))
+#
+#    # normality tests
+#    p_alpha = 0.05  # alpha helps interpreting the p-value from the normality test at hand
+#
+#    # Shapiro-Wilk Test (only for ~ 2000 samples)
+#    normal_shapiro = False
+#
+#    if len_testdata <= 2000:
+#        write_to_log("Shapiro-Wilk Test:\n")
+#        stat_shapiro, p_shapiro = scipy.stats.shapiro(testdata)
+#        normal_shapiro = p_shapiro > p_alpha
+#
+#        if normal_shapiro:
+#            write_to_log("{} > {}: Sample looks Gaussian (fail to reject H0)\n".format(p_shapiro, p_alpha))
+#        else:
+#            write_to_log("{} < {}: Sample does not look Gaussian (reject H0)\n".format(p_shapiro, p_alpha))
+#
+#        write_to_log("\n")
+#
+#    # D'Agostino's K^2 Test
+#    write_to_log("D'Agostino's K^2 Test:\n")
+#    stat_agostino, p_agostino = scipy.stats.normaltest(testdata)
+#    normal_agostino = p_agostino > p_alpha
+#
+#    if normal_agostino:
+#        write_to_log("Sample looks Gaussian (fail to reject H0)\n")
+#    else:
+#        write_to_log("Sample does not look Gaussian (reject H0)\n")
+#
+#    write_to_log("\n")
+#
+#    # Anderson-Darling Test
+#    write_to_log("Anderson-Darling Test:\n")
+#    result_anderson = scipy.stats.anderson(testdata, dist="norm")
+#    write_to_log("\t> Statistic: {}\n".format(result_anderson.statistic))
+#
+#    for idx in range(len(result_anderson.critical_values)):
+#        sl_anderson = result_anderson.significance_level[idx]
+#        cv_anderson = result_anderson.critical_values[idx]
+#
+#        # check if the null hypothesis can be rejected (H0: normal distributed)
+#        normal_anderson = result_anderson.statistic < cv_anderson
+#
+#        if normal_anderson:
+#            write_to_log("\t> {:> .3f}: {:> .3f}, data looks normal (fail to reject H0)\n".format(sl_anderson, cv_anderson))
+#        else:
+#            write_to_log("\t> {:> .3f}: {:> .3f}, data does not look normal (reject H0)\n".format(sl_anderson, cv_anderson))
+#
+#        # if H0 is ok at any confidence level, stop further testing
+#        if normal_anderson is True:
+#            break
+#
+#    write_to_log("\n")
+#
+#    # Compute the skewness of a data set, For normally distributed data,
+#    # the skewness should be about 0
+#    skewness = scipy.stats.skew(testdata)
+#    write_to_log("Skewness (should be -0.3 < skewness < 0.3): {:> .12f}\n".format(skewness))
+#
+#    # determine if the skewness is close enough to 0 (statistically speaking)
+#    stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
+#    write_to_log("P-Value (skewness, should be > 0.05): {:> .12f}\n".format(p_skewness))
+#    write_to_log("\n")
+#    normal_skewness = (-0.3 < skewness < 0.3) and (p_skewness > 0.05)
+#
+#    # determine if the kurtosis is close enough to 0 (statistically speaking)
+#    normal_kurtosis = False
+#
+#    if len_testdata > 20:
+#        kurtosis = scipy.stats.kurtosis(testdata)
+#        write_to_log("Kurtosis (should be -0.3 < kurtosis < 0.3): {:> .12f}\n".format(kurtosis))
+#        stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(testdata)
+#        normal_kurtosis = (-0.3 < kurtosis < 0.3) and (p_kurtosis > 0.05)
+#        write_to_log("Statistic (Kurtosis): {:> 4.12f}\n".format(stat_kurtosis))
+#        write_to_log("P-Value (Kurtosis, should be > 0.05): {:> 4.12f}\n".format(p_kurtosis))
+#        write_to_log("\n")
+#    else:
+#        write_to_log("Need more than 20 values for Kurtosis-Test!\n")
+#
+#    write_to_log("\n")
+#
+#    # chi squared test
+#    num_bins = int(np.sqrt(len(data)))
+#    histo, bin_edges = np.histogram(data, bins=num_bins, normed=False)
+#    a1, b1 = scipy.stats.norm.fit(data)
+#    cdf = scipy.stats.norm.cdf(bin_edges, a1, b1)
+#    #scaling_factor = len(data) * (x_max - x_min) / num_bins
+#    scaling_factor = len(data)
+#    # expected frequencies (haufigkeiten)
+#    expected_values = scaling_factor * np.diff(cdf)
+#    chisquare_results = scipy.stats.chisquare(histo, f_exp=expected_values, ddof=2)
+#    #write_to_log(chisquare_results[1], "\n")
+#
+#    # only use tests that are allowed for the amount of given values for the shape and normality
+#    if len_testdata > 20:
+#        normal_shape = normal_skewness or normal_kurtosis
+#    else:
+#        normal_shape = normal_skewness
+#
+#    # accept normal distribution if any test states is is normally distributed
+#    if len_testdata <= 2000:
+#        normal_distributed = normal_shape and (normal_shapiro or normal_agostino or normal_anderson)
+#    else:
+#        normal_distributed = normal_shape and (normal_agostino or normal_anderson)
+#
+#    return (normal_distributed, min_value_testdata)
 
 
 def _molecules_radii(lmp_sys):
@@ -347,19 +348,7 @@ def _molecules_radii(lmp_sys):
     return (radii_sphere, cogs_solvate)
 
 
-def mkdir(folder):
-    """
-    Create folder or skip creation if it already exists.
-
-    Create a folder, if it exists, do nothing.
-    """
-    try:
-        os.mkdir(folder, 0755)
-    except OSError:
-        print("***Info: Folder {} already exists!".format(folder))
-
-
-def _read_system(lmpdat, dcd=None, frame_idx=-1):
+def read_system(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     """
     Read a lammps data file and a dcd file on top (optional).
 
@@ -396,21 +385,21 @@ def _read_system(lmpdat, dcd=None, frame_idx=-1):
         md_sys.ts_boxes = []
 
         # enable reading the last frame with negative indexing
-        if frame_idx == -1:
-            md_sys.read_frames(frame=frame_idx - 1, to_frame=frame_idx)
+        if frame_idx_stop == -1:
+            md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
         else:
-            md_sys.read_frames(frame=frame_idx, to_frame=frame_idx + 1)
+            md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
 
         md_sys.close_dcd()
 
     return md_sys
 
 
-def merge_sys(sys_a, sys_b, frame_id_a=-1, frame_id_b=-1, pair_coeffs=False):
+def merge_sys(sys_a, sys_b, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=False):
     """
     """
     sys_both = copy.deepcopy(sys_a)
-    sys_both.extend_universe(sys_b, u1_frame_id=frame_id_a, u2_frame_id=frame_id_b, mode="merge")
+    sys_both.extend_universe(sys_b, u1_frame_id=frame_idx_a, u2_frame_id=frame_idx_b, mode="merge")
 
     if pair_coeffs is True:
         sys_both.mix_pair_types(mode="ii", mix_style="arithmetic")
@@ -418,6 +407,22 @@ def merge_sys(sys_a, sys_b, frame_id_a=-1, frame_id_b=-1, pair_coeffs=False):
     sys_both.fetch_molecules_by_bonds()
     sys_both.mols_to_grps()
     return sys_both
+
+
+def _write_data(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=False):
+    """
+    """
+    sys_a = read_system(lmpdat_a, dcd_a, frame_idx_a)
+
+    if lmpdat_b is not None:
+        sys_b = read_system(lmpdat_b, dcd_b, frame_idx_b)
+        # since we only read one frame, only this frame combined will be written
+        sys_ab = merge_sys(sys_a, sys_b, pair_coeffs=pair_coeffs)
+    else:
+        sys_ab = sys_a
+
+    sys_ab.change_indices(incr=1, mode="increase")
+    sys_ab.write_lmpdat(lmpdat_out, cgcmm=True)
 
 
 def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=False):
@@ -486,7 +491,7 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
     return aggregate_ok
 
 
-def cut_box(lmpdat, box, lmpdat_out, dcd=None):
+def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
     """
     Cut a smaller solvent box from a bigger one that will be used during the simulation.
 
@@ -495,12 +500,13 @@ def cut_box(lmpdat, box, lmpdat_out, dcd=None):
     calculation time. This is possible since the potential energy for a group
     of atoms may be calculated with lammps. The center of the box will be at
     the origin.
+    Only reads one frame.
 
     > lmpdat            str; lammps data file of the system to cut from
     > box               Box; size of the box to cut out
     > lmpdat_out       str; name of new lammps data file with cut coordinates
     """
-    md_sys = _read_system(lmpdat, dcd)
+    md_sys = read_system(lmpdat, dcd, frame_idx_start=frame_idx - 1, frame_idx_stop=frame_idx)
 
     # generate planes that describe the box
     cart_box = copy.deepcopy(box)
@@ -612,8 +618,7 @@ def _check_sys(md_sys, atm_idx_max):
         return True
 
 
-def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None,
-            frame_idx=-1):
+def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
     """
     Prepare the system for the next docking step.
 
@@ -645,12 +650,12 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None,
 
     """
     # read and transpose the main sys to the origin
-    main_sys = _read_system(lmpdat_main)
+    main_sys = read_system(lmpdat_main)
     main_sys.transpose_by_cog(-1, [0, 0, 0], copy=False)
     _natoms = len(main_sys.atoms)
 
     # read and transpose the add sys to the origin
-    add_sys = _read_system(lmpdat_add, dcd_add, frame_idx)
+    add_sys = read_system(lmpdat_add, dcd_add, frame_idx)
     add_sys.transpose_by_cog(-1, [0, 0, 0], copy=False)
 
     # rotate add sys
@@ -686,7 +691,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None,
 def quench(lmpcuts, lmpdat_main):
     """
     """
-    main_sys = _read_system(lmpdat_main)
+    main_sys = read_system(lmpdat_main)
     natoms_main_sys = len(main_sys.atoms)
     del main_sys
 
@@ -699,7 +704,7 @@ def quench(lmpcuts, lmpdat_main):
 
     lmp.file(lmpcuts.settings_file)
     # change box type to not be periodic
-    lmp.command("boundary f f f")
+    #lmp.command("boundary f f f")
     lmpcuts.read_system(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
@@ -724,7 +729,7 @@ def quench(lmpcuts, lmpdat_main):
     # towards the origin at (0/0/0)
     # (prevents losing atoms due to being localized outside the cutoff)
     if rank == 0:
-        prep_sys = _read_system(lmpcuts.input_lmpdat)
+        prep_sys = read_system(lmpcuts.input_lmpdat)
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         cog *= -1
@@ -750,6 +755,16 @@ def quench(lmpcuts, lmpdat_main):
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
+
+    # check aggregate
+    if rank == 0:
+        quench_sys = read_system(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
+        quench_success = check_aggregate(quench_sys)
+    else:
+        quench_success = False
+
+    quench_success = comm.bcast(quench_success, 0)
+    return quench_success
 
 
 # Annealing ===================================================================#
@@ -789,7 +804,7 @@ def relax_box(lmpcuts):
     lmp.close()
 
 
-def fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
+def _fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
     """
     Create the strings that are used as IDs for the lammps fix indent command.
 
@@ -827,7 +842,7 @@ def fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
     return all_indent_fixes
 
 
-def lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
+def _lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
     """
     Perform indentation runs to grow spheres around certain molecules.
 
@@ -861,7 +876,7 @@ def lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
             lmp.command("unfix {}".format(indent_fix.split()[1]))
 
 
-def check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
+def _check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
     """
     Check for imaginary clashes between atoms of two systems before combining them.
 
@@ -901,9 +916,9 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     """
     """
     # solvate with molecule radii and cogs
-    solvate_sys = _read_system(lmpdat_solvate, dcd_solvate)
+    solvate_sys = read_system(lmpdat_solvate, dcd_solvate)
     radii_mol, cogs_mol = _molecules_radii(solvate_sys)
-    indent_strs = fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
+    indent_strs = _fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
 
     # load lammps and lammps settings
     lmp = lammps()
@@ -925,15 +940,15 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     lmpcuts.berendsen(lmp)
     #lmp.command("unfix integrator")
     #lmp.command("fix integrator all nve/limit 1.0")
-    lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
+    _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
 
     # solution system
-    solvent_sys = _read_system(lmpcuts.input_lmpdat)
+    solvent_sys = read_system(lmpcuts.input_lmpdat)
     solution_sys = merge_sys(solvate_sys, solvent_sys)
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
-    close_atoms = check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
+    close_atoms = _check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
     cogs_atoms = [solvate_sys.ts_coords[-1][i] for i in close_atoms]
     radii_atoms = [mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)] for i in close_atoms]
 
@@ -952,9 +967,9 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     if close_atoms != []:
         # move solvent molecules away from close solvate atoms
         for _ in xrange(5):
-            indent_strs = fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
-            lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
-            close_atoms = check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
+            indent_strs = _fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
+            _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
+            close_atoms = _check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
 
             # add new close atoms to present ones or stop indenting
             if close_atoms == []:
@@ -979,18 +994,16 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
 
     del (solvate_sys, solvent_sys, solution_sys)
 
+    # combine solvent and solute and write a lammps data file
     if rank == 0:
-        solvate_sys = _read_system(lmpdat_solvate, dcd_solvate)
-        solvent_sys = _read_system(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
-        solution_sys = merge_sys(solvate_sys, solvent_sys)
-        solution_sys.change_indices(incr=1, mode="increase")
-        solution_sys.write_lmpdat(lmpcuts.output_lmpdat, cgcmm=True)
+        _write_data(lmpcuts.output_lmpdat, lmpdat_solvate, lmpdat_b=lmpcuts.input_lmpdat, dcd_a=dcd_solvate, dcd_b=lmpcuts.output_dcd)
 
     return close_atoms == []
 
 
 def anneal_productive(lmpcuts):
     """
+    Use nose-hoover baro- and thermostat for productive annealing run.
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -1010,6 +1023,28 @@ def anneal_productive(lmpcuts):
 
     lmp.command("fix barostat all npt temp {} {} 0.5 aniso {} {} 50".format(lmpcuts.tstart, lmpcuts.tstop, lmpcuts.pstart, lmpcuts.pstop))
     lmp.command("run {}".format(lmpcuts.runsteps))
+    lmpcuts.unfix_undump(pylmp, lmp)
+    lmp.command("reset_timestep 0")
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+    lmp.command("clear")
+    lmp.close()
+
+
+def requench(lmpcuts):
+    """
+    """
+    lmp = lammps()
+    pylmp = PyLammps(ptr=lammps)
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.read_system(lmp)
+    lmpcuts.thermo(lmp)
+    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
+
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
+
+    lmpcuts.minimize(lmp, style="cg", box_relax=False)
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
