@@ -43,6 +43,7 @@ class LmpShortcuts(object):
     def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
         """
         """
+        self.thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
         self.tstart = tstart
         self.tstop = tstop
         self.pstart = pstart
@@ -62,12 +63,11 @@ class LmpShortcuts(object):
         self.gpu = gpu
 
     def read_system(self, lmp):
-        """
-        Read a restart file from another stage, previous run or a data file instead.
-        """
-        # reading order: output restart -> input restart -> data
+        """Read a lammps restart or data file."""
         if self.output_lmprst is not None and os.path.isfile(self.output_lmprst):
             lmp.command("read_restart {}".format(self.output_lmprst))
+        elif self.inter_lmprst is not None and os.path.isfile(self.inter_lmprst):
+            lmp.command("read_restart {}".format(self.inter_lmprst))
         elif self.input_lmprst is not None and os.path.isfile(self.input_lmprst):
             lmp.command("read_restart {}".format(self.input_lmprst))
         else:
@@ -102,8 +102,7 @@ class LmpShortcuts(object):
         """
         Log thermodynamic data.
         """
-        thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
-        lmp.command("thermo_style custom " + " ".join(thermargs))
+        lmp.command("thermo_style custom " + " ".join(self.thermargs))
         lmp.command("thermo_modify lost warn flush yes")
         #lmp.command("thermo_modify line multi format float %g")
         lmp.command("thermo {}".format(self.logsteps))
@@ -123,7 +122,15 @@ class LmpShortcuts(object):
         """
         lmp.command("fix integrator {} nve".format(group))
         lmp.command("fix thermostat {} temp/berendsen {} {} 0.5".format(group, self.tstart, self.tstop))
-        lmp.command("fix barostat {} press/berendsen iso {} {} 50".format(group, self.pstart, self.pstop))
+
+        if self.pstart is not None and self.pstop is not None:
+            lmp.command("fix barostat {} press/berendsen iso {} {} 50".format(group, self.pstart, self.pstop))
+
+    def nose_hoover(self, lmp, group="all"):
+        if self.pstart is not None and self.pstop is not None:
+            lmp.command("fix integrator {} nvt temp {} {} 0.5".format(group, self.tstart, self.tstop))
+        else:
+            lmp.command("fix integrator {} npt temp {} {} 0.5 iso {} {} 50".format(group, self.tstart, self.tstop, self.pstart, self.pstop))
 
     def use_gpu(self, lmp, neigh=True):
         """
@@ -409,7 +416,7 @@ def merge_sys(sys_a, sys_b, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=False):
     return sys_both
 
 
-def _write_data(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=False):
+def write_data(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=False):
     """
     """
     sys_a = read_system(lmpdat_a, dcd_a, frame_idx_a)
@@ -430,6 +437,8 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
     Check if several molecules form an aggregate.
 
     #TODO Buggy, does not recognize aggregates properly when they form a chain?
+    #TODO Check aggregate only for certain atom ids
+    #TODO number of molecules may only be the number of molecules with atom ids
 
     At the moment this works only for orthogonal cells (reason: sub-cell length)
     Check if the aggregate did not get dissolved in the process. This is achieved
@@ -768,7 +777,7 @@ def quench(lmpcuts, lmpdat_main):
 
 
 # Annealing ===================================================================#
-def relax_box(lmpcuts):
+def berendsen_md(lmpcuts, group="all"):
     """
     """
     lmp = lammps()
@@ -792,10 +801,39 @@ def relax_box(lmpcuts):
         lmpcuts.minimize(lmp, style="cg")
 
     # barostatting, thermostatting
-    lmpcuts.berendsen(lmp)
+    lmpcuts.berendsen(lmp, group=group)
+    lmp.command("run {}".format(lmpcuts.runsteps))
+    lmpcuts.unfix_undump(pylmp, lmp)
+    lmp.command("reset_timestep 0")
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+    lmp.command("clear")
+    lmp.close()
 
-    #lmp.command("fix nose_hoover grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
 
+def nose_hoover_md(lmpcuts, group="all"):
+    """
+    """
+    lmp = lammps()
+    pylmp = PyLammps(ptr=lmp)
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
+
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp, neigh=True)
+
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.read_system(lmp)
+    lmpcuts.thermo(lmp)
+    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
+
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
+
+    # minimize cut box if not done already
+    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
+        lmpcuts.minimize(lmp, style="cg")
+
+    lmpcuts.nose_hoover(lmp, group=group)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
@@ -992,25 +1030,22 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     lmp.command("clear")
     lmp.close()
 
-    del (solvate_sys, solvent_sys, solution_sys)
-
-    # combine solvent and solute and write a lammps data file
-    if rank == 0:
-        _write_data(lmpcuts.output_lmpdat, lmpdat_solvate, lmpdat_b=lmpcuts.input_lmpdat, dcd_a=dcd_solvate, dcd_b=lmpcuts.output_dcd)
-
     return close_atoms == []
 
 
-def anneal_productive(lmpcuts):
+def anneal_productive(lmpcuts, pe_atm_ids):
     """
     Use nose-hoover baro- and thermostat for productive annealing run.
     """
+
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
     lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
+    # caveat: only possible with neigh no if calculating pe/atom on the graphics
+    # card
     if lmpcuts.gpu is True:
-        lmpcuts.use_gpu(lmp, neigh=True)
+        lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
     lmpcuts.read_system(lmp)
@@ -1021,7 +1056,14 @@ def anneal_productive(lmpcuts):
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
-    lmp.command("fix barostat all npt temp {} {} 0.5 aniso {} {} 50".format(lmpcuts.tstart, lmpcuts.tstop, lmpcuts.pstart, lmpcuts.pstop))
+    # compute potential energy of the solvate (pair, bond, ...)
+    # in order to compute the pe of the solvent, the solvent atom-ids must be
+    # known
+    atm_ids_str = " ".join(map(str, pe_atm_ids))
+    lmp.command("group resname_atoms " + atm_ids_str)
+    lmp.command("compute poteng_solvate resname_atoms pe/atom")
+    lmp.command("compute pe resname_atoms reduce sum c_poteng_solvate")
+    lmpcuts.nose_hoover(lmp)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")

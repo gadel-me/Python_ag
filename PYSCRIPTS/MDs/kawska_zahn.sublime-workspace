@@ -602,7 +602,7 @@
 	"expanded_folders":
 	[
 		"/home/gadelmeier/Python/PYMODULES",
-		"/home/gadelmeier/Python/PYMODULES/LAMMPS"
+		"/home/gadelmeier/Programs/vmd_1.9.2/lib/scripts/python"
 	],
 	"file_history":
 	[
@@ -933,6 +933,10 @@
 		]
 	},
 	"menu_visible": true,
+	"output.SublimeLinter":
+	{
+		"height": 0.0
+	},
 	"output.find_results":
 	{
 		"height": 0.0

@@ -1516,8 +1516,7 @@ class Universe(object):
         if refresh_bonds is True:
             self.fetch_molecules_by_bonds()
 
-    def change_indices(self, incr=1, mode="increase",
-                      entries="atm_id, atm_grp_id, atm_key, "):
+    def change_indices(self, incr=1, mode="increase", entries="atm_id, atm_grp_id, atm_key, "):
         """
         Programs, such as lammps, need (why so ever) to have the integers in
         data-files to run from 1-N. Since other programs (like VMD) have starting
@@ -1771,26 +1770,29 @@ class Universe(object):
             print("***Info: Creating linked cells.")
             self.create_linked_cells(frame_id)
 
-    #def get_rmsds(self, reference_id, *frame_ids):
-    #    """
-    #    Calculate rmsd values of frame ids against frame id.
-#
-    #    Parameters:
-    #        > reference_id    int;
-    #                    ID of reference frame
-    #        > frame_ids tuple of ints;
-    #                    IDs of all frame to calculate the rmsd from
-#
-    #    Returns:
-    #        > rmsds     list of floats;
-    #                    All RMSD values of all frames given
-#
-    #    """
-    #    rmsds = []
-#
-    #    for frame_id in frame_ids:
-    #        cur_rmsd = agm.get_rmsd(self.ts_coords[frame_id],
-    #                                self.ts_coords[reference_id])
-    #        rmsds.append(cur_rmsd)
-#
-    #    return rmsds
+    def atom_ids_by_resname(self, resnames):
+        """
+        Find atom ids by searching for their residue name in a lammps data file.
+
+        In order to make this work, the CGCMM style must be used in the lammps
+        data file so atoms can be found by their residue names.
+
+        Parameters
+        ----------
+        resnames : set of str
+            residue names of which the desired atoms are part of
+
+        Returns
+        -------
+        atom_ids : list
+            atom ids of atoms which have residue names defined in resnames
+
+        """
+        atom_ids = []
+
+        #TODO add index or catm.atm_id?
+        for idx, catm in enumerate(self.atoms):
+            if catm.resname in resnames:
+                atom_ids.append(idx)
+
+        return atom_ids

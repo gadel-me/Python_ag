@@ -138,26 +138,47 @@ def write_to_log(string, filename="kwz_log"):
     with open("kwz_log", "a") as kwz_log:
         kwz_log.write(string)
 
+
 if __name__ == "__main__":
     #==============================================================================#
     # Argument Parsing
     #==============================================================================#
     parser = argparse.ArgumentParser(prog="kawska_zahn.py", formatter_class=argparse.RawTextHelpFormatter, description="Kawska-Zahn-Approach for accelerated crystallization simulations.")
 
+    # arguments description
+    lmpm_help = "Lammps' data-file of the main system."
+    lmpa_help = """
+    Lammps' data-file with atom-cube_sidetypes and coordinates for one single molecule to
+    add to the current system. Atom types have to be defined already by the first
+    data/restart file loaded!
+    """
+    lmps_help = "Create a solvent box for MD-Simulation. Data-file with one single solvent molecule to add."
+    lmps_dcd_help = "DCD file of solvent box."
+    set_help = "lammps' input-file/-script with basic simulation settings"
+    settings_solvent_help = "lammps' input-file/-script with basic simulation settings for the solvent system"
+    pair_coeffs_help = "lammps'  script with lj, dreiding, etc. parameters"
+    solvent_pc_help = "lammps'  script with lj, dreiding, etc. parameters for the solvent"
+    logsteps_help = "log thermodynamic-, steps- and restart-files every" + "'logsteps' steps"
+    gpu_help = "utilize lammps' GPU package."
+    cycles_help = "Number of aggregations."
+    timeout_help = "allowed duration of simulation, for resubmitting purposes;  should be < 24h"
+    pa_help = "The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles"
+
     # general
-    parser.add_argument("-lmpm", default=None, metavar="*.lmpdat", help="Lammps' data-file of the main system.")
-    parser.add_argument("-lmpa", default=None, nargs="*", metavar="*.lmpdat", help="Lammps' data-file with atom-cube_sidetypes and coordinates for one single molecule to add to the current system. Atom types have to be defined already by the first data/restart file loaded!")
-    parser.add_argument("-lmps", default=None, metavar="*.lmpdat", help="Create a solvent box for MD-Simulation. Data-file with one single solvent molecule to add.")
-    parser.add_argument("-lmps_dcd", default=None, metavar="*.lmpdat", help="DCD file of solvent box.")
-    parser.add_argument("-set", metavar="*.lmpcfg", required=True, help="lammps' input-file/-script with basic simulation " + "settings")
-    parser.add_argument("-settings_solvent", metavar="*.lmpcfg", help="lammps' input-file/-script with basic simulation " +      "settings for the solvent system")
-    parser.add_argument("-pair_coeffs", default=None, metavar="*.lmpcfg", required=True, help="lammps'  script with lj, dreiding, etc. parameters")
-    parser.add_argument("-solvent_paircoeffs", default=None, metavar="*.lmpcfg", help="lammps'  script with lj, dreiding, etc. parameters " + "for the solvent")
-    parser.add_argument("-logsteps", type=int, default=1000, help="log thermodynamic-, steps- and restart-files every" + "'logsteps' steps")
-    parser.add_argument("-gpu", default=False, action="store_true", help="utilize lammps' GPU package.",)
-    parser.add_argument("-cycles", type=int, default=5, help="Number of aggregations.")
-    parser.add_argument("-timeout", metavar="00:01:00", default="00:00:05", help="allowed duration of simulation, for resubmitting purposes;  should be < 24h")
-    parser.add_argument("-pa", "-pattern_add", nargs="*", default=0, type=int, help="The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles")
+    parser.add_argument("-lmpm", default=None, metavar="*.lmpdat", help=lmpm_help)
+    parser.add_argument("-lmpa", default=None, nargs="*", metavar="*.lmpdat", help=lmpa_help)
+    parser.add_argument("-lmps", default=None, metavar="*.lmpdat", help=lmps_help)
+    parser.add_argument("-lmps_dcd", default=None, metavar="*.lmpdat", help=lmps_dcd_help)
+    parser.add_argument("-solvate_resnames, metavar='cbz sac'")
+    parser.add_argument("-set", metavar="*.lmpcfg", required=True, help=set_help)
+    parser.add_argument("-settings_solvent", metavar="*.lmpcfg", help=settings_solvent_help)
+    parser.add_argument("-pair_coeffs", default=None, metavar="*.lmpcfg", required=True, help=pair_coeffs_help)
+    parser.add_argument("-solvent_paircoeffs", default=None, metavar="*.lmpcfg", help=solvent_pc_help)
+    parser.add_argument("-logsteps", type=int, default=1000, help=logsteps_help)
+    parser.add_argument("-gpu", default=False, action="store_true", help=gpu_help)
+    parser.add_argument("-cycles", type=int, default=5, help=cycles_help)
+    parser.add_argument("-timeout", metavar="00:01:00", default="00:00:05", help=timeout_help)
+    parser.add_argument("-pa", "-pattern_add", nargs="*", default=0, type=int, help=pa_help)
 
     # quenching
     parser.add_argument("-quench_temp_start", type=int, default=5)
@@ -165,12 +186,13 @@ if __name__ == "__main__":
     parser.add_argument("-quench_steps", type=int, default=250000)
     parser.add_argument("-quench_logsteps", type=int, default=1000)
 
-    # cut and relax solvent
-    parser.add_argument("-cut_tstart", type=int, default=200)
-    parser.add_argument("-cut_tstop", type=int, default=250)
-    parser.add_argument("-cut_pstart", type=int, default=40)
-    parser.add_argument("-cut_pstop", type=int, default=10)
-    parser.add_argument("-cut_steps", type=int, default=50000)
+    # relax cut solvent
+    parser.add_argument("-relax_cut_tstart", type=int, default=200)
+    parser.add_argument("-relax_cut_tstop", type=int, default=250)
+    parser.add_argument("-relax_cut_pstart", type=int, default=40)
+    parser.add_argument("-relax_cut_pstop", type=int, default=10)
+    parser.add_argument("-relax_cut_steps", type=int, default=50000)
+    parser.add_argument("-relax_cut_logsteps", type=int, default=1000)
 
     # create voids in relaxed solvent
     parser.add_argument("-void_tstart", type=int, default=250)
@@ -180,17 +202,32 @@ if __name__ == "__main__":
     parser.add_argument("-void_steps", type=int, default=2000)
     parser.add_argument("-void_logsteps", type=int, default=1000)
 
+    # relax solvent in solution
+    parser.add_argument("-relax_solv_tstart", type=int, default=250)
+    parser.add_argument("-relax_solv_tstop", type=int, default=300)
+    parser.add_argument("-relax_solv_pstart", type=int, default=10)
+    parser.add_argument("-relax_solv_pstop", type=int, default=1)
+    parser.add_argument("-relax_solv_steps", type=int, default=2000)
+    parser.add_argument("-relax_solv_logsteps", type=int, default=1000)
+
     # equilibrate solvate and solvent
-    parser.add_argument("-start_relax_solvent_temp", type=int, default=10)
-    parser.add_argument("-stop_relax_solvent_temp", type=int, default=10)
-    parser.add_argument("-relax_solvent_steps", type=int, default=50000)
-    parser.add_argument("-start_equil_anneal_temp", type=int, default=10)
-    parser.add_argument("-stop_equil_anneal_temp", type=int, default=300, help="Temperature at which system shall be annealed")
-    parser.add_argument("-equil_anneal_steps", type=int, default=500000)
-    parser.add_argument("-equil_anneal_ensemble", type=str, default="npt", help="nvt or npt")
+    parser.add_argument("-heat_tstart", type=int, default=200)
+    parser.add_argument("-heat_tstop", type=int, default=300)
+    parser.add_argument("-heat_pstart", type=int, default=50)
+    parser.add_argument("-heat_pstop", type=int, default=1)
+    parser.add_argument("-heat_steps", type=int, default=50000)
+    parser.add_argument("-heat_logsteps", type=int, default=1000)
+
+    # annealing
+    parser.add_argument("-anneal_tstart", type=int, default=300)
+    parser.add_argument("-anneal_tstop", type=int, default=300)
+    parser.add_argument("-anneal_pstart", type=int, default=1)
+    parser.add_argument("-anneal_pstop", type=int, default=1)
     parser.add_argument("-anneal_steps", type=int, default=2000000)
-    parser.add_argument("-additional_anneal_steps", type=int, default=100000)
+    parser.add_argument("-anneal_steps_plus", type=int, default=500000)
     parser.add_argument("-anneal_logsteps", type=int, default=500)
+
+    # requenching
     parser.add_argument("-requench_steps", type=int, default=150000)
 
     args = parser.parse_args()
@@ -199,7 +236,7 @@ if __name__ == "__main__":
     # Remaining cycles and molecule to add pattern
     #==============================================================================#
     remaining_cycles, requench_out = get_remaining_cycles()
-
+    resnames = set(args.solvate_resnames.split())
 
     #==============================================================================#
     # Kawska Zahn Approach
@@ -227,49 +264,55 @@ if __name__ == "__main__":
         quench_rst = quench_dir + "quench_rst_{}.lmprst".format(curcycle)
         quench_dcd = quench_dir + "quench_{}.dcd".format(curcycle)
         quench_log = quench_dir + "quench_{}.lmplog".format(curcycle)
-        lmpcuts_quench = agk.LmpShortcuts(tstart=args.quench_temp_start, tstop=args.quench_temp_stop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
+        lmpsettings_quench = agk.LmpShortcuts(tstart=args.quench_temp_start, tstop=args.quench_temp_stop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
 
         # anneal -> solvent
-        cut_solv = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
+        cut_solv_lmpdat = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
         cut_solv_rst = anneal_dir + "cut_solv_{}".format(curcycle) + "_tmp.rst"
         cut_solv_out = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmprst"
         cut_solv_dcd = anneal_dir + "cut_solv_{}".format(curcycle) + ".dcd"
         cut_solv_log = anneal_dir + "cut_solv_{}".format(curcycle) + ".lmplog"
-        lmpcuts_cut_solv = agk.LmpShortcuts(tstart=args.cut_tstart, tstop=args.cut_tstop, pstart=args.cut_pstart, pstop=args.cut_pstop, logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv, inter_lmprst=cut_solv_rst, output_lmprst=cut_solv_out, output_dcd=cut_solv_dcd, output_lmplog=cut_solv_log, gpu=args.gpu)
+        lmpsettings_relax_cut = agk.LmpShortcuts(tstart=args.relax_cut_tstart, tstop=args.relax_cut_tstop, pstart=args.relax_cut_pstart, pstop=args.relax_cut_pstop, logsteps=args.relax_cut_logsteps, runsteps=args.relax_cut_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_lmpdat, inter_lmprst=cut_solv_rst, output_lmprst=cut_solv_out, output_dcd=cut_solv_dcd, output_lmplog=cut_solv_log, gpu=args.gpu)
 
-        void_solvate_solvent = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmpdat"
         void_solv_rst = anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
         void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmprst"
         void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
         void_solv_log = anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
-        lmpcuts_void = agk.LmpShortcuts(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop, logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_out, inter_lmprst=void_solv_rst, output_lmpdat=void_solvate_solvent, output_lmprst=void_solv_out, output_dcd=void_solv_dcd, output_lmplog=void_solv_log, gpu=args.gpu)
+        lmpsettings_void = agk.LmpShortcuts(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop,logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs,settings_file=args.settings_solvent, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd,output_lmplog=void_solv_log, gpu=args.gpu)
 
-        relax_solv_in = anneal_dir + "relax_solv_{}".format(curcycle) + "_in.lmpdat"
+        solution_lmpdat = anneal_dir + "solution_{}".format(curcycle) + "_out.lmpdat"
+        #relax_solv_in = anneal_dir + "relax_solv_{}".format(curcycle) + "_in.lmpdat"
         relax_solv_out = anneal_dir + "relax_solv_{}".format(curcycle) + "_out.lmprst"
         relax_solv_rst = anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
         relax_solv_dcd = anneal_dir + "relax_solv_{}".format(curcycle) + ".dcd"
         relax_solv_log = anneal_dir + "relax_solv_{}".format(curcycle) + ".lmplog"
-        lmpcuts_relax = agk.LmpShortcuts(tstart=args.void_tstart, tstop=args.void_tstop, logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_out, inter_lmprst=void_solv_rst, output_lmpdat=void_solvate_solvent, output_lmprst=void_solv_out, output_dcd=void_solv_dcd, output_lmplog=void_solv_log, gpu=args.gpu)
+        lmpsettings_relax_solv = agk.LmpShortcuts(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop,logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.pair_coeffs, settings_file=args.set,input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst,output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log,gpu=args.gpu)
 
         # anneal -> equilibration/heating
-        equil_anneal_out = anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"
-        equil_anneal_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
-        equil_anneal_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
-        equil_anneal_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
+        heat_out = anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"
+        heat_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
+        heat_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
+        heat_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
+        lmpsettings_heat = agk.LmpShortcuts(tstart=args.heat_tstart, tstop=args.heat_tstop,pstart=args.heat_pstart, pstop=args.heat_pstop,logsteps=args.heat_logsteps, runsteps=args.heat_steps,pc_file=args.pair_coeffs, settings_file=args.set,input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst,output_lmprst=heat_out,output_dcd=heat_dcd, output_lmplog=heat_log,gpu=args.gpu)
+
+        if args.lmps is None:
+            lmpsettings_heat.input_lmprst = lmpsettings_quench.output_lmprst
+            lmpsettings_heat.input_lmpdat = None
+            lmpsettings_heat.pstart = None
+            lmpsettings_heat.pstop = None
 
         # anneal -> productive
-        solvate_anneal_out = anneal_dir + "anneal_{}".format(curcycle) + "_solvate_out.xyz"
-        solvent_anneal_out = anneal_dir + "anneal_{}".format(curcycle) + "_solvent_out.xyz"
+        anneal_out = anneal_dir + "anneal_{}".format(curcycle) + "_out.lmprst"
         anneal_rst = anneal_dir + "anneal_{}".format(curcycle) + "_tmp.lmprst"
-        anneal_dat = anneal_dir + "anneal_{}".format(curcycle) + ".lmpdat"
-        #anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
+        anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
         anneal_log = anneal_dir + "anneal_{}".format(curcycle) + ".lmplog"
+        lmpsettings_anneal = agk.LmpShortcuts(tstart=args.anneal_tstart, tstop=args.anneal_tstop,pstart=args.anneal_pstart, pstop=args.anneal_pstop,logsteps=args.anneal_logsteps, runsteps=args.anneal_steps,pc_file=args.pair_coeffs, settings_file=args.set,input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst,output_lmprst=anneal_out,output_dcd=anneal_dcd, output_lmplog=anneal_log,gpu=args.gpu)
 
         # requench
         tmp_solvate_anneal_out = requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
-        #requench_out          = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
-        requench_dcd           = requench_dir + "requench_{}".format(curcycle) + ".dcd"
-        requench_log           = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
+        #requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
+        requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
+        requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
 
         # important files from previous run
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(PWD, curcycle - 1)
@@ -316,7 +359,7 @@ if __name__ == "__main__":
                 if os.path.isfile(quench_out) is False:
                     if rank == 0:
                         create_folder(quench_dir)
-                    quench_success = agk.quench(lmpcuts_quench, main_prep_lmpdat)
+                    quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
 
                     if quench_success is False:
                         fail_appendix = "failed_{}".format(quench_attempts)
@@ -334,26 +377,78 @@ if __name__ == "__main__":
             #======================================================================#
             # 3. ANNEALING
             #======================================================================#
-            if os.path.isfile(solvate_anneal_out) is False:
+            if os.path.isfile(lmpsettings_anneal.output_lmprst) is False:
                 if rank == 0:
                     create_folder(anneal_dir)
 
-                solvate_sys = agk.read_system(sysprep_out, dcd=lmpcuts_quench.output_dcd)
+                solvate_sys = agk.read_system(sysprep_out, dcd=lmpsettings_quench.output_dcd)
 
                 # check if solvent is needed
                 if args.lmps is not None:
 
                     # write data file for cut out solvent box
-                    if not os.path.isfile(cut_solv):
-                        if rank == 0:
-                            agk.cut_box(cut_solv_out, args.lmps, solvate_sys.ts_boxes[-1], args.lmps_dcd, frame_idx=-1)
+                    if rank == 0 and not os.path.isfile(cut_solv_lmpdat):
+                        agk.cut_box(cut_solv_lmpdat, args.lmps, solvate_sys.ts_boxes[-1], args.lmps_dcd, frame_idx=-1)
 
-                    if not os.path.isdir(cut_solv_out):
-                        agk.relax_box(lmpcuts_cut_solv)
+                    # relax cut box
+                    if not os.path.isdir(lmpsettings_relax_cut.output_lmprst):
+                        agk.berendsen_md(lmpsettings_relax_cut)
 
                     # create voids and write lammps data with solvate and solvent combined
-                    if not os.path.isfile(void_solvate_solvent):
-                        agk.create_voids(lmpcuts_void, sysprep_out, lmpcuts_quench.output_dcd)
+                    if not os.path.isfile(lmpsettings_void.output_lmprst):
+                        for _ in xrange(5):
+                            no_clashes = agk.create_voids(lmpsettings_void, sysprep_out, lmpsettings_quench.output_dcd)
 
-                    if not os.path.isfile(relax_solv_out):
-                        agk.relax_box(lmpcuts_relax)
+                            if no_clashes is True:
+                                break
+
+                        else:
+                            # could not create large enough voids, void creation needs revision
+                            os.remove(lmpsettings_void.output_lmprst)
+                            exit(102)
+
+                    # combine solute and solvent
+                    if rank == 0 and not os.path.isfile(solution_lmpdat):
+                        agk.write_data(solution_lmpdat, sysprep_out, lmpdat_b=lmpsettings_relax_cut.input_lmpdat, dcd_a=lmpsettings_quench.output_dcd, dcd_b=lmpsettings_void.output_dcd, pair_coeffs=args.pair_coeffs)
+
+                    # relax solvent molecules in solution
+                    #TODO change group to solvent molecules only
+                    agk.berendsen_md(lmpsettings_relax_solv)
+
+                # heat complex
+                agk.berendsen_md(lmpsettings_heat)
+
+                # check if complex is ok
+                #TODO check aggregate for atoms 1 to n from sysprep out
+                #TODO maybe do a function from this
+                if rank == 0:
+                    if args.lmps is not None:
+                        lmpdat = lmpsettings_relax_solv.input_lmpdat
+                    else:
+                        lmpdat = sysprep_out
+
+                    md_sys = agk.read_system(lmpdat, lmpsettings_heat.output_dcd)
+                    del lmpdat
+                    aggregate_ok = agk.check_aggregate(md_sys)
+                else:
+                    aggregate_ok = False
+
+                aggregate_ok = comm.bcast(aggregate_ok, 0)
+
+                # stop further calculations and start from the beginning
+                if not aggregate_ok:
+                    anneal_attempts = 0
+                    quench_attempts = 0
+                    sysprep_attempts = 0
+                    sl.move(sysprep_dir, sysprep_dir + "failed_{}".format(sysprep_attempts))
+                    sl.move(quench_dir, quench_dir.rstrip("/") + fail_appendix)
+                    sl.move(anneal_dir, anneal_dir.rstrip("/") + fail_appendix)
+                    continue
+
+                if not os.path.isfile(lmpsettings_anneal.output_lmprst):
+                    solution_sys = agk.read_system(solution_lmpdat)
+                    atm_ids = solution_sys.atom_ids_by_resname(resnames)
+                    #TODO change dcd names during the process to keep them
+                    #TODO so they can be read
+                    #TODO implement cluster algorithm from vmd
+                    agk.anneal_productive(lmpsettings_anneal, atm_ids)
