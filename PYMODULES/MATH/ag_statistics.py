@@ -160,7 +160,7 @@ def test_normality(test, data, alpha=0.05, filename=None):
 
 def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3, filename=None):
     """
-    Carry out the Kurtosis or Skewness test.
+    Carry out the Kurtosis, Skewness test or a QQ-Plot.
 
     Tests the shape of the gaussian curve. A value of zero means the curve
     has a total gaussian shape. Values beyond min and max indicate that
