@@ -9,6 +9,7 @@ import ag_lmplog as agl
 import ag_statistics as ags
 import vmd
 import molecule
+import atomsel
 
 """
 Kawska-Zahn approach to aggregate crystals.
@@ -339,11 +340,11 @@ if __name__ == "__main__":
         else:
             main_prep_lmpdat = os.path.abspath(args.lmpm)
 
-        while anneal_success is False:
+        while not os.path.isfile(lmpsettings_anneal.output_lmprst):
             anneal_attempts = 0
-            while os.path.isfile(quench_out) is False:
+            while not os.path.isfile(lmpsettings_quench):
                 quench_attempts = 0
-                while os.path.isfile(sysprep_out_lmpdat) is False:
+                while not os.path.isfile(sysprep_out_lmpdat):
                     sysprep_attempts = 0
                     #==================================================================#
                     # 1. System Preparation
@@ -455,44 +456,16 @@ if __name__ == "__main__":
                     continue
 
                 # productive run
+                anneal_success = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check)
 
-                all_rmsds = []
-                all_pot_engs = []
-
-                # reset all coordinates for the solution sys
-                solution_sys.ts_coords = []
-                solution_sys.ts_boxes = []
-                if rank == 0:
-                    molecule.load("lmpdat", lmpsettings_anneal.input_lmpdat)
-
-                for run_idx in xrange(5):
-                    # prepend current run number
-                    lmpsettings_anneal.output_dcd = "{}_{}".format(run_idx, lmpsettings_anneal.output_dcd)
-                    lmpsettings_anneal.output_log = "{}_{}".format(run_idx, lmpsettings_anneal.output_log)
-
-                    if os.path.isfile(lmpsettings_anneal.output_dcd) or os.path.isfile(lmpsettings_anneal.output_log):
-                        continue
-
-                    if not os.path.isfile(lmpsettings_anneal.output_lmprst):
-                        agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate)
-
-                    # check potential energies of the solvate
-                    if rank == 0:
-                        #TODO load coordinates via vmd, since clustering has
-                        #TODO to be performed in vmd either way
-                        cur_log = agl.LmpLog()
-                        cur_log.read_lmplog(lmpsettings_anneal.output_lmplog)
-                        cur_pes = cur_log.data[-1]["c_pe"]
-                        all_pot_engs.extend(cur_pes)
-
-                        # check normality of current run and all runs
-                        cur_normal = agk.test_anneal_equil(cur_pes)
-                        num_frames_to_check = percentage_to_check / 100 * len(all_pot_engs)
-                        all_normal = agk.test_anneal_equil(all_pot_engs[num_frames_to_check:])
-                    else:
-                        all_normal = False
-
-                    all_normal = comm.bcast(all_normal, 0)
-
-                    if all_normal is True:
-                        break
+                if not anneal_success:
+                    anneal_attempts = 0
+                    quench_attempts = 0
+                    sysprep_attempts = 0
+                    sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempts))
+                    sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
+                    sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
+                    continue
+                else:
+                    # vmd clustering
+                    pass

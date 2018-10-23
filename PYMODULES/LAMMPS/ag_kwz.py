@@ -19,9 +19,13 @@ import md_box as mdb
 #import ag_unify_md as agum
 import ag_geometry as agm
 import ag_lammps as aglmp
-import ag_unify_log as agul
+import ag_lmplog as agl
 import ag_vectalg as agv
 import ag_statistics as ags
+import vmd
+import molecule
+import atomsel
+import evaltcl
 
 #==============================================================================#
 # Setup MPI
@@ -1033,7 +1037,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     return close_atoms == []
 
 
-def anneal_productive(lmpcuts, pe_atm_idxs):
+def _anneal(lmpcuts, pe_atm_idxs):
     """
     Use nose-hoover baro- and thermostat for productive annealing run.
     """
@@ -1096,7 +1100,7 @@ def requench(lmpcuts):
     lmp.close()
 
 
-def test_anneal_equil(data):
+def _test_anneal_equil(data):
     """
     Check normality distribution of the underlying data.
 
@@ -1121,3 +1125,108 @@ def test_anneal_equil(data):
         pass
 
     return qq_normal and (skew_normal or kurtosis_normal)
+
+
+def _append_data(data, lmplog):
+    """
+    """
+    cur_log = agl.LmpLog()
+    cur_log.read_lmplog(lmplog)
+    cur_pes = cur_log.data[-1]["c_pe"]
+    data.extend(cur_pes)
+
+
+def _vmd_get_rmsds(mol_id, num_solvate_atoms):
+    """
+    Align solvate molecules and calculate the rmsd.
+
+    The first frame serves as the reference frame for the alignment and the rmsd
+    calculation. The vmd modules molecule and atomsel have to be loaded for
+    this function to work (and the coordinates had also to be read already).
+
+    Parameters
+    ----------
+    mold_id : int
+        molecule id for the molecule to choose (usually 0)
+    num_solvate_atoms : int
+        number of atoms of the solvate aggregate
+
+    Returns
+    -------
+    rmsds : list of floats
+        rmsd values for each aligned selection
+
+    """
+    rmsds = []
+    selection = "index 0 to {}".format(num_solvate_atoms - 1)
+    sel1 = atomsel.atomsel(selection, frame=0)
+
+    #vmd_selection = 'set sel{} [atomselect {} "index 0 to {} frame {}"]'
+    #sel0 = vmd_selection.format(0, mol_id, num_solvate_atoms - 1, 0)
+    #vmd.evaltcl(sel0)
+    #sel1 = vmd_selection.format(1, mol_id, num_solvate_atoms - 1, frame_idx)
+    #vmd.evaltcl(sel1)
+    #vmd.evaltcl("measure fit $sel0 $sel1")
+
+    for frame_idx in molecule.numframes(mol_id):
+        sel2 = atomsel.atomsel(selection, frame=frame_idx)
+        # align both selections
+        matrix_algin = sel2.fit(sel1)
+        sel2.move(matrix_algin)
+        # calculate the rmsd
+        rmsd = sel2.rmsd(sel1)
+        rmsds.append(rmsd)
+
+    return rmsds
+
+
+def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
+    """
+    """
+    #all_rmsds = []
+    all_pe = []
+    solvate_sys_natoms = len(atm_idxs_solvate)
+
+    # load molecule topology into vmd
+    if rank == 0:
+        molecule.load("lmpdat", lmpcuts.input_lmpdat)
+
+    for run_idx in xrange(5):
+        # rename current _anneal attempt
+        lmpcuts.output_dcd = "{}_{}".format(run_idx, lmpcuts.output_dcd)
+        lmpcuts.output_lmplog = "{}_{}".format(run_idx, lmpcuts.output_lmplog)
+
+        # read previous log- and dcd-files if they exist already
+        if os.path.isfile(lmpcuts.output_dcd) and os.path.isfile(lmpcuts.output_lmplog):
+            # read potential energy of the solvate and all coordinates
+            if rank == 0:
+                _append_data(all_pe, lmpcuts.output_lmplog)
+                molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
+            continue
+
+        else:
+            _anneal(lmpcuts, atm_idxs_solvate)
+
+        if rank == 0:
+            molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
+            rmsds = _vmd_get_rmsds(0, solvate_sys_natoms)
+            _append_data(all_pe, lmpcuts.output_lmplog)
+            num_frames_to_check = percentage_to_check / 100 * len(all_pe)
+            pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
+            rmsd_normal = _test_anneal_equil(rmsds[num_frames_to_check:])
+            aggregate_ok = False
+
+            if pe_normal is True or rmsd_normal is True:
+                solution_sys = read_system(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+                solution_sys_atoms_idxs = range(len(solution_sys.atoms))
+                aggregate_ok = solution_sys.check_aggregate(excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+        else:
+            aggregate_ok = False
+
+        aggregate_ok = comm.bcast(aggregate_ok, 0)
+
+        if aggregate_ok is False:
+            break
+
+    #vmd.VMDexit("Closing VMD")
+    return aggregate_ok
