@@ -34,7 +34,7 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helper functions and variables
 #==============================================================================#
-_sqrt_3 = math.sqrt(3)
+#_sqrt_3 = math.sqrt(3)
 
 
 class LmpShortcuts(object):
@@ -1033,7 +1033,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     return close_atoms == []
 
 
-def anneal_productive(lmpcuts, pe_atm_ids):
+def anneal_productive(lmpcuts, pe_atm_idxs):
     """
     Use nose-hoover baro- and thermostat for productive annealing run.
     """
@@ -1049,6 +1049,7 @@ def anneal_productive(lmpcuts, pe_atm_ids):
 
     lmp.file(lmpcuts.settings_file)
     lmpcuts.read_system(lmp)
+    lmpcuts.thermargs.append("c_pe_solvate")
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
@@ -1059,10 +1060,11 @@ def anneal_productive(lmpcuts, pe_atm_ids):
     # compute potential energy of the solvate (pair, bond, ...)
     # in order to compute the pe of the solvent, the solvent atom-ids must be
     # known
+    pe_atm_ids = [i + 1 for i in range(pe_atm_idxs)]
     atm_ids_str = " ".join(map(str, pe_atm_ids))
     lmp.command("group resname_atoms " + atm_ids_str)
-    lmp.command("compute poteng_solvate resname_atoms pe/atom")
-    lmp.command("compute pe resname_atoms reduce sum c_poteng_solvate")
+    lmp.command("compute pe_solvate resname_atoms pe/atom")
+    lmp.command("compute pe resname_atoms reduce sum c_pe_solvate")
     lmpcuts.nose_hoover(lmp)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
@@ -1092,3 +1094,30 @@ def requench(lmpcuts):
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
+
+
+def test_anneal_equil(data):
+    """
+    Check normality distribution of the underlying data.
+
+    If the qq-plot fails, the distribution is not normal, if the other tests
+    fail, normality can still be accepted if the qq plot states so.
+
+    Parameters
+    ----------
+    data : list of floats
+
+    Returns
+    -------
+    bool
+
+    """
+    qq_normal = ags.test_gauss_shape("qq", data)
+    skew_normal = ags.test_gauss_shape("skewness", data)
+
+    try:
+        kurtosis_normal = ags.test_gauss_shape("kurtosis", data)
+    except Warning:
+        pass
+
+    return qq_normal and (skew_normal or kurtosis_normal)

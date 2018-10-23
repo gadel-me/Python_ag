@@ -27,8 +27,7 @@ class LmpLog(logu.LogUniverse):
 
                 while line != '':
                     # starting point of thermo-output
-                    if (line.startswith("Memory usage per processor") or
-                        line.startswith("Per MPI rank memory allocation")):
+                    if (line.startswith("Memory usage per processor") or line.startswith("Per MPI rank memory allocation")):
 
                         # deploy containers for the data to come
                         thermo_line = log_in.readline()

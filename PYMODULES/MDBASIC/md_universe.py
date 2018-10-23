@@ -7,6 +7,7 @@ molecules.
 """
 
 from __future__ import print_function, division
+import math
 import numpy as np
 import copy
 import itertools as it
@@ -23,7 +24,7 @@ import md_linked_cells as mdlc
 import md_universe_helper_functions as mduh
 import networkx
 from networkx.algorithms.components.connected import connected_components
-import rmsd
+#import rmsd
 import pdb
 
 __version__ = "2018-01-10"
@@ -965,6 +966,7 @@ class Universe(object):
                      frame_id=-1,
                      min_dist=0.80,
                      exclude_same_molecule=True,
+                     excluded_atm_idxs=[],
                      get_aggregates=False,
                      debug=False):
         """
@@ -977,6 +979,7 @@ class Universe(object):
             > exclude_same_molecule boolean; do not compare atoms of the same molecule
             > get_aggregates boolean; check if all atoms are part of the same aggregate,
                                 return an array of atom-indices if True for each aggregate
+            > excluded_atm_ids list, tuple or set of int; indices of atoms to be excluded from the distance check
 
         Return:
             > close_contacts    list of lists; contains all atom-idx with closer
@@ -986,6 +989,12 @@ class Universe(object):
             # not sure if that is the case - i think this works with wrapped cells
             print("***Info: Atom distance check only works with unwrapped cells! " +
                   "Unwrap cells if necessary.")
+
+        # convert lists, tuples to set
+        if not isinstance(excluded_atm_idxs, set):
+            if isinstance(excluded_atm_idxs, (list, tuple)):
+                excluded_atm_idxs = set(excluded_atm_idxs)
+
         # PBC - get cartesian box vectors
         this_boxtype = self.ts_boxes[frame_id].boxtype
         tmp_box = copy.copy(self.ts_boxes[frame_id])
@@ -1071,9 +1080,14 @@ class Universe(object):
                                         # alter them permanently
                                         tmp_coords_cidx_b = np.copy(linked_cells.atm_coords[cidx_b])
 
-                                        # skip atoms which are part of the same molecule (same grp_id)
+                                        # skip atoms which are part of the same molecule (i.e. same grp_id) or if they are in the exclusion list (excluded_atm_idxs)
                                         if exclude_same_molecule is True and (self.atoms[cidx_a].grp_id == self.atoms[cidx_b].grp_id):
                                             continue
+
+                                        # skip all excluded atoms
+                                        if excluded_atm_idxs != []:
+                                            if cidx_a in excluded_atm_idxs or cidx_b in excluded_atm_idxs:
+                                                continue
 
                                         # shift atomic coordinates by one box-vector if beyond pbc
                                         if cra_idx == -1:
@@ -1796,3 +1810,66 @@ class Universe(object):
                 atom_ids.append(idx)
 
         return atom_ids
+
+    def check_aggregate(self, frame_id=-1, atm_atm_dist=4, excluded_atm_idxs=[], unwrap=False, debug=False):
+        """
+        Check if several molecules form an aggregate.
+
+        #TODO Buggy, does not recognize aggregates properly when they form a chain?
+        #TODO Check aggregate only for certain atom ids
+        #TODO number of molecules may only be the number of molecules with atom ids
+
+        At the moment this works only for orthogonal cells (reason: sub-cell length)
+        Check if the aggregate did not get dissolved in the process. This is achieved
+        by calculating the center of geometry for each molecule and subsequent com-
+        parison of the distance between each center of geometry. The smallest distance
+        must not be larger than four times the radius of the biggest molecule in the
+        system.
+
+        Input:
+            > frame_id          int; frame to process
+            > atm_atm_dist      float; radius around an atom in which another atom
+                                should be positioned
+            > debug             boolean; True if further output should be given,
+                                default=False
+
+        Output:
+            > aggregate_ok      boolean; True, if aggregate is still intact, False if
+                                a part of it drifted away
+        """
+        aggregate_ok = False
+
+        # lammps may internally have the coordinates wrapped -> unwrap cell when
+        # necessary (e.g. coordinates were taken from restart)
+        if unwrap is True:
+            print("***Check Aggregate Info: Unwrapping cell")
+            self.unwrap_cell(frame_id)
+
+        # maximal possible distance between two atoms
+        cube_side = atm_atm_dist / math.sqrt(3)  # -> atm_atm_dist/(2*math.sqrt(3)) * 2
+
+        if debug is True:
+            print("***Check Aggregate Info: Cube side {}".format(cube_side))
+
+        self.create_linked_cells(frame_id, rcut_a=cube_side, rcut_b=cube_side,
+                                 rcut_c=cube_side)
+
+        # include same molecule or it gets missing in our aggregates set
+        close_atoms, aggregates = self.chk_atm_dist(frame_id, min_dist=atm_atm_dist, exclude_same_molecule=False, get_aggregates=True, excluded_atm_idxs=excluded_atm_idxs, debug=False)
+
+        if debug is True:
+            debug_str = "***Check Aggregate Info: Number of cubes in direction"
+            print("{} a {}".format(debug_str, self.ts_lnk_cls[frame_id].ra))
+            print("{} b {}".format(debug_str, self.ts_lnk_cls[frame_id].rb))
+            print("{} c {}".format(debug_str, self.ts_lnk_cls[frame_id].rc))
+            print("***Group IDs of all aggregates: {}".format(aggregates))
+            print("***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms])))
+
+        # aggregate is only o.k. if all molecules are part of it
+        if len(aggregates) == 1 and len(aggregates[0]) == len(self.molecules):
+            aggregate_ok = True
+
+            if debug is True:
+                print("***Check Aggregate Info: Aggregate looks fine!")
+
+        return aggregate_ok
