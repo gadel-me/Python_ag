@@ -1,16 +1,4 @@
-from __future__ import print_function, division
-import os
-import re
-import shutil as sl
-import argparse
-from mpi4py import MPI
-import ag_kwz as agk
-import ag_lmplog as agl
-import ag_statistics as ags
-import vmd
-import molecule
-import atomsel
-
+# coding: utf-8
 """
 Kawska-Zahn approach to aggregate crystals.
 
@@ -32,6 +20,17 @@ CAVEAT: DO NOT UNWRAP SOLVENT BOX, IT MUST BE WRAPPED OR OTHERWISE THE DENSITY
 
 CAVEAT: THE PATTERN STUFF IS ADDED SHOULD BE ACCORDING TO A CERTAIN PROBABILITY.
 """
+
+from __future__ import print_function, division
+import os
+import re
+import shutil as sl
+import argparse
+from mpi4py import MPI
+import ag_kwz as agk
+import ag_lammps as aglmp
+#import ag_lmplog as agl
+#import ag_statistics as ags
 
 #==============================================================================#
 # Setup MPI
@@ -456,7 +455,7 @@ if __name__ == "__main__":
                     continue
 
                 # productive run
-                anneal_success = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check)
+                anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check)
 
                 if not anneal_success:
                     anneal_attempts = 0
@@ -467,5 +466,20 @@ if __name__ == "__main__":
                     sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
                     continue
                 else:
-                    # vmd clustering
-                    pass
+                    if rank == 0:
+                        anneal_rmsds, anneal_clusters = agk.vmd_rmsd_and_cluster(lmpsettings_anneal.input_lmpdat, anneal_dcds, atm_idxs_solvate, percentage_to_check)
+
+                        ## find frame and write it
+                        #frame_id = anneal_clusters[0]
+#
+                        #total_frames = 0
+#
+                        #for dcd_idx, dcd in enumerate(anneal_dcds):
+                        #    _lmp_dcd = aglmp.LmpStuff()
+                        #    _lmp_dcd.import_dcd(dcd)
+                        #    total_frames += _lmp_dcd.nframes
+#
+                        #    if frame_id > total_frames:
+                        #        dcd_file = anneal_dcds[dcd_idx]
+                        #        local_dcd_frame = total_frames - frame_id
+                        #        break

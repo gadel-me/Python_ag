@@ -22,10 +22,10 @@ import ag_lammps as aglmp
 import ag_lmplog as agl
 import ag_vectalg as agv
 import ag_statistics as ags
-import vmd
-import molecule
-import atomsel
-import evaltcl
+#import vmd
+#import molecule
+#import atomsel
+#import evaltcl
 
 #==============================================================================#
 # Setup MPI
@@ -1136,7 +1136,7 @@ def _append_data(data, lmplog):
     data.extend(cur_pes)
 
 
-def _vmd_get_rmsds(mol_id, num_solvate_atoms):
+def vmd_rmsd_and_cluster(lmpdat_in, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
     """
     Align solvate molecules and calculate the rmsd.
 
@@ -1146,50 +1146,68 @@ def _vmd_get_rmsds(mol_id, num_solvate_atoms):
 
     Parameters
     ----------
-    mold_id : int
-        molecule id for the molecule to choose (usually 0)
-    num_solvate_atoms : int
-        number of atoms of the solvate aggregate
+    lmpdat_in : str
+        name of lammps data file with topology to load
+    dcd_files : list of str
+        file names of the dcd files to load into vmd
 
     Returns
     -------
     rmsds : list of floats
         rmsd values for each aligned selection
+    cluster0 : list of ints
+        indices of frames from the most populated cluster
 
     """
+    import vmd
+    import molecule
+    import atomsel
+
+    percentage_to_check /= 100.0
+    # read topology and coordinates
+    molecule.load("lmpdat", lmpdat_in)
+
+    for dcd_file in dcd_files:
+        molecule.read(0, "dcd", dcd_file, waitfor=-1)
+
+    # rmsd with alignment for the solvent atoms
     rmsds = []
-    selection = "index 0 to {}".format(num_solvate_atoms - 1)
+    selection = "index {}".format(" ".join(map(str, atm_idxs)))
     sel1 = atomsel.atomsel(selection, frame=0)
 
-    #vmd_selection = 'set sel{} [atomselect {} "index 0 to {} frame {}"]'
-    #sel0 = vmd_selection.format(0, mol_id, num_solvate_atoms - 1, 0)
-    #vmd.evaltcl(sel0)
-    #sel1 = vmd_selection.format(1, mol_id, num_solvate_atoms - 1, frame_idx)
-    #vmd.evaltcl(sel1)
-    #vmd.evaltcl("measure fit $sel0 $sel1")
+    frame_first = int(1 - percentage_to_check * molecule.numframes(0))
+    frame_last = molecule.numframes(0)
 
-    for frame_idx in molecule.numframes(mol_id):
+    for frame_idx in range(frame_first, frame_last):
         sel2 = atomsel.atomsel(selection, frame=frame_idx)
-        # align both selections
         matrix_algin = sel2.fit(sel1)
         sel2.move(matrix_algin)
-        # calculate the rmsd
         rmsd = sel2.rmsd(sel1)
         rmsds.append(rmsd)
 
-    return rmsds
+    # clustering (currently only possible using the tcl interface)
+    tcl_selection = 'set tcl_sel1 [atomselect {} "index 0 to {} frame {}"]'
+    tcl_sel1 = tcl_selection.format(0, num_solvate_atoms - 1, 0)
+    vmd.evaltcl(tcl_sel1)
+    cluster = "measure cluster $tcl_sel1 num 5 distfunc rmsd cutoff 1.0 first {} last {} step 1 selupdate True"
+    clusters = vmd.evaltcl(cluster.format(frame_first, frame_last))
+    clusters = re.findall("\{([^[\}]*)\}", clusters)
+    cluster_0 = [int(i) for i in clusters[0].split()]
+    molecule.write(0, "xyz", xyz_out, beg=cluster_0, end=cluster_0, sel=selection)
+    vmd.VMDexit("closing vmd")
+    return (rmsds, cluster_0)
 
 
 def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
     """
+    #TODO check pressure, temperature equilibration?
+    #TODO print picture of rmsd w/ cluster coloring?
     """
     #all_rmsds = []
     all_pe = []
     solvate_sys_natoms = len(atm_idxs_solvate)
-
-    # load molecule topology into vmd
-    if rank == 0:
-        molecule.load("lmpdat", lmpcuts.input_lmpdat)
+    dcd_files = []
+    log_files = []
 
     for run_idx in xrange(5):
         # rename current _anneal attempt
@@ -1198,35 +1216,38 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
 
         # read previous log- and dcd-files if they exist already
         if os.path.isfile(lmpcuts.output_dcd) and os.path.isfile(lmpcuts.output_lmplog):
+            dcd_files.append(lmpcuts.output_dcd)
+            log_files.append(lmpcuts.output_lmplog)
             # read potential energy of the solvate and all coordinates
             if rank == 0:
                 _append_data(all_pe, lmpcuts.output_lmplog)
-                molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
+                #molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
             continue
 
         else:
             _anneal(lmpcuts, atm_idxs_solvate)
+            dcd_files.append(lmpcuts.output_dcd)
+            log_files.append(lmpcuts.output_lmplog)
 
         if rank == 0:
-            molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
-            rmsds = _vmd_get_rmsds(0, solvate_sys_natoms)
             _append_data(all_pe, lmpcuts.output_lmplog)
             num_frames_to_check = percentage_to_check / 100 * len(all_pe)
             pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
-            rmsd_normal = _test_anneal_equil(rmsds[num_frames_to_check:])
+
+            # check if aggregate is still fine after the annealing run, i.e. last
+            # frame has a solvate aggregate that is still complete
             aggregate_ok = False
 
-            if pe_normal is True or rmsd_normal is True:
+            if pe_normal is True:
                 solution_sys = read_system(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
                 solution_sys_atoms_idxs = range(len(solution_sys.atoms))
                 aggregate_ok = solution_sys.check_aggregate(excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
         else:
             aggregate_ok = False
 
-        aggregate_ok = comm.bcast(aggregate_ok, 0)
+        aggregate_ok = comm.bcast(aggregate_ok)
 
-        if aggregate_ok is False:
+        if aggregate_ok:
             break
 
-    #vmd.VMDexit("Closing VMD")
-    return aggregate_ok
+    return (aggregate_ok, dcd_files, log_files)
