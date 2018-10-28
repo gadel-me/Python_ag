@@ -141,6 +141,9 @@ def write_to_log(string, filename="kwz_log"):
         kwz_log.write(string)
 
 
+def sysprep()
+
+
 if __name__ == "__main__":
     percentage_to_check = 80
     #==============================================================================#
@@ -232,6 +235,7 @@ if __name__ == "__main__":
 
     # requenching
     parser.add_argument("-requench_steps", type=int, default=150000)
+    parser.add_argument("-requench_logsteps", type=int, default=500)
 
     args = parser.parse_args()
 
@@ -261,6 +265,7 @@ if __name__ == "__main__":
 
         # system preparation
         sysprep_out_lmpdat = sysprep_dir + "sysprep_out_{}.lmpdat".format(curcycle)
+        lmpsettings_sysprep = agk.LmpShortcuts(output_lmpdat=sysprep_out_lmpdat)
 
         # quench
         quench_out = quench_dir + "quench_out_{}.lmprst".format(curcycle)
@@ -320,6 +325,7 @@ if __name__ == "__main__":
         #requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
         requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
         requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
+        lmpsettings_requench = agk.LmpShortcuts(logsteps=args.requench_logsteps, runsteps=args.requench_steps,pc_file=args.pair_coeffs, settings_file=args.set)
 
         # important files from previous run
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(PWD, curcycle - 1)
@@ -339,31 +345,31 @@ if __name__ == "__main__":
         else:
             main_prep_lmpdat = os.path.abspath(args.lmpm)
 
+        anneal_attempts = 0
         while not os.path.isfile(lmpsettings_anneal.output_lmprst):
-            anneal_attempts = 0
-            while not os.path.isfile(lmpsettings_quench):
-                quench_attempts = 0
-                while not os.path.isfile(sysprep_out_lmpdat):
-                    sysprep_attempts = 0
+            quench_attempts = 0
+            while not os.path.isfile(lmpsettings_quench.output_lmprst):
+                sysprep_attempt = 0
+                while not os.path.isfile(lmpsettings.lmpdat_out):
                     #==================================================================#
                     # 1. System Preparation
                     #==================================================================#
                     if rank == 0:
                         create_folder(sysprep_dir)
-                        sysprep_success = agk.sysprep(sysprep_out_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
+                        sysprep_success = agk.sysprep(lmpsettings.lmpdat_out, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
 
                         if sysprep_success is False:
-                            sl.move(sysprep_dir, sysprep_dir + "failed_{}".format(sysprep_attempts))
-                            sysprep_attempts += 1
+                            sl.move(sysprep_dir, sysprep_dir + "failed_{}".format(sysprep_attempt))
+                            sysprep_attempt += 1
 
-                    if sysprep_success is False and sysprep_attempts > 20:
+                    if sysprep_success is False and sysprep_attempt > 20:
                         exit(100)
 
                 #===================================================================
                 # 2. System Quenching
                 #===================================================================
 
-                if os.path.isfile(quench_out) is False:
+                if os.path.isfile(lmpsettings_quench.lmprst_out) is False:
                     if rank == 0:
                         create_folder(quench_dir)
                     quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
@@ -439,7 +445,7 @@ if __name__ == "__main__":
 
                     # stop further calculations and start from the beginning
                     if not aggregate_ok:
-                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempts))
+                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
                         sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
                         sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
                 else:
@@ -451,7 +457,7 @@ if __name__ == "__main__":
                 if not aggregate_ok:
                     anneal_attempts = 0
                     quench_attempts = 0
-                    sysprep_attempts = 0
+                    sysprep_attempt = 0
                     continue
 
                 # productive run
@@ -460,26 +466,13 @@ if __name__ == "__main__":
                 if not anneal_success:
                     anneal_attempts = 0
                     quench_attempts = 0
-                    sysprep_attempts = 0
-                    sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempts))
+                    sysprep_attempt = 0
+                    sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
                     sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
                     sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
                     continue
                 else:
                     if rank == 0:
+                        # calculate rmsd values and cluster and write a
+                        # representative of the cluster as xyz file
                         anneal_rmsds, anneal_clusters = agk.vmd_rmsd_and_cluster(lmpsettings_anneal.input_lmpdat, anneal_dcds, atm_idxs_solvate, percentage_to_check)
-
-                        ## find frame and write it
-                        #frame_id = anneal_clusters[0]
-#
-                        #total_frames = 0
-#
-                        #for dcd_idx, dcd in enumerate(anneal_dcds):
-                        #    _lmp_dcd = aglmp.LmpStuff()
-                        #    _lmp_dcd.import_dcd(dcd)
-                        #    total_frames += _lmp_dcd.nframes
-#
-                        #    if frame_id > total_frames:
-                        #        dcd_file = anneal_dcds[dcd_idx]
-                        #        local_dcd_frame = total_frames - frame_id
-                        #        break

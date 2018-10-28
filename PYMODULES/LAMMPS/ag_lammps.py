@@ -4,12 +4,22 @@ import copy
 import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
+import ag_vectalg as agv
 import struct
 import ag_lmpdcd_helpers as agldh
 from natsort import natsorted
+from mpi4py import MPI
 #import collections
 
-__version__ = "2017-08-17"
+__version__ = "2018-10-25"
+
+#==============================================================================#
+# Setup MPI
+#==============================================================================#
+
+COMM = MPI.COMM_WORLD
+SIZE = COMM.Get_size()  # number of processes in communicator
+RANK = COMM.Get_rank()  # process' id(s) within a communicator
 
 
 class LmpStuff(mdu.Universe):
@@ -1178,135 +1188,284 @@ class LmpStuff(mdu.Universe):
         """
         pass
 
-    #def read_lmpmol(self, lmpmol):
-    #    """
-    #    Read a lammps molecule file.
-    #    Sources:    http://lammps.sandia.gov/doc/molecule.html
-    #    """
-    #    idx_ext_int = {}  # translates between external and internal indices
-#
-    #    with open("lmpmol", "r") as lmpmol_in:
-    #        title = lmpmol_in.next().strip()
-    #        # dict to fetch all atom info which is dispersed in the file
-    #        atm_stuff = {}
-#
-    #        for line in lmpmol:
-#
-    #            # /// general stuff ///
-    #            if "atoms" in line:
-    #                total_atms = int(line.split()[0])
-    #                # instantiate atoms for data to come
-    #                for atmcnt in xrange(total_atms):
-    #                    atmcnt += 1  # molecule files' indices start with 1
-    #                    atm_stuff[atmcnt] = mds.Atom()
-#
-    #            elif "bonds" in line:
-    #                total_bnds = int(line.split()[0])
-    #            elif "angles" in line:
-    #                total_angs = int(line.split()[0])
-    #            elif "dihedrals" in line:
-    #                total_dihs = int(line.split()[0])
-    #            elif "impropers" in line:
-    #                total_imps = int(line.split()[0])
-    #            elif "mass" in line:
-    #                total_mass = float(line.split()[0])
-    #            elif "com" in line:
-    #                line = line.split()[0:-1]
-    #                com = np.array([[float(i) for i in line]])
-    #            elif "inertia" in line:
-    #                line = line.split()[0:-1]
-    #                Ixx, Iyy, Izz, Ixy, Ixz, Iyz = [float(i) for i in line]
-    #            elif "Coords" in line:
-    #                lmpmol_in.next()  # skip empty line
-#
-    #                for _ in xrange(total_atms):
-    #                    line = line.next().split()
-    #                    atm_id = int(line[0])
-    #                    coords = np.array([float(i) for i in line[1:]])
-#
-#
-    #            elif "Types" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #                for atmcnt in xrange(total_atms):
-    #                    line = lmpmol_in.next().split()
-    #                    cid  = int(line[0])
-    #                    cidx = idx_ext_int[cid]
-    #                    self.atoms[cidx].atm_key = int(line[1])
-#
-    #            elif "Charges" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #                for atmcnt in xrange(total_atms):
-    #                    line = lmpmol_in.next().split()
-    #                    cid  = int(line[0])
-    #                    ccharge = float(line[1])
-    #                    cidx = idx_ext_int[cid]
-    #                    self.atoms[cidx].chge = ccharge
-#
-    #            elif "Diameters" in line:
-    #                print("Diameters are not implemented (yet).")
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Masses" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #                for atmcnt in xrange(total_atms):
-    #                    line = lmpmol_in.next().split()
-    #                    cid  = int(line[0])
-    #                    cidx = idx_ext_int[cid]
-    #                    cweigh = float(line[1])
-    #                    self.atoms[cidx].weigh = cweigh
-#
-    #            elif "Bonds" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #                for bndcnt in xrange(total_bnds):
-    #                    line = lmpmol_in.next().split()
-    #                    cid, ckey, atm_id1, atm_id2 = [int(i) for i in line[0:4]]
-    #                    atm_idx1 = idx_ext_int[atm_id1]
-    #                    atm_idx2 = idx_ext_int[atm_id2]
-#
-    #                    cbnd = mds.Bond(bnd_id=bndcnt,
-    #                                    bnd_key=ckey,
-    #                                    atm_id1=atm_idx1,
-    #                                    atm_id2=atm_idx2)
-    #                    self.bonds.append(cbnd)
-#
-    #            elif "Angles" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #                for angcnt in xrange(total_angs):
-    #                    line = lmpmol_in.next().split()
-    #                    cid, ckey, atm_id1, atm_id2 = [int(i) for i in line[0:4]]
-    #                    atm_idx1 = idx_ext_int[atm_id1]
-    #                    atm_idx2 = idx_ext_int[atm_id2]
-#
-    #                    cbnd = mds.Bond(bnd_id=bndcnt, bnd_key=ckey, atm_id1=atm_idx1, atm_id2=atm_idx2)
-    #                    self.bonds.append(cbnd)
-#
-    #            elif "Dihedrals" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Impropers" in line:
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Special Bond Counts" in line:
-    #                print("***Molecule-Info: TBD")
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Special Bonds" in line:
-    #                print("***Molecule-Info: TBD")
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Shake Flags" in line:
-    #                print("***Molecule-Info: TBD")
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Shake Atoms" in line:
-    #                print("***Molecule-Info: TBD")
-    #                lmpmol.next()  # skip empty line
-#
-    #            elif "Shake Bond Types" in line:
-    #                print("***Molecule-Info: TBD")
-    #                lmpmol.next()  # skip empty line
+
+class LmpSimShortcuts(object):
+    """
+    """
+    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
+        """
+        """
+        self.thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
+        self.tstart = tstart
+        self.tstop = tstop
+        self.pstart = pstart
+        self.pstop = pstop
+        self.logsteps = logsteps
+        self.runsteps = runsteps
+        self.pc_file = pc_file
+        self.settings_file = settings_file
+        self.input_lmpdat = input_lmpdat
+        self.input_lmprst = input_lmprst
+        self.inter_lmprst = inter_lmprst
+        self.output_lmplog = output_lmplog
+        self.output_dcd = output_dcd
+        self.output_lmpdat = output_lmpdat
+        self.output_lmprst = output_lmprst
+        self.output_name = output_name
+        self.gpu = gpu
+
+    def read_system(self, lmp):
+        """Read a lammps restart or data file."""
+        if self.output_lmprst is not None and os.path.isfile(self.output_lmprst):
+            lmp.command("read_restart {}".format(self.output_lmprst))
+        elif self.inter_lmprst is not None and os.path.isfile(self.inter_lmprst):
+            lmp.command("read_restart {}".format(self.inter_lmprst))
+        elif self.input_lmprst is not None and os.path.isfile(self.input_lmprst):
+            lmp.command("read_restart {}".format(self.input_lmprst))
+        else:
+            lmp.command("read_data {}".format(self.input_lmpdat))
+            lmp.command("velocity all create {} 4928459 mom yes rot yes dist gaussian".format(self.tstart))
+
+    def unfix_undump(self, pylmp, lmp):
+        """
+        Remove all fixes and dumps.
+        """
+        lmp_fixes = []
+        lmp_dumps = []
+
+        if RANK == 0:
+            for fix in pylmp.fixes:
+                lmp_fixes.append(fix["name"])
+            for dump in pylmp.dumps:
+                lmp_dumps.append(dump["name"])
+
+        lmp_fixes = COMM.bcast(lmp_fixes, 0)
+        lmp_dumps = COMM.bcast(lmp_dumps, 0)
+
+        for fix in lmp_fixes:
+            if "gpu" in fix:
+                continue
+            lmp.command("unfix {}".format(fix))
+
+        for dump in lmp_dumps:
+            lmp.command("undump {}".format(dump))
+
+    def thermo(self, lmp):
+        """
+        Log thermodynamic data.
+        """
+        lmp.command("thermo_style custom " + " ".join(self.thermargs))
+        lmp.command("thermo_modify lost warn flush yes")
+        #lmp.command("thermo_modify line multi format float %g")
+        lmp.command("thermo {}".format(self.logsteps))
+
+    def dump(self, lmp, unwrap=True):
+        """
+        """
+        # trajectory
+        lmp.command("dump trajectory all dcd {} {}".format(self.logsteps, self.output_dcd))
+        lmp.command("restart {} {} {}".format(self.logsteps*50, self.inter_lmprst, self.inter_lmprst))
+
+        if unwrap is True:
+            lmp.command("dump_modify trajectory unwrap yes")
+
+    def berendsen(self, lmp, group="all"):
+        """
+        """
+        lmp.command("fix integrator {} nve".format(group))
+        lmp.command("fix thermostat {} temp/berendsen {} {} 0.5".format(group, self.tstart, self.tstop))
+
+        if self.pstart is not None and self.pstop is not None:
+            lmp.command("fix barostat {} press/berendsen iso {} {} 50".format(group, self.pstart, self.pstop))
+
+    def nose_hoover(self, lmp, group="all"):
+        if self.pstart is not None and self.pstop is not None:
+            lmp.command("fix integrator {} nvt temp {} {} 0.5".format(group, self.tstart, self.tstop))
+        else:
+            lmp.command("fix integrator {} npt temp {} {} 0.5 iso {} {} 50".format(group, self.tstart, self.tstop, self.pstart, self.pstop))
+
+    def use_gpu(self, lmp, neigh=True):
+        """
+        """
+        if neigh:
+            lmp.command("package gpu 1 neigh yes")
+        else:
+            lmp.command("package gpu 1 neigh no")
+
+        lmp.command("suffix gpu")
+
+    def minimize(self, lmp, style="cg", box_relax=False):
+        """
+        """
+        if box_relax:
+            lmp.command("fix box_relax all box/relax aniso {}".format(self.pstart))
+
+        lmp.command("min_style {}".format(style))
+        lmp.command("min_modify dmax 2.0")
+        lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
+
+
+def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1, selection=""):
+    """
+    Read a lammps data file and optionally a dcd file on top.
+
+    This function simplifies the process of reading a lammps data file and loading
+    a dcd file on top of it for further coordinates. It returns a Universe object
+    which has many methods to manipulate it with.
+
+    Parameters
+    ----------
+    lmpdat : str
+        Name of the lammps data file
+
+    dcd : str (optional)
+        Name of the dcd file with the same amounts of atoms as the lammps data
+        file
+
+    frame_idx : int (default: -1)
+        Index of the frame to use from the dcd file.
+
+    Returns
+    -------
+    md_sys : LmpStuff object
+        An object of LmpStuff which can be further processed.
+
+    """
+    # read output from quenching
+    md_sys = LmpStuff()
+    md_sys.read_lmpdat(lmpdat)
+
+    if dcd is not None:
+        md_sys.import_dcd(dcd)
+        # since we are only interested in one frame, delete all others
+        md_sys.ts_coords = []
+        md_sys.ts_boxes = []
+
+        # enable reading the last frame with negative indexing
+        if frame_idx_stop == -1:
+            md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
+        else:
+            md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
+
+        md_sys.close_dcd()
+
+    return md_sys
+
+
+def write_data(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None):
+    """
+    Write a lammps data file.
+
+    Write a lammps data file by reading the file and merging it with a second
+    lammps data file (optional). DCD files may be loaded as well for each system
+    on top. When merging, simulation boxes from system a will be overwritten by
+    the simulation boxes from system b.
+
+    Parameters
+    ----------
+    lmpdat_out : str
+        name of the lammps output file
+
+    lmpdat_a : str
+        lammps data file a
+
+    lmpdat_b : str (optional)
+        lammps data file b
+
+    dcd_a : str
+        dcd file which has the same amount of coordinates as lammps data a has atoms
+
+
+    dcd_b : str (optional)
+        dcd file which has the same amount of coordinates as lammps data b has atoms
+
+    frame_idx_a : int (default: -1)
+        index of the frame to use from dcd a (default: last frame)
+
+    frame_idx_b : int (default : -1)
+        index of the frame to use from dcd b (default: last frame)
+
+    pair_coeffs : str (optional)
+        mixing type for pair coefficients (default: None): 'ii' or 'jj'
+
+    """
+    sys_a = read_lmpdat(lmpdat_a, dcd_a, frame_idx_a)
+
+    if lmpdat_b is not None:
+        sys_b = read_lmpdat(lmpdat_b, dcd_b, frame_idx_b)
+        # since we only read one frame, only this frame combined will be written
+        sys_ab = mdu.merge_sys(sys_a, sys_b, pair_coeffs=pair_coeffs)
+    else:
+        sys_ab = sys_a
+
+    sys_ab.change_indices(incr=1, mode="increase")
+    sys_ab.write_lmpdat(lmpdat_out, cgcmm=True)
+
+
+def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
+    """
+    Cut a smaller solvent box from a bigger one that will be used during the simulation.
+
+    Given a (in the best case) larger solvent box, a smaller one will be cut.
+    Having only as many solvent molecules as absolutely necessary reduces the
+    calculation time. This is possible since the potential energy for a group
+    of atoms may be calculated with lammps. The center of the box will be at
+    the origin.
+    Only reads one frame.
+
+    Parameters
+    ----------
+    lmpdat_out : str
+        name of new lammps data file with cut coordinates
+
+    lmpdat : str
+        lammps data file of the system to cut from
+
+    box : Box
+        box to cut out from lmpdat
+
+    dcd : str (optional)
+        Name of the dcd file with the same amounts of atoms as the lammps data
+        file
+
+    frame_idx : int (default: -1)
+        Index of the frame to use from the dcd file.
+
+    """
+    md_sys = read_lmpdat(lmpdat, dcd, frame_idx_start=frame_idx - 1, frame_idx_stop=frame_idx)
+
+    # generate planes that describe the box
+    cart_box = copy.deepcopy(box)
+    cart_box.box_lmp2cart()
+
+    # define planes which form the box to cut (plane vectors always need the same
+    # origin or they will be shifted)
+    plane_ab = agv.get_plane(cart_box.crt_a, cart_box.crt_b)
+    plane_ca = agv.get_plane(cart_box.crt_c, cart_box.crt_a)
+    plane_bc = agv.get_plane(cart_box.crt_b, cart_box.crt_c)
+
+    # opposite planes to ab, ca and bc
+    plane_ab_c = [-1 * i for i in agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)]
+    plane_ca_b = [-1 * i for i in agv.get_plane(cart_box.crt_c, cart_box.crt_a, cart_box.crt_b)]
+    plane_bc_a = [-1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)]
+
+    # cut plane
+    md_sys.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
+
+    # enlarge box a little so atoms at the edge will not clash due to pbc
+    cart_box.box_cart2lat()
+    cart_box.ltc_a += 4
+    cart_box.ltc_b += 4
+    cart_box.ltc_c += 4
+    cart_box.box_lat2lmp()
+
+    # def new box vectors by given box angles
+    md_sys.ts_boxes[0] = cart_box
+
+    md_sys.ts_boxes[0].lmp_xy = None
+    md_sys.ts_boxes[0].lmp_xz = None
+    md_sys.ts_boxes[0].lmp_yz = None
+
+    md_sys.mols_to_grps()
+    md_sys.change_indices(incr=1, mode="increase")
+    md_sys.write_lmpdat(lmpdat_out, cgcmm=True)

@@ -1873,3 +1873,41 @@ class Universe(object):
                 print("***Check Aggregate Info: Aggregate looks fine!")
 
         return aggregate_ok
+
+
+################################################################################
+# Shortcuts for common procedures
+################################################################################
+
+def merge_sys(sys_a, sys_b, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None, selections=[]):
+    """
+    Merge two systems into a new one.
+
+    Parameters
+    ----------
+    sys_a : Universe
+        system a that gets merged with system b
+    sys_b : Universe
+        system b that gets merged with system a
+    frame_idx_a : int
+        frame number that will be used for system a (default: last frame)
+    frame_idx_b : int
+        frame number that will be used for system b (default: last frame)
+    pair_coeffs : str
+        mixing type for pair coefficients - 'ii' or 'ij'
+
+    Returns
+    -------
+    sys_both : Universe
+        the merged systems (box a will be overwritten with box from system b)
+
+    """
+    sys_both = copy.deepcopy(sys_a)
+    sys_both.extend_universe(sys_b, u1_frame_id=frame_idx_a, u2_frame_id=frame_idx_b, mode="merge")
+
+    if pair_coeffs:
+        sys_both.mix_pair_types(mode=pair_coeffs, mix_style="arithmetic")
+
+    sys_both.fetch_molecules_by_bonds()
+    sys_both.mols_to_grps()
+    return sys_both
