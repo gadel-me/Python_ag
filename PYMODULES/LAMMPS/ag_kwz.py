@@ -1,27 +1,28 @@
 from __future__ import print_function, division
 import os
-import copy
-import shutil as sl
+#import copy
+#import shutil as sl
 import re
-import argparse
+#import argparse
 import math
-import pdb
-import time
+#import time
 import numpy as np
-from natsort import natsorted
+#from natsort import natsorted
 #import itertools as it
-import scipy.stats
+#import scipy.stats
 from mpi4py import MPI
 from lammps import lammps, PyLammps
 import Transformations as cgt
 import md_elements as mde
 import md_box as mdb
+import md_universe as mdu
 #import ag_unify_md as agum
 import ag_geometry as agm
 import ag_lammps as aglmp
 import ag_lmplog as agl
-import ag_vectalg as agv
+#import ag_vectalg as agv
 import ag_statistics as ags
+import pdb
 
 #==============================================================================#
 # Setup MPI
@@ -34,6 +35,8 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helper functions
 #==============================================================================#
+
+
 ################################################################################
 # Ensembles
 ################################################################################
@@ -101,23 +104,37 @@ def nose_hoover_md(lmpcuts, group="all"):
     lmp.command("clear")
     lmp.close()
 
+
 #==============================================================================#
 # System Preparation
 #==============================================================================#
+
 def _molecules_radii(lmp_sys):
     """
+    Get center of geometry and sphere of each solvate molecule which is placed inside the solvent box.
+
+    Parameters
+    ----------
+    lmp_sys : Unification
+
+    Returns
+    -------
+    radii : list of floats
+        radius of each molecule
+
+    cogs : list of lists
+        coordinates of the center of geometry of each molecule
+
     """
-    # get center of geometry and sphere of each solvate molecule which is placed
-    # inside the solvent box
-    radii_sphere = []
-    cogs_solvate = []
+    radii = []
+    cogs = []
 
     for molecule in lmp_sys.molecules:
         sphere, cog = lmp_sys.get_mol_radius(-1, *molecule)
-        radii_sphere.append(sphere)
-        cogs_solvate.append(cog)
+        radii.append(sphere)
+        cogs.append(cog)
 
-    return (radii_sphere, cogs_solvate)
+    return (radii, cogs)
 
 
 def _rot_matrix():
@@ -266,7 +283,10 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
     return success
 
 
-# Quenching ===================================================================#
+################################################################################
+# Quenching
+################################################################################
+
 def quench(lmpcuts, lmpdat_main):
     """
     """
@@ -345,6 +365,11 @@ def quench(lmpcuts, lmpdat_main):
     quench_success = comm.bcast(quench_success, 0)
     return quench_success
 
+
+
+################################################################################
+# Annealing
+################################################################################
 
 def _fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
     """
@@ -458,7 +483,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     """
     """
     # solvate with molecule radii and cogs
-    solvate_sys = read_system(lmpdat_solvate, dcd_solvate)
+    solvate_sys = aglmp.read_lmpdat(lmpdat_solvate, dcd_solvate)
     radii_mol, cogs_mol = _molecules_radii(solvate_sys)
     indent_strs = _fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
 
@@ -485,8 +510,8 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
 
     # solution system
-    solvent_sys = read_system(lmpcuts.input_lmpdat)
-    solution_sys = merge_sys(solvate_sys, solvent_sys)
+    solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
+    solution_sys = mdu.merge_systems([solvate_sys, solvent_sys])
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
@@ -741,7 +766,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
             aggregate_ok = False
 
             if pe_normal is True:
-                solution_sys = read_system(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+                solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
                 solution_sys_atoms_idxs = range(len(solution_sys.atoms))
                 aggregate_ok = solution_sys.check_aggregate(excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
         else:

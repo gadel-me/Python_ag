@@ -632,7 +632,6 @@ class LmpStuff(mdu.Universe):
             cbox = None
             print("***Warning: No box specified - a simulation box must be specified for this file to work!")
 
-
         total_atms     = len(self.atoms)
         total_bnds     = len(self.bonds)
         total_angs     = len(self.angles)
@@ -1070,9 +1069,9 @@ class LmpStuff(mdu.Universe):
         Sources:    https://github.com/MDAnalysis/mdanalysis/issues/187
         """
         if debug:
-            print("***Verbose: MB already read: {:.2f} MiB".format(self._dcdfile.tell()/1000000))
+            print("***Verbose: MB already read: {:.2f} MiB".format(self._dcdfile.tell() / 1000000))
 
-        M_PI_2 = np.pi/2
+        M_PI_2 = np.pi / 2
         # convert input to corresponding indices
         frm, to_frm = agldh.reshape_arguments(self.sframe, self.nframes,
                                               self.step, frame, to_frame,
@@ -1157,15 +1156,15 @@ class LmpStuff(mdu.Universe):
             do_not_append = []
 
             # find duplicate step-entries, save indices
-            for k, i in enumerate(c_dcd.ts_steps):
-                for j in self.ts_steps:
+            for k, i in enumerate(c_dcd.ts_coords):
+                for j in self.ts_coords:
                     if i == j:
                         do_not_append.append(k)
 
             # append ts-steps, ts-boxes and ts-coordinates to universe
-            for iidx, istp in enumerate(c_dcd.ts_steps):
+            for iidx, istp in enumerate(c_dcd.ts_coords):
                 if iidx not in do_not_append:
-                    self.ts_steps.append(istp)
+                    self.ts_coords.append(istp)
                     self.ts_boxes.append(c_dcd.ts_boxes[iidx])
                     self.ts_coords.append(c_dcd.ts_coords[iidx])
 
@@ -1189,7 +1188,7 @@ class LmpStuff(mdu.Universe):
         pass
 
 
-class LmpSimShortcuts(object):
+class LmpSim(object):
     """
     """
     def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
@@ -1305,7 +1304,11 @@ class LmpSimShortcuts(object):
         lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
 
 
-def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1, selection=""):
+################################################################################
+# Shortcut functions for common procedures
+################################################################################
+
+def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     """
     Read a lammps data file and optionally a dcd file on top.
 
@@ -1342,10 +1345,25 @@ def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1, selecti
         md_sys.ts_boxes = []
 
         # enable reading the last frame with negative indexing
-        if frame_idx_stop == -1:
-            md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
+        if frame_idx_start == frame_idx_stop:
+            if frame_idx_stop < 0:
+                md_sys.read_frames(frame=frame_idx_stop - 1, to_frame=frame_idx_stop)
+            else:
+                md_sys.read_frames(frame=frame_idx_stop, to_frame=frame_idx_stop + 1)
         else:
-            md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
+            if frame_idx_stop == -1:
+                md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop)
+            else:
+                md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
+
+
+        #if frame_idx_stop == -1:
+        #    if frame_idx_start == 0:
+        #        md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
+        #    else:
+        #        md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
+        #else:
+        #    md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
 
         md_sys.close_dcd()
 
@@ -1389,12 +1407,12 @@ def write_data(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, fram
         mixing type for pair coefficients (default: None): 'ii' or 'jj'
 
     """
-    sys_a = read_lmpdat(lmpdat_a, dcd_a, frame_idx_a)
+    sys_a = read_lmpdat(lmpdat_a, dcd_a, frame_idx_a, frame_idx_a)
 
     if lmpdat_b is not None:
-        sys_b = read_lmpdat(lmpdat_b, dcd_b, frame_idx_b)
+        sys_b = read_lmpdat(lmpdat_b, dcd_b, frame_idx_b, frame_idx_b)
         # since we only read one frame, only this frame combined will be written
-        sys_ab = mdu.merge_sys(sys_a, sys_b, pair_coeffs=pair_coeffs)
+        sys_ab = mdu.merge_systems([sys_a, sys_b], pair_coeffs=pair_coeffs)
     else:
         sys_ab = sys_a
 

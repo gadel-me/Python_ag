@@ -388,7 +388,7 @@ class Universe(object):
         #TODO write pair coeffs with right parameters (ii is enough, in lammps fix mix paircoeffs arithmetic)
         # appending mode (do not replace existing entries, append everything
         # from universe 2)
-        # make a copy since we do not want to change the original universe_2
+        # make a copy since we do not want to alter the original universe_2
         universe2_copy = copy.deepcopy(universe2)
 
         # atoms-, bonds-, angles-, dihedrals-, impropers-section
@@ -443,7 +443,7 @@ class Universe(object):
             if mode in ("merge", "append"):
                 if mode == "append":
                     # redefine indices
-                    combined_ffe_keys = range(u1_len_ffe_keys+len(u2_ffe_keys))
+                    combined_ffe_keys = range(u1_len_ffe_keys + len(u2_ffe_keys))
 
                     # concatenate values of current entry
                     combined_ffe_vals = u1_ffe_vals + u2_ffe_vals
@@ -489,7 +489,7 @@ class Universe(object):
                                 same = True
                                 break
                             else:
-                                same  = False
+                                same = False
 
                         if same is False:
                             combined_ffe_keys.append(len(combined_ffe_keys)+1)
@@ -683,15 +683,15 @@ class Universe(object):
 
                     # attributes of class instances of force-field-entry from u2
                     # as dictionary
-                    for u1_cffe_key, u1_cvalue, u2_cffe_key, u2_cvalue in zip(
-                            zip(u2_ffe_keys, u2_ffe_vals), zip(u1_ffe_keys, u1_ffe_vals)):
-                        # dictionary with attributes and their values
-                        u1_cattr = dict(u1_cvalue.__iter__())
-                        u1_cattr_keys = u1_cattr.keys()
-                        u1_cattr_vals = u1_cattr.values()
-                        u2_cattr = dict(u2_cvalue.__iter__())
-                        u2_cattr_keys = u2_cattr.keys()
-                        u2_cattr_vals = u2_cattr.values()
+                    #for u1_cffe_key, u1_cvalue, u2_cffe_key, u2_cvalue in zip(
+                    #        zip(u2_ffe_keys, u2_ffe_vals), zip(u1_ffe_keys, u1_ffe_vals)):
+                    #    # dictionary with attributes and their values
+                    #    u1_cattr = dict(u1_cvalue.__iter__())
+                    #    u1_cattr_keys = u1_cattr.keys()
+                    #    u1_cattr_vals = u1_cattr.values()
+                    #    u2_cattr = dict(u2_cvalue.__iter__())
+                    #    u2_cattr_keys = u2_cattr.keys()
+                    #    u2_cattr_vals = u2_cattr.values()
 
         if mode in ("merge", "append"):
             # do not do anything with boxes, it is up to the user to adjust the box
@@ -1876,25 +1876,29 @@ class Universe(object):
 
 
 ################################################################################
-# Shortcuts for common procedures
+# Shortcut functions for common procedures
 ################################################################################
 
-def merge_sys(sys_a, sys_b, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None, selections=[]):
+def merge_systems(systems, frame_idxs=None, pair_coeffs=None):
     """
     Merge two systems into a new one.
 
+    Merge the systems to a new one. If the number of systems, frames and
+    selections is not equal, default values of -1 for the last frame and a
+    selection of value "all" is assumed for the missing entries.
+
     Parameters
     ----------
-    sys_a : Universe
-        system a that gets merged with system b
-    sys_b : Universe
-        system b that gets merged with system a
-    frame_idx_a : int
-        frame number that will be used for system a (default: last frame)
-    frame_idx_b : int
-        frame number that will be used for system b (default: last frame)
-    pair_coeffs : str
-        mixing type for pair coefficients - 'ii' or 'ij'
+    universes : list of Universe
+        all systems that will be merged into a new one
+    frame_idxs : list of ints
+        all frames of each universe that will be taken
+    pair_coeffs : None or str
+        combining rules on how the systems will be merged
+        currently only Lorentz-Berthelot rules possible
+        ii: only return ii pairs
+        ij: only return ij pairs
+        None: lennard-jones parameters will be omitted
 
     Returns
     -------
@@ -1902,12 +1906,40 @@ def merge_sys(sys_a, sys_b, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None, se
         the merged systems (box a will be overwritten with box from system b)
 
     """
-    sys_both = copy.deepcopy(sys_a)
-    sys_both.extend_universe(sys_b, u1_frame_id=frame_idx_a, u2_frame_id=frame_idx_b, mode="merge")
+    def get_frame_idx(idx):
+        """
+        Return -1 as default frame index for each frame not given in the list of frame indices.
 
-    if pair_coeffs:
-        sys_both.mix_pair_types(mode=pair_coeffs, mix_style="arithmetic")
+        Parameters
+        ----------
+        idx : int
+            index of frame
 
-    sys_both.fetch_molecules_by_bonds()
-    sys_both.mols_to_grps()
-    return sys_both
+        """
+        try:
+            return frame_idxs[idx]
+        except (IndexError, TypeError):
+            return -1
+
+    sys_merged = copy.deepcopy(systems[0])
+    # define frame for first system
+    sys_merged.ts_coords = [systems[0].ts_coords[get_frame_idx(0)]]
+
+    for sys_add_idx in xrange(len(systems)):
+
+        if sys_add_idx == 0:
+            continue
+
+        # always take last frame from merged system
+        sys_merged.extend_universe(systems[sys_add_idx], u1_frame_id=-1, u2_frame_id=get_frame_idx(sys_add_idx), mode="merge")
+
+        if pair_coeffs:
+            sys_merged.mix_pair_types(mode=pair_coeffs, mix_style="arithmetic")
+        else:
+            sys_merged.pair_types = []
+
+        sys_merged.fetch_molecules_by_bonds()
+        sys_merged.mols_to_grps()
+
+    # delete unneeded frames
+    return sys_merged
