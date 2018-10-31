@@ -413,16 +413,16 @@ def quench(lmpcuts, lmpdat_main):
 
     thermo_dreiding = (
         "if $(is_active(pair_style,hbond/dreiding/lj)) then " +
-        "\"" +
+        "\" " +
         "compute hb all pair hbond/dreiding/lj\n" +
         "variable n_hbond equal c_hb[1]\n" +
         "variable E_hbond equal c_hb[2]\n" +
         thermo_style +
-        "v_n_hbond" + "v_E_hbond" +
+        "v_n_hbond " + "v_E_hbond" +
         "\"" +
         "else " +
-        "\"" +
-        thermo_style +
+        "\" " +
+        thermo_style + " " +
         "\"")
 
     lmp.command(thermo_dreiding)
