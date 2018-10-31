@@ -37,9 +37,96 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 
 
+def get_remaining_cycles(total_cycles):
+    """
+    Scan current folder names for numbers to get the current cycle.
+
+    Returns
+    -------
+    remaining_cycles : int
+        remaining cycles
+
+    """
+    def get_next_cycle():
+        """
+        """
+        def get_finished_cycles():
+            """
+            """
+
+            finished_cycles = []
+            folders_pwd = ["{}/{}".format(pwd, i) for i in os.listdir(pwd) if os.path.isdir(i)]
+
+            # get last cycle from directory
+            for folder in folders_pwd:
+                cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
+                cycle = int(cycle)
+
+                # avoid duplicates
+                if cycle not in finished_cycles:
+                    finished_cycles.append(cycle)
+
+            return finished_cycles
+
+        finished_cycles = get_finished_cycles()
+        current_cycle = max(finished_cycles)
+        last_requench_file = pwd + "/requench_{}/".format(current_cycle) + "requench_{}.dcd".format(current_cycle)
+
+        if len(finished_cycles) >= 1:
+
+            if os.path.isfile(last_requench_file) is True:
+                next_cycle = current_cycle + 1
+            else:
+                next_cycle = current_cycle
+
+        else:
+            next_cycle = 0
+
+        return (current_cycle, next_cycle, last_requench_file)
+
+    pwd = os.getcwd()
+    current_cycle, next_cycle, last_requench_file = get_next_cycle()
+    total_cycles = range(total_cycles)
+    idx_next_cycle = total_cycles.index(next_cycle)
+    remain_cycles = total_cycles[idx_next_cycle:]
+    return (remain_cycles, last_requench_file)
+
+    #===========================#
+    # Molecule to add by pattern
+    #===========================#
+    #id_pattern = 0
+    #num_patterns = len(args.pa) - 1  # indices start with 0 so one less
+    #total_cycles = []
+#
+    #for cycle in range(args.cycles):
+    #    if id_pattern > num_patterns:
+    #        id_pattern = 0
+    #    total_cycles.append((cycle, args.pa[id_pattern]))
+    #    id_pattern += 1
+
+
+def create_folder(folder):
+    """
+    Create folder or skip creation if it already exists
+    """
+    try:
+        os.mkdir(folder)
+    except OSError:
+        print("***Info: Folder {} already exists!".format(folder))
+
+
+def write_to_log(string, filename="kwz_log"):
+    """
+    Write string 's' to log file named 'kwz.log'.
+    """
+    with open("kwz_log", "a") as kwz_log:
+        kwz_log.write(string)
+
 ################################################################################
 # Ensembles
 ################################################################################
+
+
 def berendsen_md(lmpcuts, group="all"):
     """
     """
@@ -290,9 +377,17 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
 def quench(lmpcuts, lmpdat_main):
     """
     """
-    main_sys = aglmp.read_lmpdat(lmpdat_main)
-    natoms_main_sys = len(main_sys.atoms)
-    del main_sys
+    def get_natms():
+        """
+        """
+        with open(lmpdat_main, "r") as f_in:
+            line = f_in.readline()
+            while line != '':
+                line = f_in.readline()
+                if "atoms" in line:
+                    return int(line.split()[0])
+
+    natoms_main_sys = get_natms()
 
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -303,16 +398,41 @@ def quench(lmpcuts, lmpdat_main):
 
     lmp.file(lmpcuts.settings_file)
     # change box type to not be periodic
-    #lmp.command("boundary f f f")
-    lmpcuts.aglmp.read_lmpdat(lmp)
+    lmp.command("boundary f f f")
+    lmpcuts.load_system(lmp)
+    lmp.command("velocity all create {} 8455461 mom yes rot yes dist gaussian".format(lmpcuts.tstart))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
+    #lmp.command("variable n_hbond equal c_hb[1]")
+    #lmp.command("variable E_hbond equal c_hb[2]")
+    #lmp.command("thermo_style custom step temp epair v_E_hbond")
+
+    # thermo output
+    # compute dreiding hbonds and energies, if the pair style dreiding is set
+    thermo_style = "thermo_style custom" + " ".join(lmpcuts.thermargs)
+
+    thermo_dreiding = (
+        "if $(is_active(pair_style,hbond/dreiding/lj)) then " +
+        "\"" +
+        "compute hb all pair hbond/dreiding/lj\n" +
+        "variable n_hbond equal c_hb[1]\n" +
+        "variable E_hbond equal c_hb[2]\n" +
+        thermo_style +
+        "v_n_hbond" + "v_E_hbond" +
+        "\"" +
+        "else " +
+        "\"" +
+        thermo_style +
+        "\"")
+
+    lmp.command(thermo_dreiding)
+    pdb.set_trace()
+
+    lmp.command("compute hb all pair hbond/dreiding/lj")
+    lmpcuts.thermo(lmp)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
-
-    # intermediate restart files
-    lmp.command("restart {0} {1} {1}".format(lmpcuts.logsteps * 10, lmpcuts.output_lmprst))
 
     # define the atoms that may move during the simulation
     lmp.command("group grp_add_sys id > {}".format(natoms_main_sys))
@@ -336,35 +456,38 @@ def quench(lmpcuts, lmpdat_main):
         cog = None
 
     cog = comm.bcast(cog, 0)
-    lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 10000").format(*cog))
-
     # barostatting, thermostatting
     lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
-    lmp.command("run {}".format(lmpcuts.runsteps))
-    # remove pushing force
-    lmp.command("unfix force")
+    quench_success = False
 
-    # post-optimization
-    lmp.command("min_style quickmin")
-    lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+    # 20 attempts to dock the molecule
+    for _ in xrange(20):
+        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 100000").format(*cog))
+        lmp.command("run {}".format(lmpcuts.runsteps))
+        # remove pushing force
+        lmp.command("unfix force")
 
-    # write restart file
-    lmpcuts.unfix_undump(pylmp, lmp)
-    lmp.command("reset_timestep 0")
-    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-    lmp.command("clear")
-    lmp.close()
+        # post-optimization
+        lmp.command("min_style quickmin")
+        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-    # check aggregate
-    if rank == 0:
-        quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
-        quench_success = quench_sys.check_aggregate()
-    else:
-        quench_success = False
+        # check aggregate
+        if rank == 0:
+            quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
+            quench_success = quench_sys.check_aggregate()
 
-    quench_success = comm.bcast(quench_success, 0)
+        quench_success = comm.bcast(quench_success, 0)
+
+        if quench_success is True:
+            # write restart file
+            lmpcuts.unfix_undump(pylmp, lmp)
+            lmp.command("reset_timestep 0")
+            lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+            lmp.command("clear")
+            lmp.close()
+            break
+
     return quench_success
-
 
 
 ################################################################################

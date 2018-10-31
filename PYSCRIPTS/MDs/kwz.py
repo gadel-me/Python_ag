@@ -44,92 +44,6 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helper functions and variables
 #==============================================================================#
-
-def get_remaining_cycles(total_cycles, outputfile):
-    """
-    Scan current folder names for numbers to get the current cycle.
-
-    Returns
-    -------
-    remaining_cycles : int
-        remaining cycles
-
-    """
-    def get_next_cycle():
-        """
-        """
-        def get_finished_cycles():
-            """
-            """
-
-            finished_cycles = []
-            folders_pwd = ["{}/{}".format(pwd, i) for i in os.listdir(pwd) if os.path.isdir(i)]
-
-            # get last cycle from directory
-            for folder in folders_pwd:
-                cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
-                cycle = int(cycle)
-
-                # avoid duplicates
-                if cycle not in finished_cycles:
-                    finished_cycles.append(cycle)
-
-            return finished_cycles
-
-        finished_cycles = get_finished_cycles()
-
-        if len(finished_cycles) >= 1:
-            current_cycle = max(finished_cycles)
-
-            if os.path.isfile(outputfile) is True:
-                next_cycle = current_cycle + 1
-            else:
-                next_cycle = current_cycle
-
-        else:
-            next_cycle = 0
-
-        return (current_cycle, next_cycle)
-
-    pwd = os.getcwd()
-    current_cycle, next_cycle = get_next_cycle()
-    last_requench_file = pwd + "/requench_{}/".format(current_cycle) + "requench_{}.dcd".format(current_cycle)
-    total_cycles = range(total_cycles)
-    idx_next_cycle = total_cycles.index(next_cycle)
-    remain_cycles = total_cycles[idx_next_cycle:]
-    return (remain_cycles, last_requench_file)
-
-    #===========================#
-    # Molecule to add by pattern
-    #===========================#
-    #id_pattern = 0
-    #num_patterns = len(args.pa) - 1  # indices start with 0 so one less
-    #total_cycles = []
-#
-    #for cycle in range(args.cycles):
-    #    if id_pattern > num_patterns:
-    #        id_pattern = 0
-    #    total_cycles.append((cycle, args.pa[id_pattern]))
-    #    id_pattern += 1
-
-def create_folder(folder):
-    """
-    Create folder or skip creation if it already exists
-    """
-    try:
-        os.mkdir(folder)
-    except OSError:
-        print("***Info: Folder {} already exists!".format(folder))
-
-
-def write_to_log(string, filename="kwz_log"):
-    """
-    Write string 's' to log file named 'kwz.log'.
-    """
-    with open("kwz_log", "a") as kwz_log:
-        kwz_log.write(string)
-
-
 if __name__ == "__main__":
     percentage_to_check = 80
     #==============================================================================#
@@ -228,7 +142,7 @@ if __name__ == "__main__":
     #==============================================================================#
     # Remaining cycles and molecule to add pattern
     #==============================================================================#
-    remaining_cycles, requench_out = get_remaining_cycles()
+    remaining_cycles, requench_out = agk.get_remaining_cycles(args.total_cycles)
     #resnames = set(args.solvate_resnames.split())
 
     #==============================================================================#
@@ -242,7 +156,7 @@ if __name__ == "__main__":
         # Define folders and files, retrieve stage of current cycle
         #==========================================================#
         if rank == 0:
-            write_to_log("Cycle: {:d}\n".format(curcycle))
+            agk.write_to_log("Cycle: {:d}\n".format(curcycle))
 
         # declare folder names for each cycle
         sysprep_dir = PWD + "/sysprep_{}/".format(curcycle)
@@ -343,7 +257,7 @@ if __name__ == "__main__":
                     # 1. System Preparation
                     #==================================================================#
                     if rank == 0:
-                        create_folder(sysprep_dir)
+                        agk.create_folder(sysprep_dir)
                         sysprep_success = agk.sysprep(lmpsettings.lmpdat_out, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
 
                         if sysprep_success is False:
@@ -359,7 +273,7 @@ if __name__ == "__main__":
 
                 if os.path.isfile(lmpsettings_quench.lmprst_out) is False:
                     if rank == 0:
-                        create_folder(quench_dir)
+                        agk.create_folder(quench_dir)
                     quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
 
                     if quench_success is False:
@@ -380,7 +294,7 @@ if __name__ == "__main__":
             #======================================================================#
             if os.path.isfile(lmpsettings_anneal.output_lmprst) is False:
                 if rank == 0:
-                    create_folder(anneal_dir)
+                    agk.create_folder(anneal_dir)
                     solvate_sys = agk.read_system(lmpsettings_quench.input_lmpdat, dcd=lmpsettings_quench.output_dcd)
                     solvate_sys_natoms = len(solvate_sys.atoms)
                     atm_idxs_solvate = range(solvate_sys_natoms)

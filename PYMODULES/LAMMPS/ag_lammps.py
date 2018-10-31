@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import numpy as np
 import copy
 import md_box as mdb
@@ -1213,7 +1214,7 @@ class LmpSim(object):
         self.output_name = output_name
         self.gpu = gpu
 
-    def read_system(self, lmp):
+    def load_system(self, lmp):
         """Read a lammps restart or data file."""
         if self.output_lmprst is not None and os.path.isfile(self.output_lmprst):
             lmp.command("read_restart {}".format(self.output_lmprst))
@@ -1223,7 +1224,6 @@ class LmpSim(object):
             lmp.command("read_restart {}".format(self.input_lmprst))
         else:
             lmp.command("read_data {}".format(self.input_lmpdat))
-            lmp.command("velocity all create {} 4928459 mom yes rot yes dist gaussian".format(self.tstart))
 
     def unfix_undump(self, pylmp, lmp):
         """
@@ -1258,12 +1258,20 @@ class LmpSim(object):
         #lmp.command("thermo_modify line multi format float %g")
         lmp.command("thermo {}".format(self.logsteps))
 
-    def dump(self, lmp, unwrap=True):
+    def dump(self, lmp, n_dcd=None, n_rst=None, unwrap=True):
         """
+        Dump dcd and lammps restart files.
         """
+        # default values
+        if n_dcd is None:
+            n_dcd = self.logsteps
+
+        if n_rst is None:
+            n_rst = self.logsteps * 10
+
         # trajectory
-        lmp.command("dump trajectory all dcd {} {}".format(self.logsteps, self.output_dcd))
-        lmp.command("restart {} {} {}".format(self.logsteps*50, self.inter_lmprst, self.inter_lmprst))
+        lmp.command("dump trajectory all dcd {} {}".format(n_dcd, self.output_dcd))
+        lmp.command("restart {} {} {}".format(n_rst, self.inter_lmprst, self.inter_lmprst))
 
         if unwrap is True:
             lmp.command("dump_modify trajectory unwrap yes")
@@ -1283,16 +1291,6 @@ class LmpSim(object):
         else:
             lmp.command("fix integrator {} npt temp {} {} 0.5 iso {} {} 50".format(group, self.tstart, self.tstop, self.pstart, self.pstop))
 
-    def use_gpu(self, lmp, neigh=True):
-        """
-        """
-        if neigh:
-            lmp.command("package gpu 1 neigh yes")
-        else:
-            lmp.command("package gpu 1 neigh no")
-
-        lmp.command("suffix gpu")
-
     def minimize(self, lmp, style="cg", box_relax=False):
         """
         """
@@ -1302,6 +1300,16 @@ class LmpSim(object):
         lmp.command("min_style {}".format(style))
         lmp.command("min_modify dmax 2.0")
         lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
+
+    def use_gpu(self, lmp, neigh=True):
+        """
+        """
+        if neigh:
+            lmp.command("package gpu 1 neigh yes")
+        else:
+            lmp.command("package gpu 1 neigh no")
+
+        lmp.command("suffix gpu")
 
 
 ################################################################################
