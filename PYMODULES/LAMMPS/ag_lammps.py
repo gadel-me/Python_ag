@@ -1249,7 +1249,7 @@ class LmpSim(object):
         for dump in lmp_dumps:
             lmp.command("undump {}".format(dump))
 
-    def thermo(self, lmp):
+    def thermo(self, lmp, hb_group="all"):
         """
         Log thermodynamic data.
         """

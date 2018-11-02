@@ -138,69 +138,69 @@ def write_to_log(string, filename="kwz_log"):
 ################################################################################
 
 
-def berendsen_md(lmpcuts, group="all"):
-    """
-    """
-    lmp = lammps()
-    pylmp = PyLammps(ptr=lmp)
-    lmp.command("log {} append".format(lmpcuts.output_lmplog))
-
-    if lmpcuts.gpu is True:
-        lmpcuts.use_gpu(lmp, neigh=True)
-
-    lmp.file(lmpcuts.settings_file)
-    lmpcuts.read_system(lmp)
-    lmpcuts.thermo(lmp)
-    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
-
-    if lmpcuts.pc_file is not None:
-        lmp.file(lmpcuts.pc_file)
-
-    # minimize cut box if not done already
-    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
-        lmpcuts.minimize(lmp, style="cg")
-
-    # barostatting, thermostatting
-    lmpcuts.berendsen(lmp, group=group)
-    lmp.command("run {}".format(lmpcuts.runsteps))
-    lmpcuts.unfix_undump(pylmp, lmp)
-    lmp.command("reset_timestep 0")
-    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-    lmp.command("clear")
-    lmp.close()
-
-
-def nose_hoover_md(lmpcuts, group="all"):
-    """
-    """
-    lmp = lammps()
-    pylmp = PyLammps(ptr=lmp)
-    lmp.command("log {} append".format(lmpcuts.output_lmplog))
-
-    if lmpcuts.gpu is True:
-        lmpcuts.use_gpu(lmp, neigh=True)
-
-    lmp.file(lmpcuts.settings_file)
-    lmpcuts.read_system(lmp)
-    lmpcuts.thermo(lmp)
-    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
-
-    if lmpcuts.pc_file is not None:
-        lmp.file(lmpcuts.pc_file)
-
-    # minimize cut box if not done already
-    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
-        lmpcuts.minimize(lmp, style="cg")
-
-    lmpcuts.nose_hoover(lmp, group=group)
-    lmp.command("run {}".format(lmpcuts.runsteps))
-    lmpcuts.unfix_undump(pylmp, lmp)
-    lmp.command("reset_timestep 0")
-    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-    lmp.command("clear")
-    lmp.close()
+#def berendsen_md(lmpcuts, group="all"):
+#    """
+#    """
+#    lmp = lammps()
+#    pylmp = PyLammps(ptr=lmp)
+#    lmp.command("log {} append".format(lmpcuts.output_lmplog))
+#
+#    if lmpcuts.gpu is True:
+#        lmpcuts.use_gpu(lmp, neigh=True)
+#
+#    lmp.file(lmpcuts.settings_file)
+#    lmpcuts.read_system(lmp)
+#    lmpcuts.thermo(lmp)
+#    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+#    lmpcuts.dump(lmp)
+#
+#    if lmpcuts.pc_file is not None:
+#        lmp.file(lmpcuts.pc_file)
+#
+#    # minimize cut box if not done already
+#    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
+#        lmpcuts.minimize(lmp, style="cg")
+#
+#    # barostatting, thermostatting
+#    lmpcuts.berendsen(lmp, group=group)
+#    lmp.command("run {}".format(lmpcuts.runsteps))
+#    lmpcuts.unfix_undump(pylmp, lmp)
+#    lmp.command("reset_timestep 0")
+#    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+#    lmp.command("clear")
+#    lmp.close()
+#
+#
+#def nose_hoover_md(lmpcuts, group="all"):
+#    """
+#    """
+#    lmp = lammps()
+#    pylmp = PyLammps(ptr=lmp)
+#    lmp.command("log {} append".format(lmpcuts.output_lmplog))
+#
+#    if lmpcuts.gpu is True:
+#        lmpcuts.use_gpu(lmp, neigh=True)
+#
+#    lmp.file(lmpcuts.settings_file)
+#    lmpcuts.read_system(lmp)
+#    lmpcuts.thermo(lmp)
+#    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+#    lmpcuts.dump(lmp)
+#
+#    if lmpcuts.pc_file is not None:
+#        lmp.file(lmpcuts.pc_file)
+#
+#    # minimize cut box if not done already
+#    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
+#        lmpcuts.minimize(lmp, style="cg")
+#
+#    lmpcuts.nose_hoover(lmp, group=group)
+#    lmp.command("run {}".format(lmpcuts.runsteps))
+#    lmpcuts.unfix_undump(pylmp, lmp)
+#    lmp.command("reset_timestep 0")
+#    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+#    lmp.command("clear")
+#    lmp.close()
 
 
 #==============================================================================#
@@ -804,7 +804,7 @@ def _anneal(lmpcuts, pe_atm_idxs):
     lmp.command("compute pe_solvate resname_atoms pe/atom")
     lmp.command("compute pe resname_atoms reduce sum c_pe_solvate")
     lmpcuts.thermargs.append("c_pe_solvate")
-    lmpcuts.thermo(lmp)
+    lmpcuts.thermo(lmp, hb_group="resname_atoms")
     lmpcuts.nose_hoover(lmp)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
@@ -861,10 +861,12 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
         if os.path.isfile(lmpcuts.output_dcd) and os.path.isfile(lmpcuts.output_lmplog):
             dcd_files.append(lmpcuts.output_dcd)
             log_files.append(lmpcuts.output_lmplog)
+
             # read potential energy of the solvate and all coordinates
             if rank == 0:
                 _append_data(all_pe, lmpcuts.output_lmplog)
                 #molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
+
             continue
 
         else:
