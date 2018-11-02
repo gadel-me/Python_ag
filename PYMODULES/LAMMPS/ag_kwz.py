@@ -37,6 +37,17 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 
 
+def get_natms(lmpdat):
+    """
+    """
+    with open(lmpdat, "r") as f_in:
+        line = f_in.readline()
+        while line != '':
+            line = f_in.readline()
+            if "atoms" in line:
+                return int(line.split()[0])
+
+
 def get_remaining_cycles(total_cycles):
     """
     Scan current folder names for numbers to get the current cycle.
@@ -377,17 +388,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
 def quench(lmpcuts, lmpdat_main):
     """
     """
-    def get_natms():
-        """
-        """
-        with open(lmpdat_main, "r") as f_in:
-            line = f_in.readline()
-            while line != '':
-                line = f_in.readline()
-                if "atoms" in line:
-                    return int(line.split()[0])
-
-    natoms_main_sys = get_natms()
+    natoms_main_sys = get_natms(lmpdat_main)
 
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -403,32 +404,6 @@ def quench(lmpcuts, lmpdat_main):
     lmp.command("velocity all create {} 8455461 mom yes rot yes dist gaussian".format(lmpcuts.tstart))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
-    #lmp.command("variable n_hbond equal c_hb[1]")
-    #lmp.command("variable E_hbond equal c_hb[2]")
-    #lmp.command("thermo_style custom step temp epair v_E_hbond")
-
-    # thermo output
-    # compute dreiding hbonds and energies, if the pair style dreiding is set
-    thermo_style = "thermo_style custom" + " ".join(lmpcuts.thermargs)
-
-    thermo_dreiding = (
-        "if $(is_active(pair_style,hbond/dreiding/lj)) then " +
-        "\" " +
-        "compute hb all pair hbond/dreiding/lj\n" +
-        "variable n_hbond equal c_hb[1]\n" +
-        "variable E_hbond equal c_hb[2]\n" +
-        thermo_style +
-        "v_n_hbond " + "v_E_hbond" +
-        "\"" +
-        "else " +
-        "\" " +
-        thermo_style + " " +
-        "\"")
-
-    lmp.command(thermo_dreiding)
-    pdb.set_trace()
-
-    lmp.command("compute hb all pair hbond/dreiding/lj")
     lmpcuts.thermo(lmp)
 
     if lmpcuts.pc_file is not None:
@@ -451,6 +426,7 @@ def quench(lmpcuts, lmpdat_main):
         prep_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
+        # make vector show towards the center
         cog *= -1
     else:
         cog = None
@@ -462,8 +438,19 @@ def quench(lmpcuts, lmpdat_main):
 
     # 20 attempts to dock the molecule
     for _ in xrange(20):
-        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 100000").format(*cog))
-        lmp.command("run {}".format(lmpcuts.runsteps))
+        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 10000").format(*cog))
+
+        # end function if anything goes wrong
+        try:
+            lmp.command("run {}".format(lmpcuts.runsteps))
+        except:
+            # prevent deadlock by not nicely ending the whole program if more
+            # than one rank is used
+            if size > 1:
+                MPI.COMM_WORLD.Abort()
+            else:
+                return quench_success
+
         # remove pushing force
         lmp.command("unfix force")
 
@@ -707,6 +694,7 @@ def requench(lmpcuts):
     lmp.command("clear")
     lmp.close()
 
+
 def _append_data(data, lmplog):
     """
     """
@@ -716,7 +704,7 @@ def _append_data(data, lmplog):
     data.extend(cur_pes)
 
 
-def vmd_rmsd_and_cluster(lmpdat_in, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
+def vmd_rmsd_and_cluster(lmpdat_solution, lmpdat_solvate, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
     """
     Align solvate molecules and calculate the rmsd.
 
@@ -726,7 +714,7 @@ def vmd_rmsd_and_cluster(lmpdat_in, dcd_files, atm_idxs, xyz_out, percentage_to_
 
     Parameters
     ----------
-    lmpdat_in : str
+    lmpdat_solution : str
         name of lammps data file with topology to load
     dcd_files : list of str
         file names of the dcd files to load into vmd
@@ -743,9 +731,13 @@ def vmd_rmsd_and_cluster(lmpdat_in, dcd_files, atm_idxs, xyz_out, percentage_to_
     import molecule
     import atomsel
 
+    # get number of solvate atoms
+    natms_solvate = get_natms(lmpdat_solvate)
+
+    # get number of frames to check
     percentage_to_check /= 100.0
     # read topology and coordinates
-    molecule.load("lmpdat", lmpdat_in)
+    molecule.load("lmpdat", lmpdat_solution)
 
     for dcd_file in dcd_files:
         molecule.read(0, "dcd", dcd_file, waitfor=-1)
@@ -765,13 +757,13 @@ def vmd_rmsd_and_cluster(lmpdat_in, dcd_files, atm_idxs, xyz_out, percentage_to_
         rmsd = sel2.rmsd(sel1)
         rmsds.append(rmsd)
 
-    # clustering (currently only possible using the tcl interface)
+    # clustering (currently only possible using the tcl interface?)
     tcl_selection = 'set tcl_sel1 [atomselect {} "index 0 to {} frame {}"]'
-    tcl_sel1 = tcl_selection.format(0, num_solvate_atoms - 1, 0)
+    tcl_sel1 = tcl_selection.format(0, natms_solvate - 1, 0)
     vmd.evaltcl(tcl_sel1)
     cluster = "measure cluster $tcl_sel1 num 5 distfunc rmsd cutoff 1.0 first {} last {} step 1 selupdate True"
     clusters = vmd.evaltcl(cluster.format(frame_first, frame_last))
-    clusters = re.findall("\{([^[\}]*)\}", clusters)
+    clusters = re.findall(r"\{([^[\}]*)\}", clusters)
     cluster_0 = [int(i) for i in clusters[0].split()]
     molecule.write(0, "xyz", xyz_out, beg=cluster_0, end=cluster_0, selection=sel1)
     vmd.VMDexit("closing vmd")
@@ -791,15 +783,12 @@ def _anneal(lmpcuts, pe_atm_idxs):
     pylmp = PyLammps(ptr=lmp)
     lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
-    # caveat: only possible with neigh no if calculating pe/atom on the graphics
-    # card
+    # caveat: only possible with neigh no if calculating pe/atom on the graphics card
     if lmpcuts.gpu is True:
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
     lmpcuts.read_system(lmp)
-    lmpcuts.thermargs.append("c_pe_solvate")
-    lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
 
@@ -814,6 +803,8 @@ def _anneal(lmpcuts, pe_atm_idxs):
     lmp.command("group resname_atoms " + atm_ids_str)
     lmp.command("compute pe_solvate resname_atoms pe/atom")
     lmp.command("compute pe resname_atoms reduce sum c_pe_solvate")
+    lmpcuts.thermargs.append("c_pe_solvate")
+    lmpcuts.thermo(lmp)
     lmpcuts.nose_hoover(lmp)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
@@ -821,6 +812,7 @@ def _anneal(lmpcuts, pe_atm_idxs):
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
+
 
 def _test_anneal_equil(data):
     """
@@ -847,6 +839,7 @@ def _test_anneal_equil(data):
         pass
 
     return qq_normal and (skew_normal or kurtosis_normal)
+
 
 def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
     """

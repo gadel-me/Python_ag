@@ -1253,6 +1253,16 @@ class LmpSim(object):
         """
         Log thermodynamic data.
         """
+        # compute dreiding h-bond energies, if hbond/dreiding/lj setting is set
+        try:
+            lmp.command("compute hb all pair hbond/dreiding/lj\n")
+            lmp.command("variable n_hbond equal c_hb[1]")
+            lmp.command("variable E_hbond equal c_hb[2]")
+            self.thermargs.append("v_n_hbond")
+            self.thermargs.append("v_E_hbond")
+        except:
+            pass
+
         lmp.command("thermo_style custom " + " ".join(self.thermargs))
         lmp.command("thermo_modify lost warn flush yes")
         #lmp.command("thermo_modify line multi format float %g")
