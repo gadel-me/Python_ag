@@ -138,69 +138,77 @@ def write_to_log(string, filename="kwz_log"):
 ################################################################################
 
 
-#def berendsen_md(lmpcuts, group="all"):
-#    """
-#    """
-#    lmp = lammps()
-#    pylmp = PyLammps(ptr=lmp)
-#    lmp.command("log {} append".format(lmpcuts.output_lmplog))
-#
-#    if lmpcuts.gpu is True:
-#        lmpcuts.use_gpu(lmp, neigh=True)
-#
-#    lmp.file(lmpcuts.settings_file)
-#    lmpcuts.read_system(lmp)
-#    lmpcuts.thermo(lmp)
-#    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-#    lmpcuts.dump(lmp)
-#
-#    if lmpcuts.pc_file is not None:
-#        lmp.file(lmpcuts.pc_file)
-#
-#    # minimize cut box if not done already
-#    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
-#        lmpcuts.minimize(lmp, style="cg")
-#
-#    # barostatting, thermostatting
-#    lmpcuts.berendsen(lmp, group=group)
-#    lmp.command("run {}".format(lmpcuts.runsteps))
-#    lmpcuts.unfix_undump(pylmp, lmp)
-#    lmp.command("reset_timestep 0")
-#    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-#    lmp.command("clear")
-#    lmp.close()
-#
-#
-#def nose_hoover_md(lmpcuts, group="all"):
-#    """
-#    """
-#    lmp = lammps()
-#    pylmp = PyLammps(ptr=lmp)
-#    lmp.command("log {} append".format(lmpcuts.output_lmplog))
-#
-#    if lmpcuts.gpu is True:
-#        lmpcuts.use_gpu(lmp, neigh=True)
-#
-#    lmp.file(lmpcuts.settings_file)
-#    lmpcuts.read_system(lmp)
-#    lmpcuts.thermo(lmp)
-#    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-#    lmpcuts.dump(lmp)
-#
-#    if lmpcuts.pc_file is not None:
-#        lmp.file(lmpcuts.pc_file)
-#
-#    # minimize cut box if not done already
-#    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
-#        lmpcuts.minimize(lmp, style="cg")
-#
-#    lmpcuts.nose_hoover(lmp, group=group)
-#    lmp.command("run {}".format(lmpcuts.runsteps))
-#    lmpcuts.unfix_undump(pylmp, lmp)
-#    lmp.command("reset_timestep 0")
-#    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-#    lmp.command("clear")
-#    lmp.close()
+def md_simulation(lmpcuts, group, style, ensemble, keyword):
+    """
+    """
+    lmp = lammps()
+    pylmp = PyLammps(ptr=lmp)
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
+
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp, neigh=True)
+
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.load_system(lmp)
+    lmpcuts.thermo(lmp)
+    lmpcuts.dump(lmp, unwrap=False)
+
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
+
+    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
+        #lmp.command("min_modify line quadratic")
+        lmpcuts.minimize(lmp, style="cg", keyword=keyword)
+
+    # barostatting, thermostatting
+    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+
+    if style.lower() == "berendsen":
+        lmpcuts.fix_berendsen(lmp, group, ensemble, keyword)
+    elif style.lower() == "nose_hoover":
+        lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
+    else:
+        raise Warning("Style (currently) unkown")
+
+    lmp.command("run {}".format(lmpcuts.runsteps))
+    lmpcuts.minimize(lmp, style="cg", keyword=keyword)
+    lmpcuts.unfix_undump(pylmp, lmp)
+    #lmp.command("reset_timestep 0")
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+    lmp.command("clear")
+    lmp.close()
+
+
+def nose_hoover_md(lmpcuts, group="all"):
+    """
+    """
+    lmp = lammps()
+    pylmp = PyLammps(ptr=lmp)
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
+
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp, neigh=False)
+
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.load_system(lmp)
+    lmpcuts.thermo(lmp)
+    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
+
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
+
+    # minimize cut box if not done already
+    if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
+        lmpcuts.minimize(lmp, style="cg")
+
+
+    lmp.command("run {}".format(lmpcuts.runsteps))
+    lmpcuts.unfix_undump(pylmp, lmp)
+    lmp.command("reset_timestep 0")
+    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+    lmp.command("clear")
+    lmp.close()
 
 
 #==============================================================================#
@@ -395,7 +403,7 @@ def quench(lmpcuts, lmpdat_main):
     lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
     if lmpcuts.gpu is True:
-        lmpcuts.use_gpu(lmp, neigh=True)
+        lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
     # change box type to not be periodic
@@ -553,7 +561,7 @@ def _lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
             lmp.command("unfix {}".format(indent_fix.split()[1]))
 
 
-def _check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
+def _check_clashes(sys_both, sys_a, sys_b, dcd_b=None, unwrap=False):
     """
     Check for imaginary clashes between atoms of two systems before combining them.
 
@@ -572,9 +580,21 @@ def _check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
     """
     #sys_both.reset_cells()
     # read latest solvent coordinates and boxes
-    sys_b.import_dcd(dcd_b)
-    sys_b.read_frames(frame=-2, to_frame=-1)
-    sys_b.close_dcd()
+    if dcd_b:
+        sys_b.import_dcd(dcd_b)
+        sys_b.read_frames(frame=-2, to_frame=-1)
+        sys_b.close_dcd()
+
+    # caveat: unwrap only if totally necessary; if center(box) is (0,0,0) and
+    # cog of the molecule is also (0,0,0) then clashes can safely be measured
+    if unwrap:
+        sys_b.unwrap_cell(frame_id=-1)
+
+    # testing #################################################################
+    sys_b.change_indices()
+    sys_b.write_lmpdat("unwrapped.lmpdat", frame_id=-1, cgcmm=True)
+    exit()
+    # #########################################################################
 
     # concatenate solute and latest solvent coordinates
     sys_both.ts_coords.append(np.concatenate((sys_a.ts_coords[-1], sys_b.ts_coords[-1])))
@@ -589,7 +609,7 @@ def _check_imaginary_clashes(sys_both, sys_a, sys_b, dcd_b):
     return close_atms_a
 
 
-def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
+def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     """
     """
     # solvate with molecule radii and cogs
@@ -597,35 +617,13 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     radii_mol, cogs_mol = _molecules_radii(solvate_sys)
     indent_strs = _fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
 
-    # load lammps and lammps settings
-    lmp = lammps()
-    pylmp = PyLammps(ptr=lmp)
-    lmp.command("log {} append".format(lmpcuts.output_lmplog))
-
-    if lmpcuts.gpu is True:
-        lmpcuts.use_gpu(lmp)
-
-    lmp.file(lmpcuts.settings_file)
-    lmpcuts.read_system(lmp)
-    lmpcuts.thermo(lmp)
-    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
-
-    if lmpcuts.pc_file is not None:
-        lmp.file(lmpcuts.pc_file)
-
-    lmpcuts.berendsen(lmp)
-    #lmp.command("unfix integrator")
-    #lmp.command("fix integrator all nve/limit 1.0")
-    _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
-
-    # solution system
-    solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
+    # load solution system (last frame only)
+    solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd_solvent)
     solution_sys = mdu.merge_systems([solvate_sys, solvent_sys])
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
-    close_atoms = _check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
+    close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys)
     cogs_atoms = [solvate_sys.ts_coords[-1][i] for i in close_atoms]
     radii_atoms = [mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)] for i in close_atoms]
 
@@ -638,6 +636,28 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
     all_radii_atoms.extend(radii_atoms)
     all_cogs_atoms.extend(cogs_atoms)
 
+    # load lammps and lammps settings
+    lmp = lammps()
+    pylmp = PyLammps(ptr=lmp)
+    lmp.command("log {}".format(lmpcuts.output_lmplog))
+
+    if lmpcuts.gpu is True:
+        lmpcuts.use_gpu(lmp)
+
+    lmp.file(lmpcuts.settings_file)
+    lmpcuts.load_system(lmp)
+    lmpcuts.thermo(lmp)
+    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmpcuts.dump(lmp)
+
+    if lmpcuts.pc_file is not None:
+        lmp.file(lmpcuts.pc_file)
+
+    lmpcuts.fix_berendsen(lmp, group="all", ensemble="berendsen", keyword="iso")
+    #lmp.command("unfix integrator")
+    #lmp.command("fix integrator all nve/limit 1.0")
+    _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
+
     factor_start = 10
     factor_stop = factor_start + 1
 
@@ -646,7 +666,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
         for _ in xrange(5):
             indent_strs = _fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
             _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
-            close_atoms = _check_imaginary_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
+            close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
 
             # add new close atoms to present ones or stop indenting
             if close_atoms == []:
@@ -654,7 +674,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate):
 
             # add further close atoms to present ones
             for atm_idx in close_atoms:
-                print(close_atoms)
+                #print(close_atoms)
                 if atm_idx not in all_close_atoms:
                     all_close_atoms.append(atm_idx)
                     all_radii_atoms.append(mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)])
@@ -679,7 +699,7 @@ def requench(lmpcuts):
     pylmp = PyLammps(ptr=lammps)
     lmp.file(lmpcuts.settings_file)
     # read restart file from previous run
-    lmpcuts.read_system(lmp)
+    lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
@@ -788,7 +808,7 @@ def _anneal(lmpcuts, pe_atm_idxs):
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
-    lmpcuts.read_system(lmp)
+    lmpcuts.load_system(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
 
@@ -805,7 +825,7 @@ def _anneal(lmpcuts, pe_atm_idxs):
     lmp.command("compute pe resname_atoms reduce sum c_pe_solvate")
     lmpcuts.thermargs.append("c_pe_solvate")
     lmpcuts.thermo(lmp, hb_group="resname_atoms")
-    lmpcuts.nose_hoover(lmp)
+    lmpcuts.fix_hoover(lmp)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")

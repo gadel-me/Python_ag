@@ -1268,53 +1268,80 @@ class LmpSim(object):
         #lmp.command("thermo_modify line multi format float %g")
         lmp.command("thermo {}".format(self.logsteps))
 
-    def dump(self, lmp, n_dcd=None, n_rst=None, unwrap=True):
+    def dump(self, lmp, ndcd=None, nrst=None, unwrap=True):
         """
         Dump dcd and lammps restart files.
         """
         # default values
-        if n_dcd is None:
-            n_dcd = self.logsteps
+        if ndcd is None:
+            ndcd = self.logsteps
 
-        if n_rst is None:
-            n_rst = self.logsteps * 10
+        if nrst is None:
+            nrst = self.logsteps * 10
 
         # trajectory
-        lmp.command("dump trajectory all dcd {} {}".format(n_dcd, self.output_dcd))
-        lmp.command("restart {} {} {}".format(n_rst, self.inter_lmprst, self.inter_lmprst))
+        lmp.command("dump trajectory all dcd {} {}".format(ndcd, self.output_dcd))
+        lmp.command("restart {} {} {}".format(nrst, self.inter_lmprst, self.inter_lmprst))
 
         if unwrap is True:
             lmp.command("dump_modify trajectory unwrap yes")
 
-    def berendsen(self, lmp, group="all"):
+    def fix_berendsen(self, lmp, group, ensemble, keyword):
         """
         """
+        # nve
         lmp.command("fix integrator {} nve".format(group))
-        lmp.command("fix thermostat {} temp/berendsen {} {} 0.5".format(group, self.tstart, self.tstop))
 
-        if self.pstart is not None and self.pstop is not None:
-            lmp.command("fix barostat {} press/berendsen iso {} {} 50".format(group, self.pstart, self.pstop))
+        # nvt
+        if (self.tstart is not None and self.tstop is not None) and (ensemble == "npt" or ensemble == "nvt"):
+            lmp.command("fix thermostat {} temp/berendsen {} {} 0.5".format(group, self.tstart, self.tstop))
 
-    def nose_hoover(self, lmp, group="all"):
-        if self.pstart is not None and self.pstop is not None:
-            lmp.command("fix integrator {} nvt temp {} {} 0.5".format(group, self.tstart, self.tstop))
+        # npt
+        if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
+            lmp.command("fix barostat {} press/berendsen {} {} {} 50".format(group, keyword, self.pstart, self.pstop))
+
+    def fix_hoover(self, lmp, group, ensemble, keyword):
+        nvt_section = "fix integrator {} {} temp {} {} 0.5".format(group, ensemble, self.tstart, self.tstop)
+        npt_section = " {} {} {} 50".format(keyword, self.pstart, self.pstop)
+
+        if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
+            lmp.command(nvt_section + npt_section)
+        elif ensemble == "nph":
+            raise Warning("Not implemented yet!")
         else:
-            lmp.command("fix integrator {} npt temp {} {} 0.5 iso {} {} 50".format(group, self.tstart, self.tstop, self.pstart, self.pstop))
+            lmp.command(nvt_section)
 
-    def minimize(self, lmp, style="cg", box_relax=False):
+    def minimize(self, lmp, style="cg", keyword=None):
         """
+
+        Sources
+        ---
+        https://lammps.sandia.gov/doc/min_modify.html
+
+        Parameters
+        ----------
+        lmp : Lammps-object
+        style : str
+            minimization style to use: sd, cg, fire
+        keyword : str
+            relaxation keyword if box should be scaled as well: iso, aniso, tri
+
         """
-        if box_relax:
-            lmp.command("fix box_relax all box/relax aniso {}".format(self.pstart))
+        if keyword:
+            lmp.command("fix box_relax all box/relax {} {}".format(keyword, self.pstart))
 
         lmp.command("min_style {}".format(style))
         lmp.command("min_modify dmax 2.0")
         lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
 
+        # tidy up
+        if keyword:
+            lmp.command("unfix box_relax")
+
     def use_gpu(self, lmp, neigh=True):
         """
         """
-        if neigh:
+        if neigh is True:
             lmp.command("package gpu 1 neigh yes")
         else:
             lmp.command("package gpu 1 neigh no")
@@ -1388,7 +1415,7 @@ def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     return md_sys
 
 
-def write_data(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None):
+def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None):
     """
     Write a lammps data file.
 
@@ -1488,7 +1515,7 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
     # cut plane
     md_sys.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
 
-    # enlarge box a little so atoms at the edge will not clash due to pbc
+    # buffer for box lengths to prevent clashes using pbc
     cart_box.box_cart2lat()
     cart_box.ltc_a += 4
     cart_box.ltc_b += 4
@@ -1498,9 +1525,10 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
     # def new box vectors by given box angles
     md_sys.ts_boxes[0] = cart_box
 
-    md_sys.ts_boxes[0].lmp_xy = None
-    md_sys.ts_boxes[0].lmp_xz = None
-    md_sys.ts_boxes[0].lmp_yz = None
+    if box.lmp_xy < 1e-10 and box.lmp_xz < 1e-10 and box.lmp_yz < 1e-10:
+        md_sys.ts_boxes[0].lmp_xy = None
+        md_sys.ts_boxes[0].lmp_xz = None
+        md_sys.ts_boxes[0].lmp_yz = None
 
     md_sys.mols_to_grps()
     md_sys.change_indices(incr=1, mode="increase")

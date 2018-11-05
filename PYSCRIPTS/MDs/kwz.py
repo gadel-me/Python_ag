@@ -295,7 +295,7 @@ if __name__ == "__main__":
             if os.path.isfile(lmpsettings_anneal.output_lmprst) is False:
                 if rank == 0:
                     agk.create_folder(anneal_dir)
-                    solvate_sys = agk.read_system(lmpsettings_quench.input_lmpdat, dcd=lmpsettings_quench.output_dcd)
+                    solvate_sys = aglmp.read_lmpdat(lmpsettings_quench.input_lmpdat, dcd=lmpsettings_quench.output_dcd)
                     solvate_sys_natoms = len(solvate_sys.atoms)
                     atm_idxs_solvate = range(solvate_sys_natoms)
                 else:
@@ -312,7 +312,11 @@ if __name__ == "__main__":
 
                     # relax cut box
                     if not os.path.isdir(lmpsettings_relax_cut.output_lmprst):
-                        agk.berendsen_md(lmpsettings_relax_cut)
+                        lmpsettings_relax_cut.runsteps=20000
+                        # 20000 steps, 500 bar to 1 bar, 20 to 280 K, iso
+                        agk.md_simulation(lmpsettings_relax_cut, group="all", style=style, ensemble="nvt", keyword="iso")
+                        lmpsettings_relax_cut.tstart = lmpsettings_relax_cut.tstop
+                        agk.md_simulation(lmpsettings_relax_cut, group="all", style=style, ensemble="npt", keyword="iso")
 
                     # create voids and write lammps data with solvate and solvent combined
                     if not os.path.isfile(lmpsettings_void.output_lmprst):
@@ -329,7 +333,7 @@ if __name__ == "__main__":
 
                     # combine solute and solvent
                     if rank == 0 and not os.path.isfile(solution_lmpdat):
-                        agk.write_data(solution_lmpdat, sysprep_out_lmpdat, lmpdat_b=lmpsettings_relax_cut.input_lmpdat, dcd_a=lmpsettings_quench.output_dcd, dcd_b=lmpsettings_void.output_dcd, pair_coeffs=args.pair_coeffs)
+                        aglmp.write_lmpdat(solution_lmpdat, sysprep_out_lmpdat, lmpdat_b=lmpsettings_relax_cut.input_lmpdat, dcd_a=lmpsettings_quench.output_dcd, dcd_b=lmpsettings_void.output_dcd, pair_coeffs=args.pair_coeffs)
 
                     # relax solvent molecules in solution, since solvent is always appended
                     # every atom id greater than the last one of the solvate has to be

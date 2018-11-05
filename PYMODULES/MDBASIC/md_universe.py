@@ -1147,11 +1147,14 @@ class Universe(object):
 
         return close_contacts
 
-    def unwrap_cell(self, frame_id=0):
+    def unwrap_cell(self, frame_id=-1):
         """
         Unwrap the unit cell, i.e. move all atoms to the quadrant that is positive
         in x, y and z direction.
         Caveat: Currently this only works with orthogonal unit cells.
+
+        #TODO This does not work currently on only positive coordinates
+        #TODO -> real unwrapping is necessary instead of this cheap solution
         """
         print("***Info: Unwrapping cell")
         # get box vectors
