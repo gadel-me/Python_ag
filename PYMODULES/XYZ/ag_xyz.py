@@ -121,7 +121,7 @@ class XYZ(mdu.Universe):
                 # append current frame
                 self.ts_coords.append(cframe)
 
-    def write_xyz(self, xyz_file, title, guess_element=False, *frame_ids):
+    def write_xyz(self, xyz_file, title="DEFAULT", guess_element=False, *frame_ids):
         """
         Write a xyz-file.
         """
@@ -134,7 +134,7 @@ class XYZ(mdu.Universe):
 
             for frame_id in frame_ids:
                 xyz_out.write("{}\n".format(num_atms))
-                #xyz_out.write("Step: {} - {}".format(frame_id, title))
+                xyz_out.write("Step: {} - {}\n".format(frame_id, title))
                 # does not work out with box information -> change newline after
                 # comment line was written, maybe define comment line seperately
 
@@ -171,7 +171,7 @@ class XYZ(mdu.Universe):
 
                 for catm, ccoords in zip(self.atoms, self.ts_coords[frame_id]):
                     # write atom name
-                    if hasattr(catm, "sitnam") is True and guess_element is False:
+                    if hasattr(catm, "sitnam") and guess_element is False:
                         xyz_out.write("{} ".format(catm.sitnam))
                     else:
                         # guess element by mass

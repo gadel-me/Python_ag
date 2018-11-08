@@ -38,7 +38,7 @@ class GauStuff(mdu.Universe):
                  chk=None,
                  nproc=None,
                  mem=None,
-                 job_settings="",
+                 job_settings=None,
                  gaussian_charges=[],
                  gaussian_multiplicities=[],
                  gaussian_other_info={},
@@ -78,6 +78,8 @@ class GauStuff(mdu.Universe):
 
         if job_settings is not None:
             self.job_settings = job_settings
+        else:
+            self.job_settings = ""
 
         if gaussian_charges != []:
             self.gaussian_charges = gaussian_charges
@@ -136,20 +138,20 @@ class GauStuff(mdu.Universe):
                 #// ROUTE SECTION (may be scattered over several files)
                 elif line.startswith("#"):
                     #pdb.set_trace()
-                    if self.job_settings == "" or overwrite is True:
 
-                        # keep reading until empty line is reached, end loop
-                        # when it is
-                        while line != "\n":
+                    # keep reading until empty line is reached, end loop
+                    # when it is
+                    while line != "\n":
+                        if self.job_settings == "" or overwrite is True:
                             self.job_settings += line.rstrip("\n") + " "
-                            line = gau_in.readline()
+                        line = gau_in.readline()
 
-                            # eof reached
-                            if line == "":
-                                break
-
-                        else:
+                        # eof reached
+                        if line == "":
                             break
+
+                    else:
+                        break
 
                 else:
                     pass

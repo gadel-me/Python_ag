@@ -138,7 +138,7 @@ def write_to_log(string, filename="kwz_log"):
 ################################################################################
 
 
-def md_simulation(lmpcuts, group, style, ensemble, keyword):
+def md_simulation(lmpcuts, group, style, ensemble, keyword=None):
     """
     """
     lmp = lammps()
@@ -508,9 +508,6 @@ def _fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
         Contains all ready up fixes for the lammps indent fix
 
     """
-    if rank == 0:
-        print(radii)
-
     fix_str = "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out"
     all_indent_fixes = []
 
@@ -540,8 +537,6 @@ def _lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
 
     """
     # make sphere grow (i.e. create and delete fixes for fix indent)
-    #pdb.set_trace()
-
     for indent_fixes in indents[:-1]:
         for indent_fix in indent_fixes:
             lmp.command(indent_fix)
@@ -556,7 +551,7 @@ def _lmp_indent(lmp, indents, runsteps, keep_last_fixes=False):
     lmp.command("run {}".format(runsteps))
 
     # unfix last fixes
-    if keep_last_fixes is False:
+    if not keep_last_fixes:
         for indent_fix in indents[-1]:
             lmp.command("unfix {}".format(indent_fix.split()[1]))
 
@@ -591,9 +586,9 @@ def _check_clashes(sys_both, sys_a, sys_b, dcd_b=None, unwrap=False):
         sys_b.unwrap_cell(frame_id=-1)
 
     # testing #################################################################
-    sys_b.change_indices()
-    sys_b.write_lmpdat("unwrapped.lmpdat", frame_id=-1, cgcmm=True)
-    exit()
+    #sys_b.change_indices()
+    #sys_b.write_lmpdat("unwrapped.lmpdat", frame_id=-1, cgcmm=True)
+    #exit()
     # #########################################################################
 
     # concatenate solute and latest solvent coordinates
@@ -648,14 +643,14 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
+    lmpcuts.dump(lmp, unwrap=False)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
-    lmpcuts.fix_berendsen(lmp, group="all", ensemble="berendsen", keyword="iso")
+    lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
     #lmp.command("unfix integrator")
-    #lmp.command("fix integrator all nve/limit 1.0")
+    #lmp.command("fix integrator2 all nve/limit 0.2")
     _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
 
     factor_start = 10
@@ -664,6 +659,8 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     if close_atoms != []:
         # move solvent molecules away from close solvate atoms
         for _ in xrange(5):
+            #print(close_atoms)
+            #pdb.set_trace()
             indent_strs = _fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
             _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
             close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)

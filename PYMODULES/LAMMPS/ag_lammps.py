@@ -1401,15 +1401,6 @@ def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
             else:
                 md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
 
-
-        #if frame_idx_stop == -1:
-        #    if frame_idx_start == 0:
-        #        md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
-        #    else:
-        #        md_sys.read_frames(frame=frame_idx_start - 1, to_frame=frame_idx_stop)
-        #else:
-        #    md_sys.read_frames(frame=frame_idx_start, to_frame=frame_idx_stop + 1)
-
         md_sys.close_dcd()
 
     return md_sys

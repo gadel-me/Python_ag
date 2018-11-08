@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 import os
-import re
+#import re
 import shutil as sl
 import argparse
 from mpi4py import MPI
@@ -338,14 +338,14 @@ if __name__ == "__main__":
                     # relax solvent molecules in solution, since solvent is always appended
                     # every atom id greater than the last one of the solvate has to be
                     # a solvent atom
-                    agk.berendsen_md(lmpsettings_relax_solv, group="group solvate id > {}".format(solvate_sys_natoms))
+                    agk.md_simulation(lmpsettings_relax_solv, group="group solvate id > {}".format(solvate_sys_natoms), style="berendsen", ensemble="nvt", keyword=None)
 
                 # heat whole solution
-                agk.berendsen_md(lmpsettings_heat)
+                agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword="iso")
 
                 # check if aggregate is still ok
                 if rank == 0:
-                    solution_sys = agk.read_system(lmpsettings_heat.input_lmpdat, lmpsettings_heat.output_dcd)
+                    solution_sys = aglmp.read_lmpdat(lmpsettings_heat.input_lmpdat, lmpsettings_heat.output_dcd)
                     solution_sys_atoms_idxs = range(len(solution_sys.atoms))
                     aggregate_ok = solution_sys.check_aggregate(solvate_sys, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
 
