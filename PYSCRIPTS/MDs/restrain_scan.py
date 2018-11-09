@@ -27,6 +27,17 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helping functions
 #==============================================================================#
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def get_scanned_geometry(gau_log):
     """
     Bla.
@@ -87,7 +98,7 @@ def built_restrain_string(indices_and_values, k_start=0.0, k_stop=5000):
     return restrain_string
 
 
-def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 5000.0)):
+def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 200.0)):
     """
     Scan a bond, angle or dihedral.
 
@@ -105,10 +116,10 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 5000.0)):
     Sources:    (https://lammps.sandia.gov/threads/msg17271.html)
                 https://lammps.sandia.gov/doc/fix_restrain.html
     """
-    save_step = 10000
-    anneal_step = 500000
-    quench_step = 200000
-    thermargs = ["step", "temp", "pe"]
+    save_step   = 50000
+    anneal_step = 50000
+    quench_step = 50000
+    thermargs   = ["step", "temp", "pe"]
 
     # split world communicator into n partitions and run lammps only on that
     # specific one
@@ -130,6 +141,8 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 5000.0)):
 
     # data and thermo
     lmp.command("read_data {}".format(lmpdat))
+
+    # make lammps calculate the value of the entity (bond, angle, dihedral)
     lmp.command("thermo_style custom " + " ".join(thermargs))
     lmp.command("thermo_modify lost warn flush yes")
     lmp.command("thermo {}".format(save_step))
@@ -137,30 +150,40 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 5000.0)):
     lmp.command("fix MOMENT all momentum 100 linear 1 1 1 angular")
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
-    # MD
-    lmp.command("fix NVE all nve")
-
     # annealing -> achieve wanted angle (may be omitted?)
-    print("Annealing\n")
+    print(bcolors.OKGREEN + "Annealing\n" + bcolors.ENDC)
+
+    ###########################################################################
+    # TESTING
+    #indices_and_values = {"25 8 9 10" : 90.0}
+    #lmp.command("group entity_atoms id {}".format(indices_and_values.keys()[0]))
+    #lmp.command("compute 1 entity_atoms property/local dtype datom1 datom2 datom3 datom4")
+    #lmp.command("compute 2 entity_atoms dihedral/local phi")
+    #lmp.command("dump 1 all local 1000 {}.dump index c_2".format(output))
+    ###########################################################################
+
     restrain_anneal = built_restrain_string(indices_and_values, k[0], k[1])
     lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(temp[0]))
-    lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[0], temp[1]))
+    lmp.command("fix NVE all nve")
+    lmp.command("fix TFIX all langevin {} {} 100 24601".format(temp[0], temp[1]))
+    #lmp.command("fix TFIX all temp/berendsen {} {} 5".format(temp[0], temp[1]))
     #lmp.command("fix TFIX all nvt temp {} {} 0.1".format(temp[0], temp[1]))
     lmp.command(restrain_anneal)
     lmp.command("fix_modify REST energy yes")
     lmp.command("run {}".format(anneal_step))
 
     # quenching
-    print("Quenching\n")
+    print(bcolors.OKGREEN + "Quenching\n" + bcolors.ENDC)
     restrain_quench = built_restrain_string(indices_and_values, k[1], k[1])
-    lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], temp[1]))
+    #lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], temp[1]))
+    lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], 0))
     #lmp.command("fix TFIX all nvt temp {} {} 0.1".format(temp[1], temp[1]))
     lmp.command(restrain_quench)
     lmp.command("fix_modify REST energy yes")
     lmp.command("run {}".format(quench_step))
 
-    # sanity check for convergenc
-    print("Minimization")
+    # sanity check for convergence
+    print(bcolors.OKGREEN + "Minimization\n" + bcolors.ENDC)
     # output
     lmp.command("minimize 1e-6 1e-9 2000000 100000")
     # report unrestrained energies
@@ -290,7 +313,9 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 5), k=(0.0, 800.0),
         # shift phase by 180 degrees as defined in lamps manual
         # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
         if geom_entity.startswith("D"):
-            cur_geom_value -= 180
+            # TESTING
+            #cur_geom_value -= 180
+            pass
 
         #pdb.set_trace()
 
@@ -298,6 +323,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 5), k=(0.0, 800.0),
         # geometry value as value
         cur_geom_atm_ids = " ".join(ids_geom_enitity)
         cur_geom_atm_ids_geom_value = {cur_geom_atm_ids: cur_geom_value}
+        #pdb.set_trace()
 
         # define appendix for all files
         output_appendix = "{}_{}_{}".format(cur_geom_atm_ids.replace(" ", "_"),
@@ -370,35 +396,42 @@ def norm_energy(energy_file_in, energy_file_out):
 #==============================================================================#
 # User Input
 #==============================================================================#
-parser = argparse.ArgumentParser()
-parser.add_argument("lmpdat",
-                    help="Lammps' data-file")
+if __name__ == "__main__":
+    if rank == 0:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("lmpdat",
+                            help="Lammps' data-file")
 
-parser.add_argument("-gau_logs",
-                    nargs="*",
-                    help="Gaussian log-file")
+        parser.add_argument("-gau_logs",
+                            nargs="*",
+                            help="Gaussian log-file")
 
-parser.add_argument("-geometries",
-                    nargs="*",
-                    help="Atom indices, where each string is one set of one geometry")
+        parser.add_argument("-geometries",
+                            nargs="*",
+                            help="Atom indices, where each string is one set of one geometry")
 
-parser.add_argument("-out",
-                    default="DEFAULTNAME",
-                    help="Name of energy files.")
+        parser.add_argument("-out",
+                            default="DEFAULTNAME",
+                            help="Name of energy files.")
 
-args = parser.parse_args()
+        args = parser.parse_args()
+    else:
+        args = None
 
-#==============================================================================#
-# do restrained md for geometry scanned in gaussian
-#==============================================================================#
-output_file = "{}_md.txt".format(args.out)
+    args = comm.bcast(args, 0)
 
-if not os.path.isfile(output_file):
-    for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
-        md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file,
-                          output_idx=gau_file_idx, k=(0.0, 800.0))
+    #==============================================================================#
+    # do restrained md for geometry scanned in gaussian
+    #==============================================================================#
+    output_file = "{}_md.txt".format(args.out)
 
-time.sleep(5)
+    if not os.path.isfile(output_file):
+        for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
+            #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, k=(0.0, 800.0))
+            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 21.721080))
 
-if rank == 0:
-    norm_energy(output_file, "{}_md_normed.txt".format(args.out))
+    time.sleep(5)
+
+    if rank == 0:
+        norm_energy(output_file, "{}_md_normed.txt".format(args.out))
+
