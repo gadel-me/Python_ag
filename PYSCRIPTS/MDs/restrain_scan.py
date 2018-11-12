@@ -434,4 +434,3 @@ if __name__ == "__main__":
 
     if rank == 0:
         norm_energy(output_file, "{}_md_normed.txt".format(args.out))
-
