@@ -420,9 +420,9 @@ class GauStuff(mdu.Universe):
 
             if modredundant is not None:
                 gau_out.write(modredundant)
-                gau_out.write("\n"*2)
+                gau_out.write("\n" * 2)
 
-            gau_out.write("\n"*4)
+            gau_out.write("\n" * 4)
 
     def _read_gau_log_summary(self, result_str, overwrite=False):
         """
@@ -437,6 +437,11 @@ class GauStuff(mdu.Universe):
             atom_coords = atom_coords.split(",")
             coords = np.array([float(i) for i in atom_coords[-3:]])
             ts_coords.append(coords)
+
+        # get number of imaginary frequencies (if frequencies were calculated)
+        for subresult in result_str:
+            if "NImag" in subresult:
+                self.gaussian_other_info["NImag"] = int(subresult.split("NImag=")[1])
 
         if overwrite is False:
             self.ts_coords.append(ts_coords)

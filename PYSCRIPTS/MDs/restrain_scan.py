@@ -207,6 +207,7 @@ def measure_geometry(lmpdat, dcd, atm_ids):
     # decrement atom indices since for sys_md they start with 0, whereas
     # for lammps and gaussian they start with 1
     atm_idxs = [int(i) - 1 for i in atm_ids.split(" ")]
+    pdb.set_trace()
 
     # dummy value, good for debugging
     geometry_value = None
