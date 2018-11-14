@@ -117,8 +117,8 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
                 https://lammps.sandia.gov/doc/fix_restrain.html
     """
     save_step   = 50000
-    anneal_step = 250000
-    quench_step = 250000
+    anneal_step = 500000
+    quench_step = 500000
     thermargs   = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl", "ecoul", "ebond", "enthalpy"]
 
     # split world communicator into n partitions and run lammps only on that
@@ -430,10 +430,11 @@ if __name__ == "__main__":
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
             # Use k=80 for dihedrals and k=200 for angles or bonds
-            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 80.0))
+            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 200.0))
 
     # wait for all ranks to finish
     time.sleep(5)
+    print("{} is done".format(rank))
 
     # norm energies
     if rank == 0:
