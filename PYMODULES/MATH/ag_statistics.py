@@ -218,3 +218,30 @@ def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3, filename=None):
         print(result_str)
 
     return result
+
+
+def chi_square_error(data1, data2):
+    """
+    Calculate the chi square error of two sets of data.
+
+    Parameters
+    ----------
+    data1 : list/np-array of floats
+        first set of data to compare
+
+    data2 : list/np-array of floats
+        second set of data to compare
+
+    Returns
+    -------
+    sum(chi_squares) : float
+        the chi square value
+
+    Sources: http://cmt.dur.ac.uk/sjc/thesis_dlc/node88.html
+    """
+    chi_squares = []
+
+    for en1, en2 in zip(data1, data2):
+        chi_squares.append(abs(en1 - en2)**2)
+
+    return sum(chi_squares)

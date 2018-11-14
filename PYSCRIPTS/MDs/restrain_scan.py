@@ -98,7 +98,7 @@ def built_restrain_string(indices_and_values, k_start=0.0, k_stop=5000):
     return restrain_string
 
 
-def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 200.0)):
+def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     """
     Scan a bond, angle or dihedral.
 
@@ -117,9 +117,9 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 200.0)):
                 https://lammps.sandia.gov/doc/fix_restrain.html
     """
     save_step   = 50000
-    anneal_step = 50000
-    quench_step = 50000
-    thermargs   = ["step", "temp", "pe"]
+    anneal_step = 250000
+    quench_step = 250000
+    thermargs   = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl", "ecoul", "ebond", "enthalpy"]
 
     # split world communicator into n partitions and run lammps only on that
     # specific one
@@ -156,6 +156,8 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 200.0)):
     ###########################################################################
     # TESTING
     #indices_and_values = {"25 8 9 10" : 90.0}
+    #indices_and_values = {"11 7 8 25" : -4.0}
+    #indices_and_values = {"25 8 7 11" : 3.1415}
     #lmp.command("group entity_atoms id {}".format(indices_and_values.keys()[0]))
     #lmp.command("compute 1 entity_atoms property/local dtype datom1 datom2 datom3 datom4")
     #lmp.command("compute 2 entity_atoms dihedral/local phi")
@@ -175,8 +177,8 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 200.0)):
     # quenching
     print(bcolors.OKGREEN + "Quenching\n" + bcolors.ENDC)
     restrain_quench = built_restrain_string(indices_and_values, k[1], k[1])
-    #lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], temp[1]))
-    lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], 0))
+    lmp.command("fix TFIX all langevin {} {} 100 24601".format(temp[1], temp[1]))
+    #lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], 0))
     #lmp.command("fix TFIX all nvt temp {} {} 0.1".format(temp[1], temp[1]))
     lmp.command(restrain_quench)
     lmp.command("fix_modify REST energy yes")
@@ -186,7 +188,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 5), k=(0.0, 200.0)):
     print(bcolors.OKGREEN + "Minimization\n" + bcolors.ENDC)
     # output
     lmp.command("minimize 1e-6 1e-9 2000000 100000")
-    # report unrestrained energies
+    # report unrestrained energies, single point energy
     lmp.command("unfix REST")
     lmp.command("run 0")
     lmp.close()
@@ -207,7 +209,6 @@ def measure_geometry(lmpdat, dcd, atm_ids):
     # decrement atom indices since for sys_md they start with 0, whereas
     # for lammps and gaussian they start with 1
     atm_idxs = [int(i) - 1 for i in atm_ids.split(" ")]
-    pdb.set_trace()
 
     # dummy value, good for debugging
     geometry_value = None
@@ -271,7 +272,7 @@ def write_energies_file(filename):
                                                          "Energy [eV]"))
 
 
-def md_from_ab_initio(gau_log, lmpdat, temp=(600, 5), k=(0.0, 800.0),
+def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, 200.0),
                       energy_file_out="defaultname", output_idx=0):
     """
     Calculate md energy.
@@ -307,15 +308,15 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 5), k=(0.0, 800.0),
     for i, cur_geom_value in enumerate(entities):
 
         # parallelization; each rank does this loop and skips it, if it is not
-        # its turn; does obviously not work with lammps
+        # its turn
         if i % size != rank:
             continue
 
         # shift phase by 180 degrees as defined in lamps manual
         # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
         if geom_entity.startswith("D"):
-            # TESTING
-            #cur_geom_value -= 180
+            # TESTING, works for "D 11 7 8 25"
+            cur_geom_value += 180
             pass
 
         #pdb.set_trace()
@@ -428,10 +429,12 @@ if __name__ == "__main__":
 
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
-            #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, k=(0.0, 800.0))
-            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 21.721080))
+            # Use k=80 for dihedrals and k=200 for angles or bonds
+            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 80.0))
 
+    # wait for all ranks to finish
     time.sleep(5)
 
+    # norm energies
     if rank == 0:
         norm_energy(output_file, "{}_md_normed.txt".format(args.out))
