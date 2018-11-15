@@ -380,7 +380,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
                                                             last_pe_value))
 
         print("{} finished".format(rank))
-        time.sleep(5)
+        #time.sleep(5)
 
 
 def norm_energy(energy_file_in, energy_file_out):
