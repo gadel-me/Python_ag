@@ -189,7 +189,7 @@ class Bond(IterMixin):
         Check if something is odd with the force-field parameters (currently
         only eV-units are supported).
         """
-        warning_message = "***Warning: Odd bond-type-parameter found. Check if parameter is o.k."
+        warning_message = "***Warning: Odd bond-type-parameters found. Check if parameter is o.k."
 
         if self.prm1 > 30 or self.prm2 > 2:
             print(warning_message)
