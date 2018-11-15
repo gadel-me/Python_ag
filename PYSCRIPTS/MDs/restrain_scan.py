@@ -283,7 +283,7 @@ def write_energies_file_header(filename):
                                                          "Energy [eV]"))
 
 
-def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, None),
+def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
                       energy_file_out="defaultname", output_idx=0):
     """
     Calculate md energy.
@@ -323,20 +323,21 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, None),
         if i % size != rank:
             continue
 
+        if geom_entity.startswith("R"):
+            if k[1] is None:
+                k[1] = 1200
+        elif geom_entity.startswith("A"):
+            if k[1] is None:
+                k[1] = 300
         # shift phase by 180 degrees as defined in lamps manual
         # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
-        if geom_entity.startswith("D"):
+        elif geom_entity.startswith("D"):
             # TESTING, works for "D 11 7 8 25"
             cur_geom_value += 180
-            if k[1] == None:
-                k[1] = 20
-
-        elif geom_entity.startswith("A"):
-            if k[1] == None:
-                k[1] = 200
-        elif geom_entity.startswith("B"):
-            if k[1] == None:
-                k[1] = 1200
+            if k[1] is None:
+                k[1] = 80
+        else:
+            raise Warning("Odd entry?")
 
         # define a dictionary with atom ids as key and the current
         # geometry value as value
@@ -447,8 +448,8 @@ if __name__ == "__main__":
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
             # Use k=80 for dihedrals and k=200 for angles and k=1200 bonds
-            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
-
+            #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
+            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx)
     # wait for all ranks to finish
     time.sleep(5)
     print("{} is done".format(rank))
