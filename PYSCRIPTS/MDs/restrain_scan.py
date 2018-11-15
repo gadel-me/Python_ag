@@ -116,10 +116,10 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
                 https://lammps.sandia.gov/doc/fix_restrain.html
     """
     save_step   = 50000
-    #anneal_step = 750000
-    #quench_step = 500000
-    anneal_step = 100000
-    quench_step = 100000
+    anneal_step = 750000
+    quench_step = 500000
+    #anneal_step = 100000
+    #quench_step = 100000
     thermargs   = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl", "ecoul", "ebond", "enthalpy"]
 
     # split world communicator into n partitions and run lammps only on that
