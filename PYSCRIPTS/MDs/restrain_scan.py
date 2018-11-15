@@ -116,8 +116,10 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
                 https://lammps.sandia.gov/doc/fix_restrain.html
     """
     save_step   = 50000
-    anneal_step = 750000
-    quench_step = 500000
+    #anneal_step = 750000
+    #quench_step = 500000
+    anneal_step = 100000
+    quench_step = 100000
     thermargs   = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl", "ecoul", "ebond", "enthalpy"]
 
     # split world communicator into n partitions and run lammps only on that
@@ -305,6 +307,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
     k           tuple; starting and stopping force constants for the geometric
                 entity being examined
     """
+
     # grab scanned entity from ab initio output and involved atom ids
     geom_entity, _ = get_scanned_geometry(gau_log)
     ids_geom_enitity = re.findall(r"\d+", geom_entity)
@@ -316,28 +319,32 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
         if not os.path.isfile(energy_file_out):
             write_energies_file_header(energy_file_out)
 
-    for i, cur_geom_value in enumerate(entities):
+    if geom_entity.startswith("R"):
+        if k[1] is None:
+            k[1] = 1200
+    elif geom_entity.startswith("A"):
+        if k[1] is None:
+            k[1] = 300
+    # shift phase by 180 degrees as defined in lamps manual
+    # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
+    elif geom_entity.startswith("D"):
+        if k[1] is None:
+            k[1] = 80
+    else:
+        raise Warning("Entry seems odd")
+
+    for task, cur_geom_value in enumerate(entities):
 
         # parallelization; each rank does this loop and skips it, if it is not
         # its turn
-        if i % size != rank:
+        if task % size != rank:
             continue
 
-        if geom_entity.startswith("R"):
-            if k[1] is None:
-                k[1] = 1200
-        elif geom_entity.startswith("A"):
-            if k[1] is None:
-                k[1] = 300
-        # shift phase by 180 degrees as defined in lamps manual
+        # shift phase by 180 degrees as defined in lammps manual
         # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
-        elif geom_entity.startswith("D"):
-            # TESTING, works for "D 11 7 8 25"
+        if geom_entity.startswith("D"):
+            # shift dihedrals by 180 degrees (dont know why)
             cur_geom_value += 180
-            if k[1] is None:
-                k[1] = 80
-        else:
-            raise Warning("Odd entry?")
 
         # define a dictionary with atom ids as key and the current
         # geometry value as value
@@ -346,7 +353,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
 
         # define appendix for all files
         output_appendix = "{}_{}_{}".format(cur_geom_atm_ids.replace(" ", "_"),
-                                            i, output_idx)
+                                            task, output_idx)
 
         # skip calculations that were already carried out
         if os.path.isfile(output_appendix + ".lmplog"):
@@ -371,6 +378,9 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
         with open(energy_file_out, "a") as opened_resume_file:
             opened_resume_file.write(resume_file_row.format(current_geom_val,
                                                             last_pe_value))
+
+        print("{} finished".format(rank))
+        time.sleep(5)
 
 
 def norm_energy(energy_file_in, energy_file_out):
@@ -450,8 +460,9 @@ if __name__ == "__main__":
             # Use k=80 for dihedrals and k=200 for angles and k=1200 bonds
             #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
             md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx)
+
     # wait for all ranks to finish
-    time.sleep(5)
+    time.sleep(2)
     print("{} is done".format(rank))
 
     # norm energies
