@@ -23,7 +23,6 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
-
 #==============================================================================#
 # Helping functions
 #==============================================================================#
@@ -117,7 +116,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
                 https://lammps.sandia.gov/doc/fix_restrain.html
     """
     save_step   = 50000
-    anneal_step = 500000
+    anneal_step = 750000
     quench_step = 500000
     thermargs   = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl", "ecoul", "ebond", "enthalpy"]
 
@@ -261,7 +260,19 @@ def get_last_pe_value(lmplog):
     return log_data.data[-1]["PotEng"][-1]
 
 
-def write_energies_file(filename):
+def get_entity(dictionary):
+    """
+    """
+    key_length = len(dictionary.keys()[0])
+    if key_length == 2:
+        return "Bond [Angstrom]"
+    elif key_length == 3 or key_length == 4:
+        return "Angle [Degrees]"
+    else:
+        return "Unknown"
+
+
+def write_energies_file_header(filename):
     """
     Bla.
 
@@ -272,7 +283,7 @@ def write_energies_file(filename):
                                                          "Energy [eV]"))
 
 
-def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, 200.0),
+def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, None),
                       energy_file_out="defaultname", output_idx=0):
     """
     Calculate md energy.
@@ -303,7 +314,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, 200.0),
 
     if rank == 0:
         if not os.path.isfile(energy_file_out):
-            write_energies_file(energy_file_out)
+            write_energies_file_header(energy_file_out)
 
     for i, cur_geom_value in enumerate(entities):
 
@@ -317,15 +328,20 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=(0.0, 200.0),
         if geom_entity.startswith("D"):
             # TESTING, works for "D 11 7 8 25"
             cur_geom_value += 180
-            pass
+            if k[1] == None:
+                k[1] = 20
 
-        #pdb.set_trace()
+        elif geom_entity.startswith("A"):
+            if k[1] == None:
+                k[1] = 200
+        elif geom_entity.startswith("B"):
+            if k[1] == None:
+                k[1] = 1200
 
         # define a dictionary with atom ids as key and the current
         # geometry value as value
         cur_geom_atm_ids = " ".join(ids_geom_enitity)
         cur_geom_atm_ids_geom_value = {cur_geom_atm_ids: cur_geom_value}
-        #pdb.set_trace()
 
         # define appendix for all files
         output_appendix = "{}_{}_{}".format(cur_geom_atm_ids.replace(" ", "_"),
@@ -387,8 +403,9 @@ def norm_energy(energy_file_in, energy_file_out):
     keys_and_values = OrderedDict(sorted(keys_and_values.items()))
 
     if not os.path.isfile(energy_file_out):
-        write_energies_file(energy_file_out)
+        write_energies_file_header(energy_file_out)
 
+    #with open(energy_file_out, "a") as opened_energy_file:
     with open(energy_file_out, "a") as opened_energy_file:
 
         for key, value in keys_and_values.iteritems():
@@ -429,8 +446,8 @@ if __name__ == "__main__":
 
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
-            # Use k=80 for dihedrals and k=200 for angles or bonds
-            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 200.0))
+            # Use k=80 for dihedrals and k=200 for angles and k=1200 bonds
+            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
 
     # wait for all ranks to finish
     time.sleep(5)
