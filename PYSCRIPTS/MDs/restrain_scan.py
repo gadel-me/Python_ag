@@ -361,7 +361,10 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
             continue
 
         # annealing with quenching and minimization using lammps
-        scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, temp, k)
+        try:
+            scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, temp, k)
+        except Error:
+            MPI.COMM_WORLD.Abort()
 
         # since minimized md-structure != minimized ab initio structure,
         # the real value of the geometry of interest must be derived from the
@@ -380,7 +383,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
                                                             last_pe_value))
 
         print("{} finished".format(rank))
-        #time.sleep(5)
+        comm.bcast("run done!", root=0)
 
 
 def norm_energy(energy_file_in, energy_file_out):
