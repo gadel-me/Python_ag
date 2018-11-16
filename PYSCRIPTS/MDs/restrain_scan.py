@@ -389,8 +389,6 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
             opened_resume_file.write(resume_file_row.format(current_geom_val,
                                                             last_pe_value))
 
-        print("{} finished".format(rank))
-
 
 def norm_energy(energy_file_in, energy_file_out):
     """
