@@ -23,18 +23,22 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
+# split world communicator into n partitions and run lammps only on that
+# specific one
+split = comm.Split(rank, key=0)
+
 #==============================================================================#
 # Helping functions
 #==============================================================================#
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    header = '\033[95m'
+    blue = '\033[94m'
+    green = '\033[92m'
+    yellow = '\033[93m'
+    red = '\033[91m'
+    endc = '\033[0m'
+    bold = '\033[1m'
+    underline = '\033[4m'
 
 
 def get_scanned_geometry(gau_log):
@@ -124,8 +128,8 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
 
     # split world communicator into n partitions and run lammps only on that
     # specific one
-    split = comm.Split(rank, key=0)
-    lmp = lammps(comm=split)
+    #split = comm.Split(rank, key=0)
+    lmp = lammps(comm=split, cmdargs=["-screen", "lmp_out.txt"])
 
     lmp.command("log {}.lmplog".format(output))
     lmp.command("units metal")
@@ -152,7 +156,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
     # annealing -> achieve wanted angle (may be omitted?)
-    print(bcolors.OKGREEN + "Annealing\n" + bcolors.ENDC)
+    print(bcolors.red + "Annealing\n: " + output + bcolors.endc)
 
     ###########################################################################
     # TESTING
@@ -176,7 +180,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     lmp.command("run {}".format(anneal_step))
 
     # quenching
-    print(bcolors.OKGREEN + "Quenching\n" + bcolors.ENDC)
+    print(bcolors.yellow + "Quenching\n" + output + bcolors.endc)
     restrain_quench = built_restrain_string(indices_and_values, k[1], k[1])
     lmp.command("fix TFIX all langevin {} {} 100 24601".format(temp[1], temp[1]))
     #lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], 0))
@@ -186,7 +190,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     lmp.command("run {}".format(quench_step))
 
     # sanity check for convergence
-    print(bcolors.OKGREEN + "Minimization\n" + bcolors.ENDC)
+    print(bcolors.green + "Minimization\n" + output + bcolors.endc)
     # output
     lmp.command("minimize 1e-6 1e-9 2000000 100000")
     # report unrestrained energies, single point energy
@@ -339,6 +343,8 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
         # its turn
         if (task % size != rank) or (rank > len(entities)):
             continue
+        #else:
+        #    print("I (rank {}) am doing stuff now :)".format(rank))
 
         # shift phase by 180 degrees as defined in lammps manual
         # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
@@ -384,7 +390,6 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
                                                             last_pe_value))
 
         print("{} finished".format(rank))
-        comm.bcast("run done!", root=0)
 
 
 def norm_energy(energy_file_in, energy_file_out):
@@ -466,8 +471,8 @@ if __name__ == "__main__":
             md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx)
 
     # wait for all ranks to finish
-    time.sleep(2)
-    print("{} is done".format(rank))
+    time.sleep(5)
+    print(bcolors.green + "{} is done".format(rank) + bcolors.endc)
 
     # norm energies
     if rank == 0:
