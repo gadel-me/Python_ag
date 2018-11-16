@@ -324,7 +324,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
             k[1] = 1200
     elif geom_entity.startswith("A"):
         if k[1] is None:
-            k[1] = 300
+            k[1] = 600
     # shift phase by 180 degrees as defined in lamps manual
     # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
     elif geom_entity.startswith("D"):
@@ -337,7 +337,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
 
         # parallelization; each rank does this loop and skips it, if it is not
         # its turn
-        if task % size != rank:
+        if (task % size != rank) or (rank > len(entities)):
             continue
 
         # shift phase by 180 degrees as defined in lammps manual
@@ -363,7 +363,8 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
         # annealing with quenching and minimization using lammps
         try:
             scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, temp, k)
-        except Error:
+        except:
+            print("***Error: Simulation aborted! Consider reducing the force constant k!")
             MPI.COMM_WORLD.Abort()
 
         # since minimized md-structure != minimized ab initio structure,
