@@ -156,7 +156,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
     # annealing -> achieve wanted angle (may be omitted?)
-    print(bcolors.red + "Annealing\n: " + output + bcolors.endc)
+    print(bcolors.red + "Annealing on rank {}: ".format(rank) + output + bcolors.endc)
 
     ###########################################################################
     # TESTING
@@ -180,7 +180,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     lmp.command("run {}".format(anneal_step))
 
     # quenching
-    print(bcolors.yellow + "Quenching\n" + output + bcolors.endc)
+    print(bcolors.yellow + "Quenching on rank {}: ".format(rank) + output + bcolors.endc)
     restrain_quench = built_restrain_string(indices_and_values, k[1], k[1])
     lmp.command("fix TFIX all langevin {} {} 100 24601".format(temp[1], temp[1]))
     #lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], 0))
@@ -190,7 +190,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     lmp.command("run {}".format(quench_step))
 
     # sanity check for convergence
-    print(bcolors.green + "Minimization\n" + output + bcolors.endc)
+    print(bcolors.green + "Minimization on rank {}: ".format(rank) + output + bcolors.endc)
     # output
     lmp.command("minimize 1e-6 1e-9 2000000 100000")
     # report unrestrained energies, single point energy
