@@ -482,7 +482,7 @@ if __name__ == "__main__":
 
     # wait for all ranks to finish
     time.sleep(5)
-    print(bcolors.green + "{} is done".format(rank) + bcolors.endc)
+    print(bcolors.blue + "{} is done".format(rank) + bcolors.endc)
 
     # norm energies if file does not exist yet
     normed_md_file = "{}_md_normed.txt".format(args.out)
