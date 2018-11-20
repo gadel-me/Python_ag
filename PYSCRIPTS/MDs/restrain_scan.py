@@ -482,7 +482,7 @@ if __name__ == "__main__":
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
             # Use k=80 for dihedrals and k=200 for angles and k=1200 bonds
             #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
-            md_from_ab_initio(cur_gau_log, args.lmpdat, geom_entity=args.geom_entity, energy_file_out=output_file, output_idx=gau_file_idx, k=[0.0, k])
+            md_from_ab_initio(cur_gau_log, args.lmpdat, geom_entity=args.geom_entity, energy_file_out=output_file, output_idx=gau_file_idx, k=[0.0, args.k])
 
     # wait for all ranks to finish
     time.sleep(5)
