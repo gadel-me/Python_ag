@@ -1,5 +1,6 @@
 import re
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import argparse
 import ag_statistics as ags
@@ -43,7 +44,7 @@ def read_normed_output(filename):
     return (entities, energies)
 
 
-def plot_all(ref_file, data_files, xlabel=None):
+def plot_all(ref_file, data_files, xlabel=None, title=None):
     """
     Plot all data.
 
@@ -60,23 +61,28 @@ def plot_all(ref_file, data_files, xlabel=None):
 
         Calculate chi square error and extrapolate the data to the reference.
         """
-        for data_file in data_files:
+        # colormap
+        norm = matplotlib.colors.Normalize(vmin=0, vmax=len(data_files))
+        cmap = matplotlib.cm.get_cmap('Dark2')
+
+        for index, data_file in enumerate(data_files):
             iteration = int(re.findall(r"\d+", data_file)[-1])
             data_x, data_y = read_normed_output(data_file)
             interp_y = np.interp(ref_x, data_x, data_y)
             chi_square_error = ags.chi_square_error(ref_y, interp_y)
             #all_data_x = data_x.extend(ref_x)
             #all_data_y = data_y.extend(interp_y)
-            label = r"{} - $\chi^2$-err: {: .2f} eV".format(iteration, chi_square_error)
-            #plt.plot(ref_x, interp_y, linestyle="--", marker=marker, label=label)
-            plt.plot(data_x, data_y, linestyle="--", marker=marker, label=label)
+            label = r"{} - $\chi^2$-err: {: .6f} eV".format(iteration, chi_square_error)
+            color = cmap(norm(index))
+            plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color=color)
+            plt.plot(ref_x, interp_y, linestyle="--", marker=marker, color=color, label=label)
 
     # plot settings
     marker = "."
     plt.figure()
     plt.xlabel(xlabel)
     plt.ylabel("Energy / eV")
-    plt.title("Bonds")
+    plt.title(title)
 
     # ab initio data
     ref_x, ref_y = read_normed_output(ref_file)
@@ -84,7 +90,7 @@ def plot_all(ref_file, data_files, xlabel=None):
 
     # plot data
     plot_data_files()
-    plt.legend(bbox_to_anchor=(0.9, 1.0))
+    plt.legend(bbox_to_anchor=(0.5, 1.0))
     plt.show()
 
 
@@ -95,6 +101,9 @@ if __name__ == "__main__":
     parser.add_argument("md_result_files",
                         nargs="*",
                         help="Two column files with restrained md entities and values")
+    parser.add_argument("-title",
+                        default=None,
+                        help="Title of the plot")
 
     args = parser.parse_args()
-    plot_all(args.ab_result_file, args.md_result_files)
+    plot_all(args.ab_result_file, args.md_result_files, title=args.title)

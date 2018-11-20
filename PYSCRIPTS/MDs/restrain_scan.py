@@ -85,7 +85,7 @@ def get_geometry_by_key(key_string):
     return cur_geometry
 
 
-def built_restrain_string(indices_and_values, k_start=0.0, k_stop=5000):
+def compile_restrain_string(indices_and_values, k_start=0.0, k_stop=5000):
     """
     Bla.
 
@@ -108,23 +108,31 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     Carry out a force field calculation for an atom, a bond or a dihedral using
     the fix restrain command.
 
-    lmpdat              str; lammps data file
-    indices_and_values  dict; str with geometry indices is the key and value
-                        is the value of the geometry
-                        e.g. {"3 4 5 12": 180.05, "4 5 2 6 1": 168.90, ...}
-    k_start             float; starting value for force constant k
-    k_stop              float; stopping value for force constant k
-    output              str; appendix to output files
+    Parameters
+    ----------
+    lmpdat : str
+        lammps data file
+    indices_and_values : dict
+        geometry indices is the key and value is the value of the geometry
+        e.g. {"3 4 5 12": 180.05, "4 5 2 6 1": 168.90, ...}
+    k_start : float
+        starting value for force constant k in eV
+    k_stop : float
+        stopping value for force constant k in eV
+    output : str
+        appendix to output files
 
     Sources:    (https://lammps.sandia.gov/threads/msg17271.html)
                 https://lammps.sandia.gov/doc/fix_restrain.html
+
     """
-    save_step   = 50000
+    save_step = 50000
     anneal_step = 750000
     quench_step = 500000
     #anneal_step = 100000
     #quench_step = 100000
-    thermargs   = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl", "ecoul", "ebond", "enthalpy"]
+    thermargs = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl",
+                 "ecoul", "ebond", "enthalpy"]
 
     # split world communicator into n partitions and run lammps only on that
     # specific one
@@ -169,7 +177,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
     #lmp.command("dump 1 all local 1000 {}.dump index c_2".format(output))
     ###########################################################################
 
-    restrain_anneal = built_restrain_string(indices_and_values, k[0], k[1])
+    restrain_anneal = compile_restrain_string(indices_and_values, k[0], k[1])
     lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(temp[0]))
     lmp.command("fix NVE all nve")
     lmp.command("fix TFIX all langevin {} {} 100 24601".format(temp[0], temp[1]))
@@ -181,7 +189,7 @@ def scan(lmpdat, output, indices_and_values, temp=(600, 0), k=(0.0, 200.0)):
 
     # quenching
     print(bcolors.yellow + "Quenching on rank {}: ".format(rank) + output + bcolors.endc)
-    restrain_quench = built_restrain_string(indices_and_values, k[1], k[1])
+    restrain_quench = compile_restrain_string(indices_and_values, k[1], k[1])
     lmp.command("fix TFIX all langevin {} {} 100 24601".format(temp[1], temp[1]))
     #lmp.command("fix TFIX all langevin {} {} 10 24601".format(temp[1], 0))
     #lmp.command("fix TFIX all nvt temp {} {} 0.1".format(temp[1], temp[1]))
@@ -289,7 +297,7 @@ def write_energies_file_header(filename):
                                                          "Energy [eV]"))
 
 
-def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
+def md_from_ab_initio(gau_log, lmpdat, geom_entity=None, temp=(600, 0), k=[0.0, None],
                       energy_file_out="defaultname", output_idx=0):
     """
     Calculate md energy.
@@ -310,13 +318,18 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
                 procedure
     k           tuple; starting and stopping force constants for the geometric
                 entity being examined
+    geom_entity : str
+        the entity to scan as it is named in the gaussian output file, e.g.
+        'A(7,8,25)'
     """
 
     # grab scanned entity from ab initio output and involved atom ids
-    geom_entity, _ = get_scanned_geometry(gau_log)
+    if geom_entity is None:
+        geom_entity, _ = get_scanned_geometry(gau_log)
+
     ids_geom_enitity = re.findall(r"\d+", geom_entity)
 
-    # split single mds over the cores available
+    # read the ab initio values for each entity
     entities = get_entities(gau_log, geom_entity)
 
     if rank == 0:
@@ -337,14 +350,13 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
     else:
         raise Warning("Entry seems odd")
 
+    # split single mds over the cores available
     for task, cur_geom_value in enumerate(entities):
 
         # parallelization; each rank does this loop and skips it, if it is not
         # its turn
         if (task % size != rank) or (rank > len(entities)):
             continue
-        #else:
-        #    print("I (rank {}) am doing stuff now :)".format(rank))
 
         # shift phase by 180 degrees as defined in lammps manual
         # See: https://lammps.sandia.gov/doc/fix_restrain.html, "dihedral"
@@ -370,7 +382,7 @@ def md_from_ab_initio(gau_log, lmpdat, temp=(600, 0), k=[0.0, None],
         try:
             scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, temp, k)
         except:
-            print("***Error: Simulation aborted! Consider reducing the force constant k!")
+            print("***Error: Simulation crashed! Consider reducing the force constant k?")
             MPI.COMM_WORLD.Abort()
 
         # since minimized md-structure != minimized ab initio structure,
@@ -443,8 +455,8 @@ if __name__ == "__main__":
                             nargs="*",
                             help="Gaussian log-file")
 
-        parser.add_argument("-geometries",
-                            nargs="*",
+        parser.add_argument("-geom_entity",
+                            default=None,
                             help="Atom indices, where each string is one set of one geometry")
 
         parser.add_argument("-out",
@@ -466,12 +478,14 @@ if __name__ == "__main__":
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
             # Use k=80 for dihedrals and k=200 for angles and k=1200 bonds
             #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
-            md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx)
+            md_from_ab_initio(cur_gau_log, args.lmpdat, geom_entity=args.geom_entity, energy_file_out=output_file, output_idx=gau_file_idx)
 
     # wait for all ranks to finish
     time.sleep(5)
     print(bcolors.green + "{} is done".format(rank) + bcolors.endc)
 
-    # norm energies
-    if rank == 0:
-        norm_energy(output_file, "{}_md_normed.txt".format(args.out))
+    # norm energies if file does not exist yet
+    normed_md_file = "{}_md_normed.txt".format(args.out)
+
+    if rank == 0 and not os.path.isfile(normed_md_file):
+        norm_energy(output_file, normed_md_file)

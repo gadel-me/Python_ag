@@ -447,14 +447,19 @@ class LmpStuff(mdu.Universe):
 
                         if comment is not None:
                             comment = comment.split()
-                            # read bond order
-                            cur_bnd.bnd_order = float(comment[0])
 
-                            # read atom types the bond is between
-                            if len(comment) > 2:
-                                cur_bnd.sitnam_2 = comment[2]
-                            if len(comment) > 1:
-                                cur_bnd.sitnam_1 = comment[1]
+                            # try reading the bond order if first item after
+                            # the comment is a number
+                            try:
+                                cur_bnd.bnd_order = float(comment[0])
+
+                                # read atom types the bond is between
+                                if len(comment) > 2:
+                                    cur_bnd.sitnam_2 = comment[2]
+                                if len(comment) > 1:
+                                    cur_bnd.sitnam_1 = comment[1]
+                            except ValueError:
+                                pass
 
                         self.bonds.append(cur_bnd)
 
