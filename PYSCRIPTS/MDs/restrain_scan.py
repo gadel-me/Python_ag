@@ -557,7 +557,7 @@ if __name__ == "__main__":
         parser.add_argument("-add_geom_entities",
                             default=None,
                             nargs="*",
-                            help="Atom indices, where each string is one set of one geometry")
+                            help="Geometry to scan by gaussian syntax, e.g. A(2,1,3) A(2,1,4)")
 
         parser.add_argument("-k",
                             default=None,
@@ -577,6 +577,7 @@ if __name__ == "__main__":
     # do restrained md for geometry scanned in gaussian
     #==============================================================================#
     output_file = "{}_md.txt".format(args.out)
+    pdb.set_trace()
 
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
@@ -584,7 +585,7 @@ if __name__ == "__main__":
             #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
             #md_from_ab_initio(cur_gau_log, args.lmpdat, scanned_geom=args.geom_entity, energy_file_out=output_file, output_idx=gau_file_idx, force_constants=args.k)
             # testing 'D(5,7,11,13)'
-            md_from_ab_initio(cur_gau_log, args.lmpdat, scanned_geom=args.geom_entity, add_geoms=['D(5,7,11,13)'], energy_file_out=output_file, output_idx=gau_file_idx, force_constants=args.k)
+            md_from_ab_initio(cur_gau_log, args.lmpdat, scanned_geom=args.geom_entity, add_geoms=args.add_geom_entities, energy_file_out=output_file, output_idx=gau_file_idx, force_constants=args.k)
 
     # wait for all ranks to finish
     time.sleep(5)
