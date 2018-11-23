@@ -577,7 +577,6 @@ if __name__ == "__main__":
     # do restrained md for geometry scanned in gaussian
     #==============================================================================#
     output_file = "{}_md.txt".format(args.out)
-    pdb.set_trace()
 
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
