@@ -68,11 +68,14 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
         for index, data_file in enumerate(data_files):
             iteration = int(re.findall(r"\d+", data_file)[-1])
             data_x, data_y = read_normed_output(data_file)
+            #data_x = [i + 360 if (-180 < i < -150) else i for i in data_x]
+            # testing
+            #data_x = [i + 3.0 for i in data_x]
             interp_y = np.interp(ref_x, data_x, data_y)
             chi_square_error = ags.chi_square_error(ref_y, interp_y)
             #all_data_x = data_x.extend(ref_x)
             #all_data_y = data_y.extend(interp_y)
-            label = r"{} - $\chi^2$-err: {: .6f} eV".format(iteration, chi_square_error)
+            label = r"{:>4} - $\chi^2$-err: {:> 4.6f} eV".format(iteration, chi_square_error)
             color = cmap(norm(index))
             plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color=color)
             plt.plot(ref_x, interp_y, linestyle="--", marker=marker, color=color, label=label)
@@ -86,11 +89,13 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
 
     # ab initio data
     ref_x, ref_y = read_normed_output(ref_file)
-    plt.plot(ref_x, ref_y, linestyle="-", marker=marker, label="ab initio")
+    # shift x values by 2*pi for nicer plotting
+    ref_x = [i + 360 if (-180 < i < -150) else i for i in ref_x]
+    plt.plot(ref_x, ref_y, linestyle="-", linewidth=2.2, marker=marker, label="ab initio")
 
     # plot data
     plot_data_files()
-    plt.legend(bbox_to_anchor=(0.5, 1.0))
+    plt.legend(bbox_to_anchor=(0.5, 0.5))
     plt.show()
 
 
