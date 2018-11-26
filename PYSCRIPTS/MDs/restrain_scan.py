@@ -105,7 +105,8 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
     as strings and their according lengths/angles as values.
     """
     # short check if function is used the right way
-    assert(hold == 0 or hold == 1)
+    assert hold in (0, 1)
+    #pdb.set_trace()
 
     restrain_string = "fix REST all restrain "
 
@@ -547,7 +548,7 @@ if __name__ == "__main__":
                             help="Lammps' data-file")
 
         parser.add_argument("-gau_logs",
-                            nargs="*",
+                            nargs="+",
                             help="Gaussian log-file")
 
         parser.add_argument("-geom_entity",
@@ -560,14 +561,27 @@ if __name__ == "__main__":
                             help="Geometry to scan by gaussian syntax, e.g. A(2,1,3) A(2,1,4)")
 
         parser.add_argument("-k",
+                            type=float,
                             default=None,
-                            help="Force Konstant K in eV")
+                            nargs="*",
+                            help="Force Konstant K in eV. If add_geom_entities was chosen, a force constant for each entity has to be supplied as well. ")
 
         parser.add_argument("-out",
                             default="DEFAULTNAME",
                             help="Name of energy files.")
 
         args = parser.parse_args()
+
+        # split k to sublists with two elements in each sublist (needed to create the right strings)
+        if args.k is not None:
+            k = []
+
+            for i in args.k[::2]:
+                for j in args.k[1::2]:
+                    l = [i, j]
+                k.append(l)
+
+            args.k = k
     else:
         args = None
 
@@ -577,17 +591,14 @@ if __name__ == "__main__":
     # do restrained md for geometry scanned in gaussian
     #==============================================================================#
     output_file = "{}_md.txt".format(args.out)
+    #pdb.set_trace()
 
     if not os.path.isfile(output_file):
         for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
-            # Use k=80 for dihedrals and k=200 for angles and k=1200 bonds
-            #md_from_ab_initio(cur_gau_log, args.lmpdat, energy_file_out=output_file, output_idx=gau_file_idx, temp=(600, 0), k=(0.0, 1200.0))
-            #md_from_ab_initio(cur_gau_log, args.lmpdat, scanned_geom=args.geom_entity, energy_file_out=output_file, output_idx=gau_file_idx, force_constants=args.k)
-            # testing 'D(5,7,11,13)'
             md_from_ab_initio(cur_gau_log, args.lmpdat, scanned_geom=args.geom_entity, add_geoms=args.add_geom_entities, energy_file_out=output_file, output_idx=gau_file_idx, force_constants=args.k)
 
     # wait for all ranks to finish
-    time.sleep(5)
+    time.sleep(2)
     print(bcolors.blue + "{} is done".format(rank) + bcolors.endc)
 
     # norm energies if file does not exist yet
