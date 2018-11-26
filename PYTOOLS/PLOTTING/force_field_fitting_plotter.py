@@ -70,7 +70,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
             data_x, data_y = read_normed_output(data_file)
             #data_x = [i + 360 if (-180 < i < -150) else i for i in data_x]
             # testing
-            #data_x = [i + 3.0 for i in data_x]
+            #data_x = [i + 4.0 for i in data_x]
             interp_y = np.interp(ref_x, data_x, data_y)
             chi_square_error = ags.chi_square_error(ref_y, interp_y)
             #all_data_x = data_x.extend(ref_x)

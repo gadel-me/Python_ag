@@ -421,7 +421,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=
         scanned_geom, _ = get_scanned_geometry(gau_log)
 
     if temps is None:
-        temps = [0.0, 600.0]
+        temps = [600.0, 0.0]
 
     # include additional desired geometries that were not ab initio scanned,
     # but which the user wants to be restrained as well
