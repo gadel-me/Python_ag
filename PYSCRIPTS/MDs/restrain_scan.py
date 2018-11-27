@@ -163,12 +163,7 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0)):
     lmp.command("timestep 0.001")
 
     # data and thermo
-    try:
-        lmp.command("read_data {}".format(lmpdat))
-    except:
-        print("***Error: Data file not found!")
-        MPI.COMM_WORLD.Abort()
-
+    lmp.command("read_data {}".format(lmpdat))
     # make lammps calculate the value of the entity (bond, angle, dihedral)
     lmp.command("thermo_style custom " + " ".join(thermargs))
     lmp.command("thermo_modify lost warn flush yes")
