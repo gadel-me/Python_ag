@@ -588,8 +588,11 @@ class GauStuff(mdu.Universe):
                     cur_cycle_min_scf_energy = cur_energy
                     cur_cycle_min_scf_energy_idx = index_energy
 
-            self.ts_coords.append(scf_cycle_coords[cur_cycle_min_scf_energy_idx])
-            self.gaussian_other_info["scf_energies"].append(scf_cycle_energy[cur_cycle_min_scf_energy_idx])
+            try:
+                self.ts_coords.append(scf_cycle_coords[cur_cycle_min_scf_energy_idx])
+                self.gaussian_other_info["scf_energies"].append(scf_cycle_energy[cur_cycle_min_scf_energy_idx])
+            except IndexError:
+                print("***Warning: Gaussian run was aborted before it finished")
 
         if read_summary is True:
             self._read_gau_log_summary(log_resume, overwrite=overwrite)

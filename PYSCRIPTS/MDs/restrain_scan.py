@@ -194,7 +194,7 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0)):
 
     try:
         lmp.command("run {}".format(anneal_step))
-    except:
+    except Exception:
         print("***Error: Simulation crashed (annealing)! Force constants too high?")
         MPI.COMM_WORLD.Abort()
 

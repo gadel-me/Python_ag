@@ -68,18 +68,18 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
         for index, data_file in enumerate(data_files):
             iteration = int(re.findall(r"\d+", data_file)[-1])
             data_x, data_y = read_normed_output(data_file)
-            #data_x = [i + 360 if (-180 < i < -150) else i for i in data_x]
-            # testing
-            #data_x = [i + 4.5 for i in data_x]
-            #data_x = [i + 0.01 for i in data_x]
             interp_y = np.interp(ref_x, data_x, data_y)
             chi_square_error = ags.chi_square_error(ref_y, interp_y)
-            #all_data_x = data_x.extend(ref_x)
-            #all_data_y = data_y.extend(interp_y)
-            label = r"{:>4} - $\chi^2$-err: {:> 4.6f} eV".format(iteration, chi_square_error)
+            label = r"{:> 6} - $\chi^2$-err:{:> 8.7f} eV".format(iteration, chi_square_error)
             color = cmap(norm(index))
             plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color=color)
             plt.plot(ref_x, interp_y, linestyle="--", marker=marker, color=color, label=label)
+
+            # testing
+            if len(data_files) == 1:
+                data_x = [i + 360 if (-180 < i < -150) else i for i in data_x]
+                data_x2 = [i + 2.0 for i in data_x]
+                plt.plot(data_x2, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color="pink", label="shifted data")
 
     # plot settings
     marker = "."
