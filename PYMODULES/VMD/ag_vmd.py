@@ -84,7 +84,7 @@ def draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor="bl
                           resolution=20, filled=1)
 
 
-def label_charges(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.0, 0.3, 0.3)):
+def label(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0)):
     """
     Labels atoms by index, charge, etc.
 
@@ -100,14 +100,13 @@ def label_charges(molid, key, atoms="all", label_color="white", textsize=1.0, of
     selected_atoms = atomsel.atomsel("all", molid)
 
     # get its coordinates
-    xs     = selected_atoms.get("x")
-    ys     = selected_atoms.get("y")
-    zs     = selected_atoms.get("z")
+    xs = selected_atoms.get("x")
+    ys = selected_atoms.get("y")
+    zs = selected_atoms.get("z")
     values = selected_atoms.get(key)
-    #min_value = min(values)
-    #max_value = max(values)
-    #color_bar_offset = 0.1  # standard setting in vmd
-    #TODO bins -> per cent wise
+
+    if key == "index":
+        values = [i + 1 for i in values]
 
     # set a label color
     graphics.color(molid, label_color)
@@ -116,13 +115,18 @@ def label_charges(molid, key, atoms="all", label_color="white", textsize=1.0, of
         atoms = range(len(selected_atoms))
 
     for atom_idx in atoms:
-        label_pos = (xs[atom_idx]+offset[0], ys[atom_idx]+offset[1], zs[atom_idx]+offset[2])
-        label_text = "{:2.3f}".format(values[atom_idx])
+        label_pos = (xs[atom_idx] + offset[0], ys[atom_idx] + offset[1], zs[atom_idx] + offset[2])
+
+        if key == "index":
+            labelformat = "{}"
+        else:
+            labelformat = "{:2.3f}"
+
+        label_text = labelformat.format(values[atom_idx])
         graphics.text(molid, tuple(label_pos), label_text, textsize)
 
 
-def draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
-               resolution=50):
+def draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resolution=50):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -136,7 +140,7 @@ def draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
         > cylinder_radius   float; radius of the arrow base
         > cone_radius       float; radius of the cone
     """
-    graphics.cylinder(molid, tuple(start), tuple(0.9*end+start),
+    graphics.cylinder(molid, tuple(start), tuple(0.9 * end + start),
                       radius=cylinder_radius, resolution=resolution)
-    graphics.cone(molid, tuple(0.75*end+start), tuple(end+start),
+    graphics.cone(molid, tuple(0.75 * end + start), tuple(end + start),
                   radius=cone_radius, resolution=resolution)
