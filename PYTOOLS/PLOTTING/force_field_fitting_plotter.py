@@ -68,18 +68,19 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
         for index, data_file in enumerate(data_files):
             iteration = int(re.findall(r"\d+", data_file)[-1])
             data_x, data_y = read_normed_output(data_file)
+
+            # only for dihedrals
+            #data_x = [i + 180 if i < 0 else i - 180 for i in data_x]
+            #data_x = [i -4 for i in data_x]
+
             interp_y = np.interp(ref_x, data_x, data_y)
             chi_square_error = ags.chi_square_error(ref_y, interp_y)
             label = r"{:> 6} - $\chi^2$-err:{:> 8.7f} eV".format(iteration, chi_square_error)
             color = cmap(norm(index))
             plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color=color)
             plt.plot(ref_x, interp_y, linestyle="--", marker=marker, color=color, label=label)
-
-            # testing
-            if len(data_files) == 1:
-                data_x = [i + 360 if (-180 < i < -150) else i for i in data_x]
-                data_x2 = [i + 2.0 for i in data_x]
-                plt.plot(data_x2, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color="pink", label="shifted data")
+            #data_delta = [abs(abs(i) - abs(j)) for i, j in zip(interp_y, ref_y)]
+            #plt.plot(ref_x, data_delta, linestyle="--", marker=marker, color="red", label="Delta")
 
     # plot settings
     marker = "."
@@ -91,7 +92,13 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
     # ab initio data
     ref_x, ref_y = read_normed_output(ref_file)
     # shift x values by 2*pi for nicer plotting
-    ref_x = [i + 360 if (-180 < i < -150) else i for i in ref_x]
+    #ref_x = [i + 360 if (-180 < i < -150) else i for i in ref_x]
+
+    # only for dihedrals
+    #ref_x = [i+180 if i < 0 else i - 180 for i in ref_x]
+    #ref_x = [180 + (-180 + i) if i < 0 else i for i in ref_x]
+    #ref_x = [-180 - (180 - i) if i > 0 else i for i in ref_x]
+
     plt.plot(ref_x, ref_y, linestyle="-", linewidth=2.2, marker=marker, label="ab initio")
 
     # plot data

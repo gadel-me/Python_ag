@@ -248,6 +248,18 @@ def get_dihedral(ptI, ptJ, ptK, ptL):
              http://www.vitutor.com/geometry/distance/line_plane.html
              http://kitchingroup.cheme.cmu.edu/blog/2015/01/18/Equation-of-a-plane-through-three-points/
     """
+    if not isinstance(ptI, np.ndarray):
+        ptI = np.array(ptI)
+
+    if not isinstance(ptJ, np.ndarray):
+        ptJ = np.array(ptJ)
+
+    if not isinstance(ptK, np.ndarray):
+        ptK = np.array(ptK)
+
+    if not isinstance(ptL, np.ndarray):
+        ptL = np.array(ptL)
+
     # plane IJK
     v1 = ptI - ptJ
     v2 = ptJ - ptK
@@ -301,6 +313,15 @@ def get_angle(ptI, ptJ, ptK):
 
     Get angle between three points I, J and K.
     """
+    if not isinstance(ptI, np.ndarray):
+        ptI = np.array(ptI)
+
+    if not isinstance(ptJ, np.ndarray):
+        ptJ = np.array(ptJ)
+
+    if not isinstance(ptK, np.ndarray):
+        ptK = np.array(ptK)
+
     v1 = ptI - ptJ
     v2 = ptK - ptJ
     return cgt.angle_between_vectors(v1, v2)
