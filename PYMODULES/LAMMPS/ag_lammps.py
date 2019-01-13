@@ -1532,3 +1532,31 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
     md_sys.mols_to_grps()
     md_sys.change_indices(incr=1, mode="increase")
     md_sys.write_lmpdat(lmpdat_out, cgcmm=True)
+
+
+class LmpDihedral(object):
+    """Calculating the energy of the dihedral potential as in the lammps manual.
+    Source: dihedral_style charmm.
+    """
+    def __init__(self, k, n, d):
+        """
+        Set parameters.
+
+        K (energy)
+        n (multiplicity, >= 0)
+        d (degrees) = phi0 + 180
+
+        """
+        self.k = k
+        self.n = n
+        self.d = d
+        self.dihedral_energy = None
+
+    def calc(self, phi):
+        """
+        Calculate the value for phi given certain parameters.
+
+        phi : float
+            angle phi in degrees
+        """
+        self.dihedral_energy = self.k * (1 + np.cos(self.n * np.radians(phi) - np.radians(self.d)))

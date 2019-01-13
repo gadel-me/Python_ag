@@ -352,6 +352,28 @@ class Dihedral(IterMixin):
         if int(self.prm_d) not in (180, 0):
             print(warning_message)
 
+    def create_lmp_dih_style(self, dih_style="charmm"):
+        """
+        Create the lammps 'dihedral_coeff' string.
+
+        Sources:    https://lammps.sandia.gov/doc/dihedral_charmm.html
+                    https://lammps.sandia.gov/doc/dihedral_coeff.html
+
+        Parameters
+        ----------
+        dih_style : str
+            dihedral style as in the lammps manual (currently only 'charmm' is supported)
+
+        Returns
+        -------
+        dih_coeff : str
+            dihedral-coeff-string as in the lammps manual
+        """
+        if self.prm_k is None or self.prm_d is None or self.prm_n is None:
+            raise Warning("Force constant k, phase shift d or periodicity n missing!")
+
+        return "dihedral_coeff {} "
+
 
 class Improper(IterMixin):
     """

@@ -9,6 +9,7 @@ from collections import OrderedDict
 from lammps import lammps
 from mpi4py import MPI
 import ag_unify_md as agum
+import ag_lammps as aglmp
 import ag_unify_log as agul
 import ag_geometry as agg
 import pdb
@@ -119,7 +120,55 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
     return restrain_string
 
 
-def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0)):
+def null_entity(lmp, lmpdat, indices_and_values, key_index=0):
+    """
+    Does not work atm. Instead, read and write a new data file with dummy
+    bond-/angle- or dihedraĺ-coeffs.
+
+    Compile a bond-/angle-/dihedral-coeff string for lammps and alter the lammps instance.
+
+    The 'coeff-string' has only values of 0 which means it gets omitted.
+    Needed to switch off the energy contribution of a given dihedral in the
+    system.
+
+    Parameters
+    ----------
+    lmp : lammps.lammps instance
+        the instance of lammps which will be altered
+    lmpdat : str
+        lammps data file that is to be read
+    indices_and_values : dict
+        atom ids and according entity values, e.g. {"1 2 3 4": 120, ...}
+    key_index : int
+        index of indices_and_values to be processed
+    """
+    #lmp_sys = aglmp.read_lmpdat(lmpdat)
+    #num_geom_types = None
+    #key = indices_and_values.keys()[key_index]
+    #cur_geometry = get_geometry_by_key(key)
+    #null_coeff = None
+#
+    #if cur_geometry == "bond":
+    #    num_geom_types = len(lmp_sys.bnd_types)
+    #    null_coeff_id = num_geom_types + 1
+    #    null_coeff = "bond_coeff {} 0.0 0.0".format(null_coeff_id)
+    #elif cur_geometry == "angle":
+    #    num_geom_types = len(lmp_sys.ang_types)
+    #    null_coeff_id = num_geom_types + 1
+    #    null_coeff = "angle_coeff {} 0.0 0.0".format(null_coeff_id)
+    #elif cur_geometry == "dihedral":
+    #    num_geom_types = len(lmp_sys.dih_types)
+    #    null_coeff_id = num_geom_types + 1
+    #    null_coeff = "dihedral_coeff {} 0.0 1 0 0.5".format(null_coeff_id-1)
+    #else:
+    #    raise Warning("***Warning: Something went wrong!")
+#
+    #pdb.set_trace()
+    #lmp.command(null_coeff)
+    #lmp.command("set atom {} {} {}".format(key, cur_geometry, null_coeff_id))
+
+
+def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=False):
     """
     Scan a bond, angle or dihedral.
 
@@ -222,6 +271,11 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0)):
 
     # report unrestrained energies, single point energy
     lmp.command("unfix REST")
+
+    # omit energy contribution of the scanned entity
+    #if omit_entity is True:
+    #    null_entity(lmp, lmpdat, indices_and_values)
+
     try:
         lmp.command("run 0")
     except:

@@ -44,7 +44,7 @@ def read_normed_output(filename):
     return (entities, energies)
 
 
-def plot_all(ref_file, data_files, xlabel=None, title=None):
+def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False):
     """
     Plot all data.
 
@@ -64,6 +64,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
         # colormap
         norm = matplotlib.colors.Normalize(vmin=0, vmax=len(data_files))
         cmap = matplotlib.cm.get_cmap('Dark2')
+        cmap_reds = matplotlib.cm.get_cmap('autumn')
 
         for index, data_file in enumerate(data_files):
             iteration = int(re.findall(r"\d+", data_file)[-1])
@@ -79,8 +80,14 @@ def plot_all(ref_file, data_files, xlabel=None, title=None):
             color = cmap(norm(index))
             plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color=color)
             plt.plot(ref_x, interp_y, linestyle="--", marker=marker, color=color, label=label)
-            #data_delta = [abs(abs(i) - abs(j)) for i, j in zip(interp_y, ref_y)]
-            #plt.plot(ref_x, data_delta, linestyle="--", marker=marker, color="red", label="Delta")
+
+
+            # substract the reference from the current iteration
+            if substract is True:
+                red = cmap_reds(norm(index))
+                #data_delta = [abs(abs(i) - abs(j)) for i, j in zip(interp_y, ref_y)]
+                data_delta = [abs(i) - abs(j) for i, j in zip(interp_y, ref_y)]
+                plt.plot(ref_x, data_delta, linestyle="--", marker=marker, color=red, label=r"{:> 6} - ab initio: $\Delta$".format(iteration))
 
     # plot settings
     marker = "."
@@ -114,9 +121,12 @@ if __name__ == "__main__":
     parser.add_argument("md_result_files",
                         nargs="*",
                         help="Two column files with restrained md entities and values")
+    parser.add_argument("-substract",
+                        action="store_true",
+                        help="Plot line which substracts ab initio reference from the shown ff iteration.")
     parser.add_argument("-title",
                         default=None,
                         help="Title of the plot")
 
     args = parser.parse_args()
-    plot_all(args.ab_result_file, args.md_result_files, title=args.title)
+    plot_all(args.ab_result_file, args.md_result_files, title=args.title, substract=args.substract)
