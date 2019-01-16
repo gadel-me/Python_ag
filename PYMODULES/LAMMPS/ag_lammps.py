@@ -142,6 +142,10 @@ class LmpStuff(mdu.Universe):
                         line = line.split()
 
                         cur_bndtype = mds.Bond()
+
+                        if comment is not None:
+                            cur_bndtype.comment = comment.rstrip()
+
                         cur_bndtype.energy_unit = energy_unit
                         bnd_key = int(line[0])
 
@@ -188,6 +192,10 @@ class LmpStuff(mdu.Universe):
                         line = line.split()
 
                         cur_angtype = mds.Angle()
+
+                        if comment is not None:
+                            cur_angtype.comment = comment.rstrip()
+
                         cur_angtype.energy_unit = energy_unit
                         cur_angtype.angle_unit = angle_unit
                         ang_key = int(line[0])
@@ -223,6 +231,10 @@ class LmpStuff(mdu.Universe):
                         line = line.split()
 
                         cur_dihtype = mds.Dihedral()
+
+                        if comment is not None:
+                            cur_dihtype.comment = comment.rstrip()
+
                         cur_dihtype.energy_unit = energy_unit
                         dih_key = int(line[0])
                         cur_dihtype.prm_k = float(line[1])
@@ -251,6 +263,10 @@ class LmpStuff(mdu.Universe):
                         line = line.split()
 
                         cur_imptype = mds.Improper()
+
+                        if comment is not None:
+                            cur_imptype.comment = comment.rstrip()
+
                         cur_imptype.energy_unit = energy_unit
                         imp_key = int(line[0])
                         cur_imptype.prm_k = float(line[1])
@@ -746,6 +762,9 @@ class LmpStuff(mdu.Universe):
                     except AttributeError:
                         pass
 
+                    if self.bnd_types[ibtyp].comment is not None:
+                        lmpdat_out.write("  #{}".format(self.bnd_types[ibtyp].comment))
+
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
 
@@ -772,6 +791,9 @@ class LmpStuff(mdu.Universe):
                     except AttributeError:
                         pass
 
+                    if self.ang_types[iangtyp].comment is not None:
+                        lmpdat_out.write("  #{}".format(self.ang_types[iangtyp].comment))
+
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
 
@@ -795,6 +817,9 @@ class LmpStuff(mdu.Universe):
                         self.dih_types[idtyp].weigh_factor)
                     )
 
+                    if self.dih_types[idtyp].comment is not None:
+                        lmpdat_out.write("  #{}".format(self.dih_types[idtyp].comment))
+
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
 
@@ -810,6 +835,9 @@ class LmpStuff(mdu.Universe):
                         int(self.imp_types[iityp].prm_d),
                         int(self.imp_types[iityp].prm_n))
                     )
+
+                    if self.imp_types[iityp].comment is not None:
+                        lmpdat_out.write("  #{}".format(self.imp_types[iityp].comment))
 
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")

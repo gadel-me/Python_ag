@@ -176,8 +176,8 @@ class Bond(IterMixin):
             self.energy_unit = energy_unit
         if bnd_order is not None:
             self.bnd_order = bnd_order
-        if comment is not None:
-            self.comment = comment
+
+        self.comment = comment
 
     def convert_energy_unit(self, unit_out):
         self.prm1 = mdsh.convert_energy_unit(self.prm1, self.energy_unit,
@@ -243,8 +243,8 @@ class Angle(IterMixin):
             self.energy_unit = energy_unit
         if angle_unit is not None:
             self.angle_unit = angle_unit
-        if comment is not None:
-            self.comment = comment
+
+        self.comment = comment
 
     def convert_energy_unit(self, unit_out):
         self.prm1 = mdsh.convert_energy_unit(self.prm1, self.energy_unit,
@@ -324,8 +324,8 @@ class Dihedral(IterMixin):
             self.energy_unit = energy_unit
         if angle_unit is not None:
             self.angle_unit = angle_unit
-        if comment is not None:
-            self.comment = comment
+
+        self.comment = comment
 
     def convert_energy_unit(self, unit_out):
         self.prm_k = mdsh.convert_energy_unit(self.prm_k, self.energy_unit,
@@ -425,8 +425,8 @@ class Improper(IterMixin):
             self.energy_unit = energy_unit
         if angle_unit is not None:
             self.angle_unit = angle_unit
-        if comment is not None:
-            self.comment = comment
+
+        self.comment = comment
 
     def convert_energy_unit(self, unit_out):
         self.prm_k = mdsh.convert_energy_unit(self.prm_k, self.energy_unit,

@@ -153,33 +153,17 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
         # geometry types start with 0
         num_geom_types = len(lmp_sys.bnd_types) - 1
         null_coeff_id = num_geom_types + 1
-
-        if lmp_sys.bnd_types[num_geom_types].prm1 > 0.0:
-            lmp_sys.bnd_types[null_coeff_id] = mds.Bond(bnd_key=null_coeff_id, prm1=0.0, prm2=0.0,
-                                                        comment="dummy bond for force field fitting")
     elif cur_geometry == "angle":
         # geometry types start with 0
         num_geom_types = len(lmp_sys.ang_types) - 1
         null_coeff_id = num_geom_types + 1
-
-        if lmp_sys.ang_types[num_geom_types].prm1 > 0.0:
-            lmp_sys.ang_types[null_coeff_id] = mds.Angle(ang_key=null_coeff_id, prm1=0.0, prm2=0.0,
-                                                         comment="dummy angle for force field fitting")
     elif cur_geometry == "dihedral":
         # geometry types start with 0
         num_geom_types = len(lmp_sys.dih_types) - 1
         null_coeff_id = num_geom_types + 1
-
-        if lmp_sys.dih_types[num_geom_types].prm_k > 0.0:
-            lmp_sys.dih_types[null_coeff] = mds.Dihedral(dih_key=null_coeff, prm_k=0.0, prm_n=1,
-                                                         prm_d=0, weigh_factor=0,
-                                                         comment="dummy angle for force field fitting")
     # impropers are not supported by fix restrain
     else:
         raise Warning("***Warning: Something went wrong!")
-
-    # alter original lammps-data file
-    lmp_sys.write_lmpdat(lmpdat, frame_id=-1, title="Altered data file", cgcmm=True)
     return (cur_geometry, null_coeff_id)
 
 
@@ -207,6 +191,7 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     # change lammps data file so a dummy entity is created which can later
     # be used for the single point calculation (one with the original angle
     # and one without -> important for fitting when using the difference curve)
+
     igeom, icoeff_id = add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0)
 
     save_step = 50000
@@ -625,6 +610,36 @@ def norm_energy(energy_file_in, energy_file_out):
             opened_energy_file.write("{:> 20.8f} {:> 20.8f}\n".format(key, value))
 
 
+def add_dummy_entry(lmpdat):
+    """
+    Add dummy entries to the lammps data file.
+
+    Parameters
+    ----------
+    lmpdat : str
+        name of the lammps data file
+
+    """
+    md_sys = aglmp.read_lmpdat(lmpdat)
+    if md_sys.bnd_types != {}:
+        ntypes = len(md_sys.bnd_types)
+        if md_sys.bnd_types[ntypes - 1].prm1 > 0:
+            md_sys.bnd_types[ntypes] = mds.Bond(bnd_key=ntypes, prm1=0.0, prm2=0.0, comment=" dummy bond for force field fitting")
+
+    if md_sys.ang_types != {}:
+        ntypes = len(md_sys.ang_types)
+        if md_sys.ang_types[ntypes - 1].prm1 > 0:
+            md_sys.ang_types[ntypes] = mds.Angle(ang_key=ntypes, prm1=0.0, prm2=0.0, comment=" dummy bond for force field fitting")
+
+    if md_sys.dih_types != {}:
+        ntypes = len(md_sys.dih_types)
+        if md_sys.dih_types[ntypes - 1].prm_k > 0:
+            md_sys.dih_types[ntypes] = mds.Dihedral(dih_key=ntypes, prm_k=0.0, prm_n=1, prm_d=0, weigh_factor=0, comment=" dummy angle for force field fitting")
+
+    md_sys.change_indices(incr=1, mode="increase")
+    md_sys.write_lmpdat(lmpdat, frame_id=-1, title="Default Title", cgcmm=True)
+    return True
+
 #==============================================================================#
 # User Input
 #==============================================================================#
@@ -660,6 +675,9 @@ if __name__ == "__main__":
 
         ARGS = PARSER.parse_args()
 
+        if rank == 0:
+            pass
+
         # split k to sublists with two elements in each sublist (needed to create the right strings)
         if ARGS.k is not None:
             k = []
@@ -678,6 +696,14 @@ if __name__ == "__main__":
     #==============================================================================#
     # do restrained md for geometry scanned in gaussian
     #==============================================================================#
+    # add dummy entry to lammps data where necessary
+    if rank == 0:
+        ADD_ENTRY = add_dummy_entry(ARGS.lmpdat)
+    else:
+        ADD_ENTRY = False
+
+    comm.bcast(ADD_ENTRY, 0)
+
     OUTPUT_FILE = "{}_md.txt".format(ARGS.out)
     OUTPUT_FILE2 = "{}_without_entity_md.txt".format(ARGS.out)
 
