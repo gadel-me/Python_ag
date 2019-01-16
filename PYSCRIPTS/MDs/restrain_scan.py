@@ -14,6 +14,7 @@ import ag_unify_log as agul
 import ag_geometry as agg
 import pdb
 import time
+import md_stars as mds
 
 
 #==============================================================================#
@@ -120,10 +121,9 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
     return restrain_string
 
 
-def null_entity(lmp, lmpdat, indices_and_values, key_index=0):
+def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     """
-    Does not work atm. Instead, read and write a new data file with dummy
-    bond-/angle- or dihedraĺ-coeffs.
+    Read and write a new data file with dummy bond-/angle- or dihedral-coeffs.
 
     Compile a bond-/angle-/dihedral-coeff string for lammps and alter the lammps instance.
 
@@ -141,31 +141,43 @@ def null_entity(lmp, lmpdat, indices_and_values, key_index=0):
         atom ids and according entity values, e.g. {"1 2 3 4": 120, ...}
     key_index : int
         index of indices_and_values to be processed
+
     """
-    #lmp_sys = aglmp.read_lmpdat(lmpdat)
-    #num_geom_types = None
-    #key = indices_and_values.keys()[key_index]
-    #cur_geometry = get_geometry_by_key(key)
-    #null_coeff = None
-#
-    #if cur_geometry == "bond":
-    #    num_geom_types = len(lmp_sys.bnd_types)
-    #    null_coeff_id = num_geom_types + 1
-    #    null_coeff = "bond_coeff {} 0.0 0.0".format(null_coeff_id)
-    #elif cur_geometry == "angle":
-    #    num_geom_types = len(lmp_sys.ang_types)
-    #    null_coeff_id = num_geom_types + 1
-    #    null_coeff = "angle_coeff {} 0.0 0.0".format(null_coeff_id)
-    #elif cur_geometry == "dihedral":
-    #    num_geom_types = len(lmp_sys.dih_types)
-    #    null_coeff_id = num_geom_types + 1
-    #    null_coeff = "dihedral_coeff {} 0.0 1 0 0.5".format(null_coeff_id-1)
-    #else:
-    #    raise Warning("***Warning: Something went wrong!")
-#
-    #pdb.set_trace()
-    #lmp.command(null_coeff)
-    #lmp.command("set atom {} {} {}".format(key, cur_geometry, null_coeff_id))
+    lmp_sys = aglmp.read_lmpdat(lmpdat)
+    num_geom_types = None
+    key = indices_and_values.keys()[key_index]
+    cur_geometry = get_geometry_by_key(key)
+    null_coeff = None
+
+    if cur_geometry == "bond":
+        num_geom_types = len(lmp_sys.bnd_types)
+        null_coeff_id = num_geom_types + 1
+
+        if lmp_sys.bnd_types[num_geom_types].prm1 > 0.0:
+            lmp_sys.bnd_types[null_coeff_id] = mds.Bond(bnd_key=null_coeff_id, prm1=0.0, prm2=0.0,
+                                                        comment="dummy bond for force field fitting")
+    elif cur_geometry == "angle":
+        num_geom_types = len(lmp_sys.ang_types)
+        null_coeff_id = num_geom_types + 1
+
+        if lmp_sys.ang_types[num_geom_types].prm1 > 0.0:
+            lmp_sys.ang_types[null_coeff_id] = mds.Angle(ang_key=null_coeff_id, prm1=0.0, prm2=0.0,
+                                                         comment="dummy angle for force field fitting")
+    elif cur_geometry == "dihedral":
+        num_geom_types = len(lmp_sys.dih_types)
+        null_coeff_id = num_geom_types + 1
+
+        if lmp_sys.dih_types[num_geom_types].prm_k > 0.0:
+            lmp_sys.dih_types[null_coeff] = mds.Dihedral(dih_key=null_coeff, prm_k=0.0, prm_n=1,
+                                                         prm_d=0, weigh_factor=0.0,
+                                                         comment="dummy angle for force field fitting")
+    # impropers are not supported by fix restrain
+    else:
+        raise Warning("***Warning: Something went wrong!")
+
+    # alter original lammps-data file
+    lmp_sys.write_lmpdat(lmpdat, frame_id=-1, title="Altered data file", cgcmm=True)
+    return (cur_geometry, null_coeff_id)
 
 
 def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=False):
@@ -189,6 +201,11 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Fal
                 https://lammps.sandia.gov/doc/fix_restrain.html
 
     """
+    # change lammps data file so a dummy entity is created which can later
+    # be used for the single point calculation (one with the original angle
+    # and one without -> important for fitting when using the difference curve)
+    igeom, icoeff_id = add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0)
+
     save_step = 50000
     anneal_step = 750000
     quench_step = 500000
@@ -228,7 +245,6 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Fal
     #indices_and_values = {"25 8 9 10" : 90.0}
     #indices_and_values = {"11 7 8 25" : -4.0}
     #indices_and_values = {"25 8 7 11" : 3.1415}
-    #lmp.command("group entity_atoms id {}".format(indices_and_values.keys()[0]))
     #lmp.command("compute 1 entity_atoms property/local dtype datom1 datom2 datom3 datom4")
     #lmp.command("compute 2 entity_atoms dihedral/local phi")
     #lmp.command("dump 1 all local 1000 {}.dump index c_2".format(output))
@@ -272,15 +288,22 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Fal
     # report unrestrained energies, single point energy
     lmp.command("unfix REST")
 
-    # omit energy contribution of the scanned entity
-    #if omit_entity is True:
-    #    null_entity(lmp, lmpdat, indices_and_values)
-
     try:
         lmp.command("run 0")
     except:
         print("***Error:  Simulation crashed (single step calculation)!")
         MPI.COMM_WORLD.Abort()
+
+    # omit energy contribution of the scanned entity
+    if omit_entity is True:
+        lmp.command("group entity_atoms id {}".format(indices_and_values.keys()[0]))
+        lmp.command("set group entity_atoms {} {}".format(igeom, icoeff_id))
+
+        try:
+            lmp.command("run 0")
+        except:
+            print("***Error:  Simulation crashed (single step w/o entity calculation)!")
+            MPI.COMM_WORLD.Abort()
 
     lmp.close()
 
@@ -344,7 +367,7 @@ def get_entities(gau_log, geom_entities):
     return (entities, len(entities[0]))
 
 
-def get_last_pe_value(lmplog):
+def get_pe_value(lmplog, entry_idx=-1, energy_idx=-1):
     """
     Bla.
 
@@ -431,7 +454,11 @@ def extract_atm_ids(geometries):
     return atm_ids
 
 
-def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=None, force_constants=None, energy_file_out="defaultname", output_idx=0):
+def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
+                      temps=None, force_constants=None,
+                      energy_file_out="defaultname",
+                      energy_file_wo_entity="defaultname2",
+                      output_idx=0):
     """
     Calculate md energy.
 
@@ -465,6 +492,9 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=
     if not os.path.isfile(energy_file_out):
         write_energies_file_header(energy_file_out)
 
+    if not os.path.isfile(energy_file_wo_entity):
+        write_energies_file_header(energy_file_wo_entity)
+
     # grab scanned entity from ab initio output and involved atom ids
     if scanned_geom is None:
         scanned_geom, _ = get_scanned_geometry(gau_log)
@@ -484,7 +514,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=
     total_geom_ids = extract_atm_ids(geometries)
 
     # get scanned geom atom ids for file naming
-    scanned_geom_atm_ids = "_".join([str(i) for i in total_geom_ids[0]])
+    scanned_geom_atm_ids = "_".join([str(gid) for gid in total_geom_ids[0]])
 
     # make an educated guess for each force constant of each geometry
     force_constants_start = 0.0
@@ -503,7 +533,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=
     # shift entity value by 180 degrees for dihedrals
     for geom_ids, idx in zip(total_geom_ids, xrange(len(total_scan_entities))):
         if len(geom_ids) == 4:
-            total_scan_entities[idx] = [round(i + 180, 6) for i in total_scan_entities[idx]]
+            total_scan_entities[idx] = [round(ti + 180, 6) for ti in total_scan_entities[idx]]
 
     for task_id in xrange(tasks):
         # each rank does its task and skips tasks assigned by other ranks (this
@@ -517,7 +547,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=
 
         for idx, geom_ids in enumerate(total_geom_ids):
             geom_entity = total_scan_entities[idx][task_id]
-            geom_ids_str = " ".join([str(i) for i in geom_ids])
+            geom_ids_str = " ".join([str(gid) for gid in geom_ids])
             cur_geom_atm_ids_geom_value[geom_ids_str] = geom_entity
 
         # define individual file name endings for each task and input gaussian file
@@ -536,13 +566,18 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None, temps=
         # last frame of the md simulation
         current_geom_val = measure_geometry(lmpdat, output_appendix + ".dcd", total_geom_ids[0])
 
-        # pull energy from md run
-        last_pe_value = get_last_pe_value(output_appendix + ".lmplog")
-
         # pre defined string for each row in results file
         resume_file_row = "{:> 20.4f} {:> 20.8f}\n"
 
+        # energy file with entity's energy contribution
+        second_last_pe_value = get_pe_value(output_appendix + ".lmplog", entry_idx=-2, energy_idx=-1)
         with open(energy_file_out, "a") as opened_resume_file:
+            opened_resume_file.write(resume_file_row.format(current_geom_val,
+                                                            second_last_pe_value))
+
+        # energy file without entity's energy contribution
+        last_pe_value = get_pe_value(output_appendix + ".lmplog", entry_idx=-1, energy_idx=-1)
+        with open(energy_file_wo_entity, "a") as opened_resume_file:
             opened_resume_file.write(resume_file_row.format(current_geom_val,
                                                             last_pe_value))
 
@@ -592,66 +627,79 @@ def norm_energy(energy_file_in, energy_file_out):
 #==============================================================================#
 if __name__ == "__main__":
     if rank == 0:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("lmpdat",
+        PARSER = argparse.ArgumentParser()
+        PARSER.add_argument("lmpdat",
                             help="Lammps' data-file")
 
-        parser.add_argument("-gau_logs",
+        PARSER.add_argument("-gau_logs",
                             nargs="+",
                             help="Gaussian log-file")
 
-        parser.add_argument("-geom_entity",
+        PARSER.add_argument("-geom_entity",
                             default=None,
                             help="Atom indices, where each string is one set of one geometry")
 
-        parser.add_argument("-add_geom_entities",
+        PARSER.add_argument("-add_geom_entities",
                             default=None,
                             nargs="*",
                             help="Geometry to scan by gaussian syntax, e.g. A(2,1,3) A(2,1,4)")
 
-        parser.add_argument("-k",
+        PARSER.add_argument("-k",
                             type=float,
                             default=None,
                             nargs="*",
-                            help="Force Konstant K in eV. If add_geom_entities was chosen, a force constant for each entity has to be supplied as well. ")
+                            help=("Force Konstant K in eV. If add_geom_entities was chosen, a "
+                                  "force constant for each entity has to be supplied as well. "))
 
-        parser.add_argument("-out",
+        PARSER.add_argument("-out",
                             default="DEFAULTNAME",
                             help="Name of energy files.")
 
-        args = parser.parse_args()
+        ARGS = PARSER.parse_args()
 
         # split k to sublists with two elements in each sublist (needed to create the right strings)
-        if args.k is not None:
+        if ARGS.k is not None:
             k = []
 
-            for i in args.k[::2]:
-                for j in args.k[1::2]:
-                    l = [i, j]
+            for iarg in ARGS.k[::2]:
+                for j in ARGS.k[1::2]:
+                    l = [iarg, j]
                 k.append(l)
 
-            args.k = k
+            ARGS.k = k
     else:
-        args = None
+        ARGS = None
 
-    args = comm.bcast(args, 0)
+    ARGS = comm.bcast(ARGS, 0)
 
     #==============================================================================#
     # do restrained md for geometry scanned in gaussian
     #==============================================================================#
-    output_file = "{}_md.txt".format(args.out)
-    #pdb.set_trace()
+    OUTPUT_FILE = "{}_md.txt".format(ARGS.out)
+    OUTPUT_FILE2 = "{}_without_entity_md.txt".format(ARGS.out)
 
-    if not os.path.isfile(output_file):
-        for gau_file_idx, cur_gau_log in enumerate(args.gau_logs):
-            md_from_ab_initio(cur_gau_log, args.lmpdat, scanned_geom=args.geom_entity, add_geoms=args.add_geom_entities, energy_file_out=output_file, output_idx=gau_file_idx, force_constants=args.k)
+    if not os.path.isfile(OUTPUT_FILE):
+        for gau_file_idx, cur_gau_log in enumerate(ARGS.gau_logs):
+            md_from_ab_initio(cur_gau_log, ARGS.lmpdat,
+                              scanned_geom=ARGS.geom_entity,
+                              add_geoms=ARGS.add_geom_entities,
+                              energy_file_out=OUTPUT_FILE,
+                              energy_file_wo_entity=OUTPUT_FILE2,
+                              output_idx=gau_file_idx,
+                              force_constants=ARGS.k)
 
     # wait for all ranks to finish
     time.sleep(2)
     print(bcolors.blue + "{} is done".format(rank) + bcolors.endc)
 
     # norm energies if file does not exist yet
-    normed_md_file = "{}_md_normed.txt".format(args.out)
+    NORMED_MD_FILE = "{}_md_normed.txt".format(ARGS.out)
+    NORMED_MD_FILE2 = "{}_without_entity_md_normed.txt".format(ARGS.out)
 
-    if rank == 0 and not os.path.isfile(normed_md_file):
-        norm_energy(output_file, normed_md_file)
+    # norm file with energy contribution
+    if rank == 0 and not os.path.isfile(NORMED_MD_FILE):
+        norm_energy(OUTPUT_FILE, NORMED_MD_FILE)
+
+    # norm file without energy contribution
+    if rank == 0 and not os.path.isfile(NORMED_MD_FILE2):
+        norm_energy(OUTPUT_FILE2, NORMED_MD_FILE2)
