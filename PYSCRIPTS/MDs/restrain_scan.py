@@ -150,21 +150,24 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     null_coeff = None
 
     if cur_geometry == "bond":
-        num_geom_types = len(lmp_sys.bnd_types)
+        # geometry types start with 0
+        num_geom_types = len(lmp_sys.bnd_types) - 1
         null_coeff_id = num_geom_types + 1
 
         if lmp_sys.bnd_types[num_geom_types].prm1 > 0.0:
             lmp_sys.bnd_types[null_coeff_id] = mds.Bond(bnd_key=null_coeff_id, prm1=0.0, prm2=0.0,
                                                         comment="dummy bond for force field fitting")
     elif cur_geometry == "angle":
-        num_geom_types = len(lmp_sys.ang_types)
+        # geometry types start with 0
+        num_geom_types = len(lmp_sys.ang_types) - 1
         null_coeff_id = num_geom_types + 1
 
         if lmp_sys.ang_types[num_geom_types].prm1 > 0.0:
             lmp_sys.ang_types[null_coeff_id] = mds.Angle(ang_key=null_coeff_id, prm1=0.0, prm2=0.0,
                                                          comment="dummy angle for force field fitting")
     elif cur_geometry == "dihedral":
-        num_geom_types = len(lmp_sys.dih_types)
+        # geometry types start with 0
+        num_geom_types = len(lmp_sys.dih_types) - 1
         null_coeff_id = num_geom_types + 1
 
         if lmp_sys.dih_types[num_geom_types].prm_k > 0.0:
