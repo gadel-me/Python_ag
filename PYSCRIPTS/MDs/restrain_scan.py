@@ -172,7 +172,7 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
 
         if lmp_sys.dih_types[num_geom_types].prm_k > 0.0:
             lmp_sys.dih_types[null_coeff] = mds.Dihedral(dih_key=null_coeff, prm_k=0.0, prm_n=1,
-                                                         prm_d=0, weigh_factor=0.0,
+                                                         prm_d=0, weigh_factor=0,
                                                          comment="dummy angle for force field fitting")
     # impropers are not supported by fix restrain
     else:
