@@ -180,7 +180,7 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     return (cur_geometry, null_coeff_id)
 
 
-def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=False):
+def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=True):
     """
     Scan a bond, angle or dihedral.
 
