@@ -670,3 +670,23 @@ class GauStuff(mdu.Universe):
         #    self.ts_coords[-1] = g_frame
         #else:
         #    self.ts_coords.append(g_frame)
+
+
+def read_gauin(gauin, coordinate_style="cartesian", overwrite=False, debug=False):
+    """
+    Read the gaussian input file.
+
+    Parameters
+    ----------
+    gauin : str
+        name of the gaussian input file
+
+    Returns
+    -------
+    gau_sys : GauStuff object
+        An object of GauStuff which can be further processed
+
+    """
+    gau_sys = GauStuff()
+    gau_sys.read_gau(gauin, coordinate_style, overwrite, debug)
+    return gau_sys
