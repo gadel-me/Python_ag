@@ -706,7 +706,7 @@ if __name__ == "__main__":
     comm.bcast(ADD_ENTRY, 0)
 
     OUTPUT_FILE = "{}_md.txt".format(ARGS.out)
-    OUTPUT_FILE2 = "{}_without_entity_md.txt".format(ARGS.out)
+    OUTPUT_FILE2 = "{}_md_without_entity.txt".format(ARGS.out)
 
     if not os.path.isfile(OUTPUT_FILE):
         for gau_file_idx, cur_gau_log in enumerate(ARGS.gau_logs):
@@ -724,7 +724,7 @@ if __name__ == "__main__":
 
     # norm energies if file does not exist yet
     NORMED_MD_FILE = "{}_md_normed.txt".format(ARGS.out)
-    NORMED_MD_FILE2 = "{}_without_entity_md_normed.txt".format(ARGS.out)
+    NORMED_MD_FILE2 = "{}_md_normed_without_entity.txt".format(ARGS.out)
 
     # norm file with energy contribution
     if rank == 0 and not os.path.isfile(NORMED_MD_FILE):
