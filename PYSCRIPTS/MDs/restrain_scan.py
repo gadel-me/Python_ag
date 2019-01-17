@@ -363,7 +363,7 @@ def get_pe_value(lmplog, entry_idx=-1, energy_idx=-1):
     """
     log_data = agul.LogUnification()
     log_data.read_lmplog(lmplog)
-    return log_data.data[-1]["PotEng"][-1]
+    return log_data.data[entry_idx]["PotEng"][energy_idx]
 
 
 def get_entity(dictionary):
@@ -639,6 +639,7 @@ def add_dummy_entry(lmpdat):
     md_sys.change_indices(incr=1, mode="increase")
     md_sys.write_lmpdat(lmpdat, frame_id=-1, title="Default Title", cgcmm=True)
     return True
+
 
 #==============================================================================#
 # User Input
