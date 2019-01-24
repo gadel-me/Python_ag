@@ -15,6 +15,7 @@ def find_gau_outs(maindir, method, basset):
 
     for subdir in os.listdir(maindir):
         subdir = maindir + subdir
+        #pdb.set_trace()
 
         if os.path.isdir(subdir):
             subfiles = os.listdir(subdir)
@@ -65,6 +66,7 @@ def calculate_distance(gau_out_file, idxs_atm1, idxs_atm2):
 def get_results(maindir, method, basset, index_atm1, index_atm2):
     output_files = find_gau_outs(maindir, method, basset)
     dists_and_energies = []
+    #pdb.set_trace()
 
     for output_file in output_files:
         try:

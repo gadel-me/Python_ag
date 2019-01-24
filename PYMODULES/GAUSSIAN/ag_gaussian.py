@@ -563,7 +563,7 @@ class GauStuff(mdu.Universe):
                 # read the summary
                 elif line.startswith(" 1\\1\\") is True:
 
-                    while not line.endswith("\\@\n"):
+                    while not line.endswith("@\n"):
                         line = line.lstrip()
                         line = line.rstrip()
                         # create one huge string since lines could be oddly wrapped

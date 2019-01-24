@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from __future__ import division
+import pdb
 import argparse
 import os
 import re
@@ -35,6 +36,12 @@ parser.add_argument("-set",
                     required=True,
                     help="lammps' input-file/-script with basic simulation " +
                          "settings"
+                    )
+
+parser.add_argument("-additional_file",
+                    metavar="*.txt",
+                    default=None,
+                    help="Additional text file with dihedral, improper coeffs, etc."
                     )
 
 parser.add_argument("-non_covalent",
@@ -166,6 +173,10 @@ if args.non_covalent is not None:
         lmp.command("variable E_hbond equal c_hb[2]")
         lmp.command("compute hb all pair hbond/dreiding/lj")
         lmp.command("variable n_hbond equal c_hb[1]")
+
+if args.additional_file is not None:
+    pdb.set_trace()
+    lmp.file(args.additional_file)
 
 # thermo stuff
 if args.dreiding is True:

@@ -581,6 +581,11 @@ class LmpStuff(mdu.Universe):
         if debug is True:
             print("***Info: Wiped all indices! Internal indices now start with 0.")
 
+        # check charge of the system
+        total_charge = sum([float(i.chge) for i in self.atoms])
+        if total_charge != 0:
+            print("***Warning/Info: Total charge of the system is {}".format(total_charge))
+
     def _parse_cgcmm(self, cur_line):
         """
         Helper function for e.g. read_lmpdat to parse additional cgcmm-info
@@ -1562,29 +1567,29 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
     md_sys.write_lmpdat(lmpdat_out, cgcmm=True)
 
 
-class LmpDihedral(object):
-    """Calculating the energy of the dihedral potential as in the lammps manual.
-    Source: dihedral_style charmm.
-    """
-    def __init__(self, k, n, d):
-        """
-        Set parameters.
-
-        K (energy)
-        n (multiplicity, >= 0)
-        d (degrees) = phi0 + 180
-
-        """
-        self.k = k
-        self.n = n
-        self.d = d
-        self.dihedral_energy = None
-
-    def calc(self, phi):
-        """
-        Calculate the value for phi given certain parameters.
-
-        phi : float
-            angle phi in degrees
-        """
-        self.dihedral_energy = self.k * (1 + np.cos(self.n * np.radians(phi) - np.radians(self.d)))
+#class LmpDihedral(object):
+#    """Calculating the energy of the dihedral potential as in the lammps manual.
+#    Source: dihedral_style charmm.
+#    """
+#    def __init__(self, k, n, d):
+#        """
+#        Set parameters.
+#
+#        K (energy)
+#        n (multiplicity, >= 0)
+#        d (degrees) = phi0 + 180
+#
+#        """
+#        self.k = k
+#        self.n = n
+#        self.d = d
+#        self.dihedral_energy = None
+#
+#    def calc(self, phi):
+#        """
+#        Calculate the value for phi given certain parameters.
+#
+#        phi : float
+#            angle phi in degrees
+#        """
+#        self.dihedral_energy = self.k * (1 + np.cos(self.n * np.radians(phi) - np.radians(self.d)))

@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import argparse
 import ag_statistics as ags
+from restrain_scan import norm_energy
 import pdb
 
 
@@ -44,7 +45,7 @@ def read_normed_output(filename):
     return (entities, energies)
 
 
-def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False):
+def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_offset=None):
     """
     Plot all data.
 
@@ -68,6 +69,12 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False):
 
         for index, data_file in enumerate(data_files):
             iteration = int(re.findall(r"\d+", data_file)[-1])
+
+            if "without_entity" in data_file:
+                addname = "w/o entity"
+            else:
+                addname = ""
+
             data_x, data_y = read_normed_output(data_file)
 
             # only for dihedrals
@@ -76,18 +83,31 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False):
 
             interp_y = np.interp(ref_x, data_x, data_y)
             chi_square_error = ags.chi_square_error(ref_y, interp_y)
-            label = r"{:> 6} - $\chi^2$-err:{:> 8.7f} eV".format(iteration, chi_square_error)
+            label = r"{:> 6} {} - $\chi^2$-err:{:> 8.7f} eV".format(iteration, addname, chi_square_error)
             color = cmap(norm(index))
-            plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.5, markersize=0.5, color=color)
-            plt.plot(ref_x, interp_y, linestyle="--", marker=marker, color=color, label=label)
-
+            if x_offset is not None:
+                plt.plot([i + x_offset if i < 0 else i for i in data_x], data_y, linestyle="--", marker=marker, linewidth=0.2, markersize=0.5, color=color)
+                plt.plot([i + x_offset if i < 0 else i for i in ref_x], interp_y, linestyle="--", marker=marker, linewidth=0.2, color=color, label=label)
+            else:
+                plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.2, markersize=0.5, color=color)
+                plt.plot(ref_x, interp_y, linestyle="--", marker=marker, linewidth=1.0, color=color, label=label)
 
             # substract the reference from the current iteration
             if substract is True:
                 red = cmap_reds(norm(index))
-                #data_delta = [abs(abs(i) - abs(j)) for i, j in zip(interp_y, ref_y)]
-                data_delta = [abs(i) - abs(j) for i, j in zip(interp_y, ref_y)]
-                plt.plot(ref_x, data_delta, linestyle="--", marker=marker, color=red, label=r"{:> 6} - ab initio: $\Delta$".format(iteration))
+                data_delta = [abs(i) - abs(j) for i, j in zip(ref_y, interp_y)]
+
+                if x_offset is not None:
+                    plt.plot([i + x_offset if i < 0 else i for i in ref_x], data_delta, linestyle="--", linewidth=0.2, marker=marker, color=red, label=r"{:> 6} vs. ab initio: $\Delta$ {}".format(iteration, addname))
+                else:
+                    #plt.plot(ref_x, data_delta, linestyle="--", linewidth=0.2, marker=marker, color=red, label=r"{:> 6} vs. ab initio: $\Delta$ {}".format(iteration, addname))
+                    plt.plot(ref_x, data_delta, linestyle="--", linewidth=1.0, marker=marker, color=red, label=r"{:> 6} vs. ab initio: $\Delta$ {}".format(iteration, addname))
+
+                # write delta energies to a file for further plotting
+                with open(data_file.rstrip(".txt") + "_delta.txt", "w") as fin:
+                    fin.write("     Angle [Degrees]          Energy [eV]\n")
+                    for i, j in zip(ref_x, data_delta):
+                        fin.write("{:<20} {:<20}\n".format(i, j))
 
     # plot settings
     marker = "."
@@ -106,7 +126,11 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False):
     #ref_x = [180 + (-180 + i) if i < 0 else i for i in ref_x]
     #ref_x = [-180 - (180 - i) if i > 0 else i for i in ref_x]
 
-    plt.plot(ref_x, ref_y, linestyle="-", linewidth=2.2, marker=marker, label="ab initio")
+    if x_offset is not None:
+        plt.plot([i + x_offset if i < 0 else i for i in ref_x], ref_y, linestyle="--", linewidth=0.2, marker=marker, label="ab initio")
+    else:
+        #plt.plot(ref_x, ref_y, linestyle="--", linewidth=0.02, marker=marker, label="ab initio")
+        plt.plot(ref_x, ref_y, linestyle="--", linewidth=1.0, marker=marker, label="ab initio")
 
     # plot data
     plot_data_files()
@@ -124,9 +148,15 @@ if __name__ == "__main__":
     parser.add_argument("-substract",
                         action="store_true",
                         help="Plot line which substracts ab initio reference from the shown ff iteration.")
+
+    parser.add_argument("-x_offset",
+                        type=float,
+                        default=None,
+                        help="Plot line which substracts ab initio reference from the shown ff iteration.")
+
     parser.add_argument("-title",
                         default=None,
                         help="Title of the plot")
 
     args = parser.parse_args()
-    plot_all(args.ab_result_file, args.md_result_files, title=args.title, substract=args.substract)
+    plot_all(args.ab_result_file, args.md_result_files, title=args.title, substract=args.substract, x_offset=args.x_offset)
