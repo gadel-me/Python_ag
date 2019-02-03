@@ -16,13 +16,17 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 split = comm.Split(rank, key=0)
+ATM_IDXS_BENZ1 = [14, 15, 16, 18, 20, 22]
+ATM_IDXS_BENZ2 = [44, 45, 46, 48, 50, 52]
 
 
 def get_shift_vector(lmpdat, dcd):
     """
     """
     dimer_sys = read_lmpdat(lmpdat, dcd)
-    vt_shift = (dimer_sys.ts_coords[-1][25] - dimer_sys.ts_coords[-1][55])
+    cog1 = dimer_sys.get_cog(-1, *ATM_IDXS_BENZ1)
+    cog2 = dimer_sys.get_cog(-1, *ATM_IDXS_BENZ2)
+    vt_shift = cog1 - cog2
     # normalize vt_shift
     return vt_shift / np.linalg.norm(vt_shift)
 
@@ -64,8 +68,8 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output, sav
     lmp.command("fix MOMENT all momentum 100 linear 1 1 1 angular")
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
-    for i in xrange(1, 200):
-        if i < 10:
+    for i in xrange(1, 400):
+        if i < 15:
             vt_add = 0.05 * vt_shift
         else:
             vt_add = -0.05 * vt_shift
@@ -155,6 +159,6 @@ if __name__ == "__main__":
     #lammps_restart = minimize_folder + "CBZ_gaff-0_2H_dimer.lmpdat_out.lmprst"
     SHIFT_VECTOR = get_shift_vector(ARGS.lmpdat, ARGS.dcd)
     #outname = "2H_flexible_scan"
-    scan_coordinates(ARGS.lmprst, range(31, 61), [25, 26, 28, 55, 56, 58], SHIFT_VECTOR, ARGS.o, non_covalent=ARGS.non_covalent)
-    write_summary(calculate_distances(ARGS.lmpdat, ARGS.o + ".dcd", [25], [55]), get_energies(ARGS.o + ".lmplog"))
+    scan_coordinates(ARGS.lmprst, range(31, 61), [15, 16, 17, 19, 21, 23, 45, 46, 47, 49, 51, 53], SHIFT_VECTOR, ARGS.o, non_covalent=ARGS.non_covalent)
+    write_summary(calculate_distances(ARGS.lmpdat, ARGS.o + ".dcd", ATM_IDXS_BENZ1, ATM_IDXS_BENZ2), get_energies(ARGS.o + ".lmplog"))
     norm_energy("md_energies.txt", "md_energies_normed.txt")

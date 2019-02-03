@@ -23,6 +23,7 @@ def find_gau_outs(maindir, method, basset):
                 subfile = subdir + "/" + subfile
 
                 if subfile.endswith(".gau.out") and method in subfile.upper() and basset in subfile.upper():
+                    print(subfile)
                     gaussian_output_files.append(subfile)
                     break
 

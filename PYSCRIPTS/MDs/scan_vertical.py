@@ -22,7 +22,9 @@ def get_shift_vector(lmpdat, dcd):
     """
     """
     dimer_sys = read_lmpdat(lmpdat, dcd)
-    vt_shift = (dimer_sys.ts_coords[-1][25] - dimer_sys.ts_coords[-1][55])
+    vt_N25_C26 = dimer_sys.ts_coords[-1][24]
+    vt_C26_O27 = dimer_sys.ts_coords[-1][25] - dimer_sys.ts_coords[-1][27]
+    vt_shift = np.cross(vt_N25_C26, vt_C26_O27)
     # normalize vt_shift
     return vt_shift / np.linalg.norm(vt_shift)
 
@@ -64,8 +66,8 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output, sav
     lmp.command("fix MOMENT all momentum 100 linear 1 1 1 angular")
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
-    for i in xrange(1, 200):
-        if i < 10:
+    for i in xrange(-200, 400):
+        if i < 0:
             vt_add = 0.05 * vt_shift
         else:
             vt_add = -0.05 * vt_shift

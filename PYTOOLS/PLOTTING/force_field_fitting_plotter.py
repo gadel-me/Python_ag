@@ -104,6 +104,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
                     plt.plot(ref_x, data_delta, linestyle="--", linewidth=1.0, marker=marker, color=red, label=r"{:> 6} vs. ab initio: $\Delta$ {}".format(iteration, addname))
 
                 # write delta energies to a file for further plotting
+                print("***Info: Writing delta file!")
                 with open(data_file.rstrip(".txt") + "_delta.txt", "w") as fin:
                     fin.write("     Angle [Degrees]          Energy [eV]\n")
                     for i, j in zip(ref_x, data_delta):
