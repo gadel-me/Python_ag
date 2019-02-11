@@ -56,9 +56,14 @@ class LmpLog(logu.LogUniverse):
         self._int_values()
 
     def add_log(self, log_to_add):
-        """
-        Add data from another log-file to current log-file.
-        """
+        """Add data from another log-file to current log-file."""
         log = LmpLog()
         log.read_lmplog(log_to_add)
         self.data.extend(log.data)
+
+
+def read_lammps_log(*lammps_log_files):
+    """Read lammps log files."""
+    lmplogs = LmpLog()
+    lmplogs.read_lmplog(*lammps_log_files)
+    return lmplogs

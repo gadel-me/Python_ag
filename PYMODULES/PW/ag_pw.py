@@ -18,8 +18,9 @@ import md_universe as mdu
 
 __version__ = "2018-06-22"
 
-BOHR_ANGSTROM = sc.value("Bohr radius")/sc.angstrom
-ANGSTROM_BOHR = sc.angstrom/sc.value("Bohr radius")
+BOHR_ANGSTROM = sc.value("Bohr radius") / sc.angstrom
+ANGSTROM_BOHR = sc.angstrom / sc.value("Bohr radius")
+RYDBERG_EV = sc.value("Rydberg constant times hc in eV")
 
 
 class PwStuff(mdu.Universe):
@@ -42,6 +43,10 @@ class PwStuff(mdu.Universe):
         self.pw_entries["IONS"] = {}
         self.pw_entries["CELL"] = {}
         self.pw_entries["K_POINTS"] = {}
+        self.pw_other_info = {}
+        self.pw_other_info["ENERGIES"] = []
+        self.pw_other_info["DENSITIES"] = []
+        self.pw_other_info["VOLUMES"] = []
 
     def read_pwin(self, pwin):
         """
@@ -309,6 +314,7 @@ class PwStuff(mdu.Universe):
         Currently this only reads the coordinates and cell vectors.
         Cell vector alat (celldm(1)) is converted to angstrom when read.
         """
+        #print(pwout)
         with open(pwout) as opened_pwout:
             line = opened_pwout.readline()
             while line != '':
@@ -351,8 +357,7 @@ class PwStuff(mdu.Universe):
                         line = opened_pwout.readline()
 
                         # stop reading when EOF is reached
-                        if (line.startswith("\n") or
-                           line.startswith("End final coordinates")):
+                        if line.startswith("\n") or line.startswith("End final coordinates"):
                             break
 
                         split_line = line.split()
@@ -361,6 +366,18 @@ class PwStuff(mdu.Universe):
                         self.atoms.append(cur_atm)
                         cur_atm_coords = np.array([float(i) for i in split_line[1:]])
                         self.ts_coords[-1].append(cur_atm_coords)
+                elif line.startswith("!    total energy"):
+                    line = line.split()
+                    energy = float(line[-2]) * RYDBERG_EV
+                    self.pw_other_info["ENERGIES"].append(energy)
+                elif line.startswith("     density ="):
+                    line = line.split()
+                    density = float(line[-2])
+                    self.pw_other_info["DENSITIES"].append(density)
+                elif line.startswith("     new unit-cell volume"):
+                    line = line.split()
+                    volume = float(line[-3])
+                    self.pw_other_info["VOLUMES"].append(volume)
                 else:
                     pass
 
@@ -456,3 +473,10 @@ class PwStuff(mdu.Universe):
                         cell_string.format(v=self.ts_boxes[frame_id].crt_c))
             except KeyError:
                 pass
+
+
+def read_pw_out(pw_out):
+    """Read a pw output file."""
+    pw_sys = PwStuff()
+    pw_sys.read_pwout(pw_out)
+    return pw_sys
