@@ -349,6 +349,7 @@ class PwStuff(mdu.Universe):
                     self.ts_boxes.append(cbox)
 
                 elif line.startswith("ATOMIC_POSITIONS"):
+                    self.atoms = []  # overwrite existing atoms
                     # prepare container for coordinates to come
                     self.ts_coords.append([])
 

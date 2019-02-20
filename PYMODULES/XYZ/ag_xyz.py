@@ -126,7 +126,8 @@ class XYZ(mdu.Universe):
         Write a xyz-file.
         """
         if frame_ids == ():
-            frame_ids = [0]
+            print("***XYZ-Info: Writing last frame as default!")
+            frame_ids = [-1]
 
         num_atms = len(self.atoms)
 
@@ -134,7 +135,7 @@ class XYZ(mdu.Universe):
 
             for frame_id in frame_ids:
                 xyz_out.write("{}\n".format(num_atms))
-                xyz_out.write("Step: {} - {}\n".format(frame_id, title))
+                xyz_out.write("Step: {} - {}: ".format(frame_id, title))
                 # does not work out with box information -> change newline after
                 # comment line was written, maybe define comment line seperately
 
@@ -152,9 +153,9 @@ class XYZ(mdu.Universe):
                                        "alpha: {} beta: {} gamma: {}\n").format(self.ts_boxes[frame_id].ltc_a,
                                                                                 self.ts_boxes[frame_id].ltc_b,
                                                                                 self.ts_boxes[frame_id].ltc_c,
-                                                                                self.ts_boxes[frame_id].ltc_alpha,
-                                                                                self.ts_boxes[frame_id].ltc_beta,
-                                                                                self.ts_boxes[frame_id].ltc_gamma))
+                                                                                np.degrees(self.ts_boxes[frame_id].ltc_alpha),
+                                                                                np.degrees(self.ts_boxes[frame_id].ltc_beta),
+                                                                                np.degrees(self.ts_boxes[frame_id].ltc_gamma)))
                     else:
                         xyz_out.write(("xlo {} xhi {} "
                                        "ylo {} yhi {} "
