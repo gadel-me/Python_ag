@@ -121,6 +121,12 @@ if __name__ == "__main__":
                         help="XYZ file. Provides coordinates.",
                         )
 
+    coords.add_argument("-pwout",
+                        default=None,
+                        metavar="bar.pw_out",
+                        help="PW-output file. Provides coordinates.",
+                        )
+
     coords.add_argument("-inpcrd",
                         default=None,
                         metavar="bar.inpcrd",
@@ -196,6 +202,8 @@ if __name__ == "__main__":
         sys_coords.read_xyz(args.xyz)
     elif args.inpcrd is not None:
         sys_coords.read_inpcrd(args.inpcrd)
+    elif args.pwout is not None:
+        sys_coords.read_pwout(args.pwout)
     else:
         raise Warning("This should not have happened (2).")
 
