@@ -894,7 +894,11 @@ class LmpStuff(mdu.Universe):
             if self.atoms:
                 lmpdat_out.write("Atoms\n")
                 lmpdat_out.write("\n")
-                longest_grp_id = len(str(self.atoms[-1].grp_id))
+                try:
+                    longest_grp_id = len(str(self.atoms[-1].grp_id))
+                except AttributeError:
+                    longest_grp_id = 2
+
                 longest_atm_key = len(str(len(self.atm_types)))
 
                 for cidx, catm in enumerate(self.atoms):
@@ -902,6 +906,18 @@ class LmpStuff(mdu.Universe):
                     #cidx = self.atm_id_idx[catm.atm_id]
                     #cidx = catm.atm_id
                     # atom-id
+                    if not hasattr(catm, "atm_id"):
+                        catm.atm_id = cidx
+
+                    if not hasattr(catm, "grp_id"):
+                        catm.grp_id = 1
+
+                    if not hasattr(catm, "atm_key"):
+                        catm.atm_key = 1
+
+                    if not hasattr(catm, "chge"):
+                        catm.chge = 0.0
+
                     lmpdat_out.write("{0:<8d} {1:<{width_2}d}      {2:<{width_3}d} {3: >10.6f} {c[0]: >16.6f} {c[1]: >12.6f} {c[2]: >12.6f}".format(
                         catm.atm_id,
                         catm.grp_id,

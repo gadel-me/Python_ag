@@ -2,12 +2,15 @@
 PW Module.
 
 Read/Write PW-Input-/Output-Files.
+When reading the output file, a common function might be used with decorators
+for reading pwin-coords entry and pwout-coords entry
 """
 
 from __future__ import print_function, division
 import math
 import os
 import re
+import pdb
 import numpy as np
 import scipy.constants as sc
 # import time
@@ -54,6 +57,10 @@ class PwStuff(mdu.Universe):
 
         Cell vector alat (celldm(1)) is converted to angstrom when read.
         """
+        # container to supply atoms from "ATOMIC_POSITIONS" with info from "ATOMIC_SPECIES"
+        # which may be compared to lammps "Masses" and "Atoms" input
+        atm_types_ptrs = {}
+
         with open(pwin) as opened_pwin:
             line = opened_pwin.readline()
             while line != '':
@@ -196,6 +203,8 @@ class PwStuff(mdu.Universe):
                         self.atm_types[atmcnt] = mds.Atom(sitnam=split_line[0],
                                                           weigh=float(split_line[1]),
                                                           pseudopotential=split_line[2])
+                        # "C": 0, "H": 1, and so on
+                        atm_types_ptrs[split_line[0]] = atmcnt
                         atmcnt += 1
                 elif line.startswith("ATOMIC_POSITIONS"):
                     # GET ATOM COORDINATES
@@ -209,7 +218,19 @@ class PwStuff(mdu.Universe):
                             break
 
                         split_line = line.split()
-                        self.atoms.append(mds.Atom(sitnam=split_line[0]))
+                        # omit further information if dictionary is empty (should not happen)
+                        cur_atm_sitnam = split_line[0]
+
+                        if atm_types_ptrs == {}:
+                            self.atoms.append(mds.Atom(sitnam=cur_atm_sitnam))
+                        else:
+                            cur_atm_key = atm_types_ptrs[cur_atm_sitnam]
+                            #cur_atm_key = self.atm_types[cur_atm_key_idx]
+                            self.atoms.append(mds.Atom(
+                                sitnam=cur_atm_sitnam,
+                                atm_key=cur_atm_key))
+                            #pdb.set_trace()
+
                         # add coordinates from current atom to the current frame
                         self.ts_coords[-1].append(np.array([float(i) for i in split_line[1:]]))
 
@@ -348,10 +369,22 @@ class PwStuff(mdu.Universe):
 
                     self.ts_boxes.append(cbox)
 
+                elif line.startswith("     atomic species"):
+                    line = opened_pwout.readline()
+                    atm_types_ptrs = {}
+                    atm_type_cntr = 0
+
+                    while line != '\n':
+                        #print(repr(line))
+                        atm_types_ptrs[line.split()[0]] = atm_type_cntr
+                        atm_type_cntr += 1
+                        line = opened_pwout.readline()
+
                 elif line.startswith("ATOMIC_POSITIONS"):
                     self.atoms = []  # overwrite existing atoms
                     # prepare container for coordinates to come
                     self.ts_coords.append([])
+                    atm_cntr = 0
 
                     # read the coordinates
                     while line != '':
@@ -363,10 +396,15 @@ class PwStuff(mdu.Universe):
 
                         split_line = line.split()
 
-                        cur_atm = mds.Atom(sitnam=split_line[0])
+                        cur_atm = mds.Atom(
+                            sitnam=split_line[0],
+                            atm_id=atm_cntr,
+                            atm_key=atm_types_ptrs[split_line[0]])
                         self.atoms.append(cur_atm)
                         cur_atm_coords = np.array([float(i) for i in split_line[1:]])
                         self.ts_coords[-1].append(cur_atm_coords)
+                        atm_cntr += 1
+
                 elif line.startswith("!    total energy"):
                     line = line.split()
                     energy = float(line[-2]) * RYDBERG_EV
