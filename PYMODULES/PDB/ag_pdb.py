@@ -2,20 +2,22 @@ from __future__ import print_function
 from __future__ import division
 import numpy as np
 #import copy
-#import md_box as mdb
+import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
 #import struct
 #import ag_lmpdcd_helpers as agldh
 #from natsort import natsorted
 
-__version__ = "2018-03-20"
+__version__ = "2019-03-07"
 
 
 class PdbStuff(mdu.Universe):
     """
     Read file in pdb format. This is very early alpha stage and lots of stuff
     from the pdb format cannot (yet) be read.
+
+    Sources: http://www.wwpdb.org/documentation/file-format-content/format33/sect8.html#CRYST1
     """
     def __init__(self):
         mdu.Universe.__init__(self)
@@ -67,6 +69,17 @@ class PdbStuff(mdu.Universe):
                                                 atm_id2=id_2)
                                 bnd_idx += 1
                                 self.bonds.append(cbnd)
+                elif line.startswith("CRYST1"):
+                    a = float(line[7:16])
+                    b = float(line[16:25])
+                    c = float(line[25:34])
+                    alpha = float(line[34:41])
+                    beta = float(line[40:47])
+                    gamma = float(line[48:55])
+                    cbox = mdb.Box(
+                        boxtype="lattice", ltc_a=a, ltc_b=b, ltc_c=c,
+                        ltc_alpha=alpha, ltc_beta=beta, ltc_gamma=gamma)
+                    self.ts_boxes.append(cbox)
                 else:
                     pass
 
