@@ -10,7 +10,7 @@ class LogUniverse(object):
     """
     def __init__(self):
         """
-        data = {ikey: [value1, value2, ...], jkey: [value1, value2, ...], ...}
+        data = [{ikey: [value1, value2, ...], jkey: [value1, value2, ...], ...}]
         keys   str; keywords such as 'Step', 'Temp'
         value: list/tuple of floats/ints;
         """
