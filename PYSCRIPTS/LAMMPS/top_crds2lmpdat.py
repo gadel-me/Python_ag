@@ -140,6 +140,11 @@ if __name__ == "__main__":
                              "(force field and topology information will be ignored)."
                         )
 
+    coords.add_argument("-gau_in",
+                        default=None,
+                        metavar="foo.gau",
+                        help="Gaussian input file with coordinates.")
+
     parser.add_argument("-sysname",
                         metavar="UNK",
                         default="UNK",
@@ -204,6 +209,8 @@ if __name__ == "__main__":
         sys_coords.read_inpcrd(args.inpcrd)
     elif args.pwout is not None:
         sys_coords.read_pwout(args.pwout)
+    elif args.gua_in is not None:
+        sys_coords.read_gau(args.gau_in)
     else:
         raise Warning("This should not have happened (2).")
 
