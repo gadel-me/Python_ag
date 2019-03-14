@@ -328,7 +328,7 @@ class PwStuff(mdu.Universe):
             print("***Warning: Folder for Pseudopotentials does not exist!")
             #time.sleep(5)
 
-    def read_pwout(self, pwout):
+    def read_pwout(self, pwout, read_crystal_sections=False):
         """
         CAVEAT: UNDER CONSTRUCTION! Read the output of pw.x.
 
@@ -339,7 +339,6 @@ class PwStuff(mdu.Universe):
         with open(pwout) as opened_pwout:
             line = opened_pwout.readline()
             while line != '':
-
                 if line.startswith("CELL_PARAMETERS"):
                     # get alat
                     split_line = line.split()
@@ -381,7 +380,9 @@ class PwStuff(mdu.Universe):
                         line = opened_pwout.readline()
 
                 elif line.startswith("ATOMIC_POSITIONS"):
-                    self.atoms = []  # overwrite existing atoms
+                    #TODO: need a smarter way to do this!
+                    # overwrite existing atoms
+                    self.atoms = []
                     # prepare container for coordinates to come
                     self.ts_coords.append([])
                     atm_cntr = 0
@@ -406,21 +407,71 @@ class PwStuff(mdu.Universe):
                         atm_cntr += 1
 
                 elif line.startswith("!    total energy"):
-                    line = line.split()
-                    energy = float(line[-2]) * RYDBERG_EV
+                    split_line = line.split()
+                    energy = float(split_line[-2]) * RYDBERG_EV
                     self.pw_other_info["ENERGIES"].append(energy)
                 elif line.startswith("     density ="):
-                    line = line.split()
-                    density = float(line[-2])
+                    split_line = line.split()
+                    density = float(split_line[-2])
                     self.pw_other_info["DENSITIES"].append(density)
                 elif line.startswith("     new unit-cell volume"):
-                    line = line.split()
-                    volume = float(line[-3])
+                    split_line = line.split()
+                    volume = float(split_line[-3])
                     self.pw_other_info["VOLUMES"].append(volume)
                 else:
                     pass
 
+                # get alat value
+                if read_crystal_sections is True:
+
+                    if line.startswith("     lattice parameter (alat)"):
+                        alat = float(line.split()[-2]) * BOHR_ANGSTROM
+                        #print(alat)
+
+                    # get box with box vectors
+                    elif line.startswith("     crystal axes: (cart. coord. in units of alat)"):
+                        # get box vectors
+                        cbox = mdb.Box(boxtype="cartesian")
+                        cbox.unit = "alat"
+
+                        cbox.crt_a = [float(i) for i in opened_pwout.readline().split()[3:6]]
+                        cbox.crt_b = [float(i) for i in opened_pwout.readline().split()[3:6]]
+                        cbox.crt_c = [float(i) for i in opened_pwout.readline().split()[3:6]]
+                        cbox.alat2angstrom(alat)
+                        self.ts_boxes.append(cbox)
+
+                    elif line.startswith("   Cartesian axes"):
+                        # overwrite existing atoms
+                        self.atoms = []
+                        # prepare container for coordinates to come
+                        self.ts_coords.append([])
+                        atm_cntr = 0
+
+                        # skip next two lines
+                        opened_pwout.readline()
+                        opened_pwout.readline()
+
+                        # read the coordinates
+                        while line != '':
+                            line = opened_pwout.readline()
+
+                            # stop reading when end of current entry is reached
+                            if line.startswith("\n"):
+                                break
+
+                            split_line = line.split()
+
+                            cur_atm = mds.Atom(
+                                sitnam=split_line[1],
+                                atm_id=atm_cntr,
+                                atm_key=atm_types_ptrs[split_line[1]])
+                            self.atoms.append(cur_atm)
+                            cur_atm_coords = np.array([float(i) * alat for i in split_line[6:9]])
+                            self.ts_coords[-1].append(cur_atm_coords)
+                            atm_cntr += 1
+
                 line = opened_pwout.readline()
+                split_line = None
 
     def _write_section(self, opened_file_instance, frame_id, keyword):
         """
