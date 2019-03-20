@@ -27,23 +27,29 @@ def get_shift_vector(lmpdat, dcd):
     return vt_shift / np.linalg.norm(vt_shift)
 
 
-def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output, save_step=100000, non_covalent=None):
+def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
+                     save_step=100000, settings_file=None, non_covalent=None):
     """
     """
     thermargs = ["step", "temp", "pe", "ebond", "eangle", "edihed", "eimp", "evdwl", "ecoul"]
     lmp = lammps(cmdargs=["-screen", "lmp_out.txt"])
     lmp.command("log {}.lmplog".format(output))
-    lmp.command("units metal")
-    lmp.command("boundary p p p")
-    lmp.command("dimension 3")
-    lmp.command("atom_style full")
-    lmp.command("pair_style lj/cut/coul/cut 30.0")
-    lmp.command("bond_style harmonic")
-    lmp.command("angle_style harmonic")
-    lmp.command("dihedral_style charmm")
-    lmp.command("improper_style cvff")
-    lmp.command("special_bonds amber")
-    lmp.command("timestep 0.001")
+
+    if settings_file is None:
+        lmp.command("units metal")
+        lmp.command("boundary p p p")
+        lmp.command("dimension 3")
+        lmp.command("atom_style full")
+        lmp.command("pair_style lj/cut/coul/cut 30.0")
+        lmp.command("bond_style harmonic")
+        lmp.command("angle_style harmonic")
+        lmp.command("dihedral_style charmm")
+        lmp.command("improper_style cvff")
+        lmp.command("special_bonds amber")
+        lmp.command("timestep 0.001")
+    else:
+        lmp.file(settings_file)
+
     lmp.command("read_restart {}".format(lmprst))
 
     if non_covalent is not None:
@@ -72,7 +78,7 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output, sav
         lmp.command("displace_atoms displaced move {a[0]} {a[1]} {a[2]} units box".format(a=vt_add))
 
         try:
-            lmp.command("minimize 1e-6 1e-9 2000000 100000")
+            lmp.command("minimize 1e-6 1e-9 2000000 1000000")
         except:
             print("***Error:  Simulation crashed (minimization)!")
             MPI.COMM_WORLD.Abort()

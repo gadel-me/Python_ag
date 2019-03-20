@@ -59,6 +59,7 @@ class PwStuff(mdu.Universe):
         """
         # container to supply atoms from "ATOMIC_POSITIONS" with info from "ATOMIC_SPECIES"
         # which may be compared to lammps "Masses" and "Atoms" input
+        #TODO write frozen atoms
         atm_types_ptrs = {}
 
         with open(pwin) as opened_pwin:
@@ -226,13 +227,18 @@ class PwStuff(mdu.Universe):
                         else:
                             cur_atm_key = atm_types_ptrs[cur_atm_sitnam]
                             #cur_atm_key = self.atm_types[cur_atm_key_idx]
-                            self.atoms.append(mds.Atom(
-                                sitnam=cur_atm_sitnam,
-                                atm_key=cur_atm_key))
-                            #pdb.set_trace()
+                            catom = mds.Atom(sitnam=cur_atm_sitnam, atm_key=cur_atm_key)
+
+                            # read frozen info if given
+                            if len(split_line) == 7:
+                                catom.ifrz_x = int(split_line[-3])
+                                catom.ifrz_y = int(split_line[-2])
+                                catom.ifrz_z = int(split_line[-1])
+
+                            self.atoms.append(catom)
 
                         # add coordinates from current atom to the current frame
-                        self.ts_coords[-1].append(np.array([float(i) for i in split_line[1:]]))
+                        self.ts_coords[-1].append(np.array([float(i) for i in split_line[1:4]]))
 
                 elif line.startswith("K_POINTS"):
                     kpoints_line = line.split()
@@ -334,6 +340,7 @@ class PwStuff(mdu.Universe):
 
         Currently this only reads the coordinates and cell vectors.
         Cell vector alat (celldm(1)) is converted to angstrom when read.
+        #TODO READ FROZEN ATOMS
         """
         #print(pwout)
         with open(pwout) as opened_pwout:
@@ -473,6 +480,38 @@ class PwStuff(mdu.Universe):
                 line = opened_pwout.readline()
                 split_line = None
 
+    def _convert_frozen_state(self):
+        """
+        In gaussian frozen atoms are marked using -1, unfrozen atoms are marked using 0.
+        In quantum espresso on the other hand, frozen atoms are marked using 0, unfrozen atoms have a 1.
+        Since gaussian does not distinguish in which direction atoms are allowed to move, quantum espresso
+        does differ between moving directions. Therefor it is necessary to know where the frozen info came
+        from and to what it will be converted to.
+        #TODO THIS FUNCTION IS JUST A VERY DIRTY FIX UNTIL THE CONCEPT OF
+        #TODO HANDLING FROZEN ATOMS IS REDONE (E.G. KNOWING WHERE THE FREEZING INFORMATION COMES FROM)
+        """
+        # first check if there is a reason to freeze at all
+        for atom in self.atoms:
+            if atom.ifrz is not None:
+                frozen_atom_found = True
+                break
+        else:
+            frozen_atom_found = False
+
+        if frozen_atom_found is True:
+            for atom in self.atoms:
+                if atom.ifrz == -1:
+                    atom.ifrz_x = 0
+                    atom.ifrz_y = 0
+                    atom.ifrz_z = 0
+                elif atom.ifrz == 0 or atom.ifrz is None:
+                    atom.ifrz_x = 1
+                    atom.ifrz_y = 1
+                    atom.ifrz_z = 1
+                else:
+                    #ifrz is None or 2 for example
+                    pass
+
     def _write_section(self, opened_file_instance, frame_id, keyword):
         """
         Help writing an input section.
@@ -503,6 +542,8 @@ class PwStuff(mdu.Universe):
         frame_id                int; id of coordinates to write
         filename                str; pw-output file to write to
         verbosity               str; high | low
+        #TODO NUMBER OF ATOMS WRONG WHEN READ FROM GAUSSIAN
+        #TODO WRITE FROZEN ATOMS
         """
         self.pw_entries["CONTROL"]["verbosity"] = verbosity
         #self.pw_entries["SYSTEM"]["A"] = agv.get_mag(self.ts_boxes[frame_id].crt_a)
@@ -528,11 +569,28 @@ class PwStuff(mdu.Universe):
 
             # Atom Coordinates
             opened_filename.write("ATOMIC_POSITIONS {angstrom}\n")
-            coordinate_string = "{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n"
+            # check if a single atom is frozen -> all atoms have to be frozen
+            for atom in self.atoms:
+                if hasattr(atom, "ifrz_x") and hasattr(atom, "ifrz_y") and hasattr(atom, "ifrz_z"):
+                    print_frozen_state = True
+                    coordinate_string = "{0:<5s} {1:> 18.9f}{2:> 18.9f}{3:> 18.9f}{4:> 18}{5:> 18}{6:> 18}\n"
+                    break
+            else:
+                print_frozen_state = False
+                coordinate_string = "{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n"
+
             for atom, atom_coordinates in zip(self.atoms,
                                               self.ts_coords[frame_id]):
-                opened_filename.write(coordinate_string.format(
-                    atom.sitnam, c=atom_coordinates))
+
+                # write format for frozen atoms
+                if print_frozen_state is False:
+                    opened_filename.write(coordinate_string.format(
+                        atom.sitnam, c=atom_coordinates))
+                else:
+                    opened_filename.write(coordinate_string.format(
+                        atom.sitnam,
+                        atom_coordinates[0], atom_coordinates[1], atom_coordinates[2],
+                        atom.ifrz_x, atom.ifrz_y, atom.ifrz_z))
 
             opened_filename.write("\n")
 

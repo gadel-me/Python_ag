@@ -273,7 +273,7 @@ if __name__ == "__main__":
     # change indices to start with 1 (everything is newly ordered,
     # internally starting with 0 from 1st atom given in coordinates)
     sys_topo_ff.change_indices(incr=1, mode="increase")
-    sys_topo_ff.write_lmpdat(args.out, title=args.sysname, cgcmm=True)
+    sys_topo_ff.write_lmpdat(args.out, frame_id=0, title=args.sysname, cgcmm=True)
 
     # just for debugging
     # already done by write lammps data routine - just for testing

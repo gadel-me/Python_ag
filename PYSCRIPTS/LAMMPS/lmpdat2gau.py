@@ -57,9 +57,10 @@ lmpdat.read_lmpdat(args.lmpdat)
 if args.name_by_mass is True:
     lmpdat.guess_atomtypes(by_mass=True, overwrite=True)
 
-charge = int(sum([i.chge for i in lmpdat.atoms]))
+charge = int(round(sum([i.chge for i in lmpdat.atoms])))
+print(charge)
 lmpdat.gaussian_charges = [charge]
 lmpdat.gaussian_multiplicities = args.multiplicities
 lmpdat.job_settings = args.job_settings
 lmpdat.change_indices()
-lmpdat.write_gau(args.output_name, -1, False, title="Converted lammps data file")
+lmpdat.write_gau(args.output_name, -1, None, title="Converted lammps data file")

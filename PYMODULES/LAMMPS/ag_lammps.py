@@ -583,8 +583,7 @@ class LmpStuff(mdu.Universe):
 
         # check charge of the system
         total_charge = sum([float(i.chge) for i in self.atoms])
-        if total_charge != 0:
-            print("***Warning/Info: Total charge of the system is {}".format(total_charge))
+        print("***Info: Total charge of the system is {}".format(total_charge))
 
     def _parse_cgcmm(self, cur_line):
         """

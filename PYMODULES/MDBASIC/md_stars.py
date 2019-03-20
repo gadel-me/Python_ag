@@ -24,6 +24,10 @@ class Atom(IterMixin):
                 https://docs.scipy.org/doc/scipy/reference/constants.html#scipy.constants.physical_constants
     Currently implemented unit-conversion: kcal/mol, kj/mol, eV
     Remember: r0 is not sigma; r0 = 2**(1/6)*sigma (using Lennard-Jones Potential)
+    #TODO CHANGE FROZEN TO A LIST WHERE THE FIRST MEMBER IS THE PROGRAM
+    #TODO IT HAS THE INFO FROM AND THEN X Y AND Z AS PARAMETERS ON WHAT TO FREEZE
+    #TODO FOR GAUSSIAN X Y AND Z SHALL BE THE SAME NUMBER
+    #TODO A CHECK SHOULD BE DONE TO ASSERT THAT THE INFO FITS THE PROGRAM IT WAS FROM
     """
     def __init__(self,
                  atm_id=None,
@@ -36,6 +40,9 @@ class Atom(IterMixin):
                  res=None,
                  nrept=None,
                  ifrz=None,
+                 ifrz_x=None,
+                 ifrz_y=None,
+                 ifrz_z=None,
                  igrp=None,
                  r0=None,
                  sigma=None,
@@ -74,6 +81,16 @@ class Atom(IterMixin):
 
         if ifrz is not None:
             self.ifrz = ifrz
+
+        # pw distinguishes freezing
+        if ifrz_x is not None:
+            self.ifrz_x = ifrz_x
+
+        if ifrz_y is not None:
+            self.ifrz_y = ifrz_y
+
+        if ifrz_z is not None:
+            self.ifrz_z = ifrz_z
 
         if igrp is not None:
             self.igrp = igrp
@@ -116,12 +133,12 @@ class Atom(IterMixin):
         Calculate sigma ij from the sigmas of the two atoms i and j.
         Sources:    http://lammps.sandia.gov/doc/pair_modify.html
         """
+        epsilon_ij = math.sqrt(self.epsilon * epsilon_j)
+
         if mix == "arithmetic":
-            sigma_ij   = (self.sigma + sigma_j)/2
-            epsilon_ij = math.sqrt(self.epsilon * epsilon_j)
+            sigma_ij = (self.sigma + sigma_j) / 2
         elif mix == "geometric":
             sigma_ij = math.sqrt(self.sigma * sigma_j)
-            epsilon_ij = math.sqrt(self.epsilon * epsilon_j)
         else:
             raise RuntimeError("'mix' has to be 'arithmetic' or 'geometric'!")
 

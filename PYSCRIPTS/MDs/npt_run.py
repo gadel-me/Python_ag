@@ -12,6 +12,17 @@ from mpi4py import MPI
 Caveat: Ice cube prevention and velocity creation is used on all atoms.
 """
 
+
+def check_settings_file(settings_file):
+    """Check if dreiding is in the settings file."""
+    with open(settings_file) as fin:
+        for line in fin:
+            if line.startswith("pair_style") and "hbond/dreiding" in line:
+                return True
+
+    return False
+
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-lmpdat",
@@ -49,10 +60,6 @@ parser.add_argument("-non_covalent",
                     metavar="*.lmpcfg",
                     help="lammps' input-file/-script with non covalent simulation " +
                          "settings (pair_styles, pair_coeffs).")
-
-parser.add_argument("-dreiding",
-                    action="store_true",
-                    help="Dreiding settings on/off")
 
 parser.add_argument("-group",
                     nargs="*",
@@ -169,21 +176,17 @@ else:
 if args.non_covalent is not None:
     lmp.file(args.non_covalent)
 
-    if args.dreiding is True:
-        lmp.command("variable E_hbond equal c_hb[2]")
-        lmp.command("compute hb all pair hbond/dreiding/lj")
-        lmp.command("variable n_hbond equal c_hb[1]")
+if check_settings_file(args.set) is True:
+    lmp.command("variable E_hbond equal c_hb[2]")
+    lmp.command("compute hb all pair hbond/dreiding/lj")
+    lmp.command("variable n_hbond equal c_hb[1]")
+    lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
+else:
+    lmp.command("thermo_style custom " + " ".join(thermargs))
 
 if args.additional_file is not None:
     pdb.set_trace()
     lmp.file(args.additional_file)
-
-# thermo stuff
-if args.dreiding is True:
-    lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
-else:
-    lmp.command("thermo_style custom " + " ".join(thermargs))
-#lmp.command("thermo_style custom " + " ".join(thermargs))
 
 lmp.command("thermo_modify lost warn flush yes")
 lmp.command("thermo {}".format(args.logsteps))

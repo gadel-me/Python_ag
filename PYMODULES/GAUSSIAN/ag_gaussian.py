@@ -418,6 +418,7 @@ class GauStuff(mdu.Universe):
                     gau_out.write("\n")
                 gau_out.write("\n")
 
+            #pdb.set_trace()
             if modredundant is not None:
                 gau_out.write(modredundant)
                 gau_out.write("\n" * 2)

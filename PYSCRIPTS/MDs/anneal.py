@@ -25,7 +25,7 @@ class bcolors:
     underline = '\033[4m'
 
 
-def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None):
+def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, ff_file=None):
     """
     """
 
@@ -47,9 +47,17 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None):
         lmp.command("dihedral_style charmm")
         lmp.command("improper_style cvff")
         lmp.command("special_bonds amber")
+        lmp.command("pair_modify shift yes")
         lmp.command("timestep 0.001")
+    else:
+        lmp.file(settings_file)
 
     lmp.command("read_data {}".format(lmpdat))
+
+    # read the force field file
+    if ff_file is not None:
+        lmp.file(ff_file)
+
     # make lammps calculate the value of the entity (bond, angle, dihedral)
     lmp.command("thermo_style custom " + " ".join(thermargs))
     lmp.command("thermo_modify lost warn flush yes")
@@ -70,8 +78,18 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None):
             print("***Error: Simulation crashed (annealing)! Force constants too high?")
             MPI.COMM_WORLD.Abort()
 
-        print(bcolors.yellow + "Quenching" + bcolors.endc)
+        print(bcolors.yellow + "Quenching 1" + bcolors.endc)
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(tmax, 0.0))
+
+        try:
+            lmp.command("run {}".format(steps*2))
+        except:
+            print("***Error: Simulation crashed (annealing)! Force constants too high?")
+            MPI.COMM_WORLD.Abort()
+
+        print(bcolors.yellow + "Quenching 2" + bcolors.endc)
+        lmp.command("unfix TFIX")
+        lmp.command("fix TFIX all langevin {} {} 100 24601".format(1.0, 1.0))
 
         try:
             lmp.command("run {}".format(steps*2))
@@ -91,10 +109,12 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("lmpdat", help="Lammps' data-file")
     PARSER.add_argument("-tmax", type=float, default=900)
-    PARSER.add_argument("-steps", type=int, default=1000000)
+    PARSER.add_argument("-steps", type=int, default=250000)
     PARSER.add_argument("-save_step", type=int, default=1000)
-    PARSER.add_argument("-cycles", type=int, default=5)
+    PARSER.add_argument("-cycles", type=int, default=3)
     PARSER.add_argument("-set", default=None)
+    PARSER.add_argument("-ff", default=None)
     PARSER.add_argument("-out", default="DEFAULTNAME", help="Name of energy files.")
     ARGS = PARSER.parse_args()
-    anneal(ARGS.lmpdat, ARGS.tmax, ARGS.steps, ARGS.save_step, ARGS.cycles, ARGS.out)
+    anneal(ARGS.lmpdat, ARGS.tmax, ARGS.steps, ARGS.save_step, ARGS.cycles,
+           ARGS.out, settings_file=ARGS.set, ff_file=ARGS.ff)
