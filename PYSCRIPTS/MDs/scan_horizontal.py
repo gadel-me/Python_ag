@@ -151,6 +151,7 @@ if __name__ == "__main__":
     PARSER.add_argument("lmpdat", help="Lammps' data-file with force field for cbz dimer system")
     PARSER.add_argument("lmprst", help="Lammps' restart file from minimization run of the cbz dimer system")
     PARSER.add_argument("dcd", help="dcd file from minimization run of the cbz dimer system")
+    PARSER.add_argument("-set", default=None)
     PARSER.add_argument("-non_covalent", help="file with pair coeffs for lammps and/or dreiding parameters")
     PARSER.add_argument("-o", default="DEFAULTNAME", help="Prefix of output files")
     ARGS = PARSER.parse_args()
@@ -161,6 +162,6 @@ if __name__ == "__main__":
     #lammps_restart = minimize_folder + "CBZ_gaff-0_2H_dimer.lmpdat_out.lmprst"
     SHIFT_VECTOR = get_shift_vector(ARGS.lmpdat, ARGS.dcd)
     #outname = "2H_flexible_scan"
-    scan_coordinates(ARGS.lmprst, range(31, 61), [25, 26, 28, 55, 56, 58], SHIFT_VECTOR, ARGS.o, non_covalent=ARGS.non_covalent)
+    scan_coordinates(ARGS.lmprst, range(31, 61), [25, 26, 28, 55, 56, 58], SHIFT_VECTOR, ARGS.o, settings_file=ARGS.set, non_covalent=ARGS.non_covalent)
     write_summary(calculate_distances(ARGS.lmpdat, ARGS.o + ".dcd", [25], [55]), get_energies(ARGS.o + ".lmplog"))
     norm_energy("md_energies.txt", "md_energies_normed.txt")
