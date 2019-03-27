@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
-import os
-import re
-import argparse
 import numpy as np
-#import scipy.constants as sc
 import pandas as pd
 import pdb
 import md_box as mdb
 from ag_pw import read_pw_out
 from top_crds2lmpdat import get_cell_from_cif, get_other_stuff_from_cif
 import ag_lmplog
-#from collections import OrderedDict
+import ag_unify_md as agum
 
 
 class Polymorph(object):
@@ -42,7 +38,6 @@ class Polymorph(object):
         if filetype == "pwout":
             molsys = read_pw_out(filename)
             molsys.ts_boxes[-1].box_cart2lat()
-
             # get box and convert angles to degrees
             self.box = molsys.ts_boxes[-1]
             self.box.ltc_alpha = np.degrees(molsys.ts_boxes[-1].ltc_alpha)
@@ -76,9 +71,11 @@ class Polymorph(object):
 
             with open(filename) as fin:
                 line = fin.readline()
-                while line != "":
+                while line != '':
                     if line.startswith("Loop time of"):
                         self.natoms = int(line.split()[-2])
+
+                    line = fin.readline()
 
         elif filetype == "cif":
             # box stuff
@@ -89,14 +86,14 @@ class Polymorph(object):
             self.box.ltc_gamma = np.degrees(self.box.ltc_gamma)
 
             # other
-            self.box.density = cif_others["density"]
-            self.box.volume = cif_others["cell_volume"]
-            self.box.temp = cif_others["cell_measurement_temperature"]
+            self.density = cif_others["density"]
+            self.volume = cif_others["cell_volume"]
+            self.temp = cif_others["cell_measurement_temperature"]
         else:
             raise Warning("Only pwout, lmplog and cif are valid keywords")
 
-        if filetype == "lmplog" or filetype == "pw":
-            self.nmols = self.natoms / self.atoms_p_molecule
+        if filetype == "lmplog" or filetype == "pwout":
+            self.nmols = int(self.natoms / self.atoms_p_molecule)
         else:
             self.nmols = cif_others["cell_formula_units"]
 
@@ -105,7 +102,7 @@ class Polymorph(object):
         Convert the energy from a given file to the energy unit given.
         """
         if energy_unit == "kcal_mol":
-            self.energy_kcal = self.energy * 23
+            self.energy *= 23
 
     def get_density_p_molecule(self):
         """
@@ -123,7 +120,7 @@ class Polymorph(object):
         """
         Get the energy that the crystallization generates.
         """
-        self.energy_gain = self.energy - energy_pmol_in_vacuo
+        self.energy_gain = self.energy_p_molecule - energy_pmol_in_vacuo
 
     def get_volume_p_molecule(self):
         """
@@ -144,51 +141,166 @@ class Polymorph(object):
 
 
 if __name__ == '__main__':
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("cif", default=None)
-    PARSER.add_argument("-lmplogs", nargs="2", default=None, help="First file is the main cell, second file is the single molecule in vacuo")
-    PARSER.add_argument("-pws", nargs="2", default=None, help="First file is the main cell, second file is the single molecule in vacuo")
-    ARGS = PARSER.parse_args()
+    ##################
+    #  experiment    #
+    ##################
+    main_path = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/1.experiment/{}"
+    exp_cbzi   = main_path.format("polymorph_I/1.CBZI.cif")
+    exp_cbzii  = main_path.format("polymorph_II/1.CBZII.cif")
+    exp_cbziii = main_path.format("polymorph_III/1.CBZIII.cif")
+    exp_cbziv  = main_path.format("polymorph_IV/1.CBZIV.cif")
+    exp_cbzv   = main_path.format("polymorph_V/1.CBZV.cif")
+    #cif_ucell_files  = (exp_cbzi, exp_cbzii, exp_cbziii, exp_cbziv, exp_cbzv)
+    cif_ucell_files  = {"I": (exp_cbzi, 6.1), "II": (exp_cbzii, 5.72), "III": (exp_cbziii, 6.41), "IV": (exp_cbziv, 5.95), "V": (exp_cbzv, 0.0)}
 
-    ATOMS_P_MOLECULE = 30
-    CIF_POLYMORPH = Polymorph(ATOMS_P_MOLECULE)
-    CIF_POLYMORPH.read_file(ARGS.cif, "cif")
-    CIF_POLYMORPH.volume_p_molecule()
+    exp_polymorphs = {}
+    # energies in kcal*mol-1 from GRZESIAK, ADAM L., et al.,
+    # JOURNAL OF PHARMACEUTICAL SCIENCES, vol. 92, no. 11, 2003, p. 12.
+    #cif_energies = (6.1, 5.72, 6.41, 5.95, 0.0)
 
-    CIF_RESULTS = {"a": CIF_POLYMORPH.box.ltc_a,
-                   "b": CIF_POLYMORPH.box.ltc_b,
-                   "c": CIF_POLYMORPH.box.ltc_c,
-                   "alpha": CIF_POLYMORPH.box.ltc_alpha,
-                   "beta": CIF_POLYMORPH.box.ltc_beta,
-                   "gamma": CIF_POLYMORPH.box.ltc_gamma,
-                   "volume p. molecule": CIF_POLYMORPH.volume_p_molecule}
+    for polymorph, (ucell_file, energy) in cif_ucell_files.iteritems():
+        cur_polymorph = Polymorph(30)
+        cur_polymorph.read_file(ucell_file, "cif")
+        cur_polymorph.get_volume_p_molecule()
+        cur_polymorph.energy_gain = energy
+        exp_polymorphs[polymorph] = cur_polymorph
 
-    if ARGS.lmplogs[0] is not None and ARGS.lmplogs[1] is not None:
-        LMPLOG_SINGLE_MOLECULE = Polymorph(1)
-        LMPLOG_SINGLE_MOLECULE.convert_energy()
+    del cur_polymorph
 
-        LMPLOG_SUPERCELL = Polymorph(ATOMS_P_MOLECULE)
-        LMPLOG_SUPERCELL.convert_energy()
-        LMPLOG_SUPERCELL.get_energy_p_molecule()
-        LMPLOG_SUPERCELL.get_volume_p_molecule()
-        LMPLOG_SUPERCELL.get_energy_generation(LMPLOG_SINGLE_MOLECULE.energy)
-        LMPLOG_SUPERCELL.supercell_to_unitcell(CIF_POLYMORPH.box)
+    ####################################
+    #  ab initio (quantum espresso)    #
+    ####################################
+    pw_cbz_single = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/1.single/2.quantum_espresso/CBZIII_residue0_box_40_40_40_gamma/CBZIII_residue0_box_40_40_40.pwscf_out"
+    PW_SINGLE_MOLECULE = agum.Unification()
+    PW_SINGLE_MOLECULE.read_pwout(pw_cbz_single)
 
-        MD_RESULTS = {"a": LMPLOG_SUPERCELL.ucell_a,
-                      "b": LMPLOG_SUPERCELL.ucell_b,
-                      "c": LMPLOG_SUPERCELL.ucell_c,
-                      "alpha": LMPLOG_SUPERCELL.box.ltc_alpha,
-                      "beta": LMPLOG_SUPERCELL.box.ltc_beta,
-                      "gamma": LMPLOG_SUPERCELL.box.ltc_gamma,
-                      "volume p. molecule": LMPLOG_SUPERCELL.volume_p_molecule,
-                      "energy gain p. molecule": LMPLOG_SUPERCELL.energy_gain}
+    main_path = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/3.unit_cell/3.vc_relax/{}"
+    pw_cbzi   = main_path.format("CBZI/CBZI_vc_relax.pwscf_out")
+    pw_cbzii  = main_path.format("CBZII/CBZII_vc_relax.pwscf_out")
+    pw_cbziii = main_path.format("CBZIII/CBZIII_vc_relax.pwscf_out")
+    pw_cbziv  = main_path.format("CBZIV/CBZIV_vc_relax.pwscf_out")
+    pw_cbzv   = main_path.format("CBZV/CBZV_vc_relax.pwscf_out")
+    #pw_ucell_files  = (pw_cbzi, pw_cbzii, pw_cbziii, pw_cbziv, pw_cbzv)
+    pw_ucell_files  = {"I": pw_cbzi, "II": pw_cbzii, "III": pw_cbziii, "IV": pw_cbziv, "V": pw_cbzv}
 
-    if ARGS.pws[0] is not None and ARGS.pws[1] is not None:
-        PW_SINGLE_MOLECULE = Polymorph(1)
-        PW_SINGLE_MOLECULE.convert_energy()
+    abinitio_polymorphs = {}
 
-        PW_UNITCELL = Polymorph(ATOMS_P_MOLECULE)
-        PW_UNITCELL.convert_energy()
-        PW_UNITCELL.get_energy_p_molecule()
-        PW_UNITCELL.get_volume_p_molecule()
-        PW_UNITCELL.get_energy_generation(PW_SINGLE_MOLECULE.energy)
+    for polymorph, filename in pw_ucell_files.iteritems():
+        cur_polymorph = Polymorph(30)
+        cur_polymorph.read_file(filename, "pwout")
+        cur_polymorph.get_volume_p_molecule()
+        # convert to kcal*mol-1
+        cur_polymorph.convert_energy()
+        cur_polymorph.get_energy_p_molecule()
+        energy_p_molecule_vacuo = PW_SINGLE_MOLECULE.pw_other_info["ENERGIES"][-1] * 23
+        cur_polymorph.get_energy_generation(energy_p_molecule_vacuo)
+        abinitio_polymorphs[polymorph] = cur_polymorph
+        del cur_polymorph
+
+    ##############################################################
+    # molecular dynamics (with different force field iterations) #
+    ##############################################################
+    path_single = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/1.single_molecule/CBZ_gaff-{0}_annealing/CBZ_gaff-{0}_annealing.lmplog"
+
+    lammps_iterations = {}
+    main_path = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/3.cell_relax/{}"
+    path_scell_dreiding_off = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_off/CBZ{1}_gaff-{0}-min.lmplog")
+    path_scell_dreiding_on  = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_on/CBZ{1}_gaff-{0}-min.lmplog")
+
+    for iteration in (0, 105, 107, 108, 110):
+        lammps_polymorphs = {}
+
+        FF_SINGLE_MOLECULE = ag_lmplog.LmpLog()
+        FF_SINGLE_MOLECULE.read_lmplog(path_single.format(iteration))
+        # convert to kcal*mol-1
+        FF_SINGLE_MOLECULE.data[-1]["PotEng"][-1] *= 23
+
+        for index, polymorph in enumerate(("I", "II", "III", "IV", "V")):
+
+            if iteration == 0:
+                # no dreiding force field for stock gaff force field
+                cur_file = path_scell_dreiding_off.format(iteration, polymorph)
+            else:
+                cur_file = path_scell_dreiding_on.format(iteration, polymorph)
+
+            #print(cur_file)
+            cur_polymorph = Polymorph(30)
+            cur_polymorph.read_file(cur_file, "lmplog")
+            # convert to kcal*mol-1
+            cur_polymorph.convert_energy()
+            cur_polymorph.get_energy_p_molecule()
+            cur_polymorph.get_volume_p_molecule()
+            cur_polymorph.get_energy_generation(FF_SINGLE_MOLECULE.data[-1]["PotEng"][-1])
+            cur_polymorph.supercell_to_unitcell(exp_polymorphs[polymorph].box)
+            lammps_polymorphs[polymorph] = cur_polymorph
+
+        lammps_iterations[iteration] = lammps_polymorphs
+
+# create pandas table
+rows = ["", "a", "b", "c", "alpha", "beta", "gamma", "vol p. molecule / A**3",
+        "density / g*cm**-3", "E lattice p. molecule / kcal*mol**-1", "Energy gain / kcal*mol**-1"]
+df_combined = pd.DataFrame()
+#dataframes = {}
+
+frames = []
+for polymorph in ("I", "II", "III", "IV", "V"):
+    #frames = []
+
+    exp_dataframe = pd.DataFrame(
+        [
+            "experiment",
+            exp_polymorphs[polymorph].box.ltc_a,
+            exp_polymorphs[polymorph].box.ltc_b,
+            exp_polymorphs[polymorph].box.ltc_c,
+            exp_polymorphs[polymorph].box.ltc_alpha,
+            exp_polymorphs[polymorph].box.ltc_beta,
+            exp_polymorphs[polymorph].box.ltc_gamma,
+            exp_polymorphs[polymorph].volume_p_molecule,
+            exp_polymorphs[polymorph].density,
+            exp_polymorphs[polymorph].energy,
+            exp_polymorphs[polymorph].energy_gain,
+        ], index=rows, columns=[polymorph])
+
+    frames.append(exp_dataframe)
+
+    abinitio_dataframe = pd.DataFrame(
+        [
+            "ab initio",
+            abinitio_polymorphs[polymorph].box.ltc_a,
+            abinitio_polymorphs[polymorph].box.ltc_b,
+            abinitio_polymorphs[polymorph].box.ltc_c,
+            abinitio_polymorphs[polymorph].box.ltc_alpha,
+            abinitio_polymorphs[polymorph].box.ltc_beta,
+            abinitio_polymorphs[polymorph].box.ltc_gamma,
+            abinitio_polymorphs[polymorph].volume_p_molecule,
+            abinitio_polymorphs[polymorph].density,
+            abinitio_polymorphs[polymorph].energy_p_molecule,
+            abinitio_polymorphs[polymorph].energy_gain,
+        ], index=rows, columns=[polymorph])
+
+    frames.append(abinitio_dataframe)
+    #pdb.set_trace()
+
+    for iteration in lammps_iterations:
+        forcefield_dataframe = pd.DataFrame(
+            [
+                "gaff-{}".format(iteration),
+                lammps_iterations[iteration][polymorph].ucell_a,
+                lammps_iterations[iteration][polymorph].ucell_b,
+                lammps_iterations[iteration][polymorph].ucell_c,
+                lammps_iterations[iteration][polymorph].box.ltc_alpha,
+                lammps_iterations[iteration][polymorph].box.ltc_beta,
+                lammps_iterations[iteration][polymorph].box.ltc_gamma,
+                lammps_iterations[iteration][polymorph].volume_p_molecule,
+                lammps_iterations[iteration][polymorph].density,
+                lammps_iterations[iteration][polymorph].energy_p_molecule,
+                lammps_iterations[iteration][polymorph].energy_gain,
+            ], index=rows, columns=[polymorph])
+
+        frames.append(forcefield_dataframe)
+
+    #break
+
+result = pd.concat(frames, axis=1)
+result.to_csv("polymorphs.csv")
+#pdb.set_trace()

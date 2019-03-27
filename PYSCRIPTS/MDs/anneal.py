@@ -69,7 +69,9 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
     # heat up
     #lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(300))
     for _ in xrange(cycles):
-        print(bcolors.red + "Annealing" + bcolors.endc)
+        if rank == 0:
+            print(bcolors.red + "Annealing" + bcolors.endc)
+
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(0.0, tmax))
 
         try:
@@ -78,7 +80,9 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
             print("***Error: Simulation crashed (annealing)! Force constants too high?")
             MPI.COMM_WORLD.Abort()
 
-        print(bcolors.yellow + "Quenching 1" + bcolors.endc)
+        if rank == 0:
+            print(bcolors.yellow + "Quenching 1" + bcolors.endc)
+
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(tmax, 0.0))
 
         try:
@@ -87,7 +91,9 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
             print("***Error: Simulation crashed (annealing)! Force constants too high?")
             MPI.COMM_WORLD.Abort()
 
-        print(bcolors.yellow + "Quenching 2" + bcolors.endc)
+        if rank == 0:
+            print(bcolors.yellow + "Quenching 2" + bcolors.endc)
+
         lmp.command("unfix TFIX")
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(1.0, 1.0))
 
@@ -97,7 +103,9 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
             print("***Error: Simulation crashed (annealing)! Force constants too high?")
             MPI.COMM_WORLD.Abort()
 
-        print(bcolors.green + "Minimization" + bcolors.endc)
+        if rank == 0:
+            print(bcolors.green + "Minimization" + bcolors.endc)
+
         try:
             lmp.command("minimize 1e-6 1e-9 2000000 100000")
         except:

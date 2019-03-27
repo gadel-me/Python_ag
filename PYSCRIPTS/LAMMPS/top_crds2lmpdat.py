@@ -74,7 +74,7 @@ def get_other_stuff_from_cif(cif_file):
             if "_cell_volume" in line:
                 cell_volume = get_number_from_line(line)
             elif "_cell_formula_units_Z" in line:
-                cell_formula_units = get_number_from_line(line)
+                cell_formula_units = int(get_number_from_line(line))
             elif "_cell_measurement_temperature" in line or "_diffrn_ambient_temperature" in line:
                 cell_measurement_temperature = get_number_from_line(line)
             elif "_exptl_crystal_density_diffrn" in line:
