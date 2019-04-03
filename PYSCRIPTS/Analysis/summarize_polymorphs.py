@@ -207,7 +207,7 @@ if __name__ == '__main__':
     path_scell_dreiding_off = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_off/CBZ{1}_gaff-{0}-min.lmplog")
     path_scell_dreiding_on  = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_on/CBZ{1}_gaff-{0}-min.lmplog")
 
-    for iteration in (0, 105, 107, 108, 110):
+    for iteration in (0, 105, 107, 108, 110, 111, 112, 113, 114, 115):
         lammps_polymorphs = {}
 
         FF_SINGLE_MOLECULE = ag_lmplog.LmpLog()

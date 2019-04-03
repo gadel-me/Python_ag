@@ -135,7 +135,9 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
 
     # plot data
     plot_data_files()
-    plt.legend(bbox_to_anchor=(0.5, 0.5))
+    #plt.legend(frameon=False)
+    #plt.legend(edgecolor="white")
+    plt.legend(bbox_to_anchor=(1, 1))
     plt.show()
 
 
@@ -155,9 +157,15 @@ if __name__ == "__main__":
                         default=None,
                         help="Plot line which substracts ab initio reference from the shown ff iteration.")
 
+    parser.add_argument("-xlabel",
+                        default=None,
+                        help="Title of x-axis")
+
     parser.add_argument("-title",
                         default=None,
                         help="Title of the plot")
 
     args = parser.parse_args()
-    plot_all(args.ab_result_file, args.md_result_files, title=args.title, substract=args.substract, x_offset=args.x_offset)
+    plot_all(args.ab_result_file, args.md_result_files,
+             title=args.title, xlabel=args.xlabel,
+             substract=args.substract, x_offset=args.x_offset)
