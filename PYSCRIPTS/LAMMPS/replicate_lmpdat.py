@@ -67,15 +67,26 @@ parser.add_argument("-out",
                     help="Name of output-file."
                     )
 
+parser.add_argument("-cgcmm",
+                    action="store_true",
+                    help="Write file with cgcmm style info.")
+
+parser.add_argument("-guess_atom",
+                    action="store_true",
+                    help="Guess atoms by mass.")
+
 args = parser.parse_args()
 
 # Modeling ---------------------------------------------------------------------
 sys  = agum.Unification()
 sys.read_lmpdat(args.lmpdat, energy_unit="eV", angle_unit="deg")
 
+if args.guess_atoms is True:
+    sys.guess_atomtypes(by_mass=True)
+
 if args.dcd is not None:
     sys.import_dcd(args.dcd)
-    sys.read_frames(frame=args.frame, to_frame=args.frame+1)
+    sys.read_frames(frame=args.frame, to_frame=args.frame + 1)
     sys.close_dcd()
 
 sys.replicate_cell(n_start=args.a[0], n_stop=args.a[1], direction="a", frame_id=-1, adjust_box=True)
@@ -88,4 +99,4 @@ if args.mix_pair_types is True:
     sys.mix_pair_types(mode="ij")
 
 sys.change_indices(incr=1, mode="increase")
-sys.write_lmpdat(args.out, frame_id=-1, title=args.sysname, cgcmm=True)
+sys.write_lmpdat(args.out, frame_id=-1, title=args.sysname, cgcmm=args.cgcmm)

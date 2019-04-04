@@ -207,7 +207,11 @@ if __name__ == '__main__':
     path_scell_dreiding_off = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_off/CBZ{1}_gaff-{0}-min.lmplog")
     path_scell_dreiding_on  = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_on/CBZ{1}_gaff-{0}-min.lmplog")
 
-    for iteration in (0, 105, 107, 108, 110, 111, 112, 113, 114, 115):
+    iterations_on = (0, 105, 107, 108, 110, 111, 112, 113, 114, 115)
+    iterations_off = (0, 105, 107, 111, 112, 113, 114, 115)
+    dreiding = True
+
+    for iteration in iterations_off:
         lammps_polymorphs = {}
 
         FF_SINGLE_MOLECULE = ag_lmplog.LmpLog()
@@ -217,7 +221,7 @@ if __name__ == '__main__':
 
         for index, polymorph in enumerate(("I", "II", "III", "IV", "V")):
 
-            if iteration == 0:
+            if iteration == 0 or dreiding is False:
                 # no dreiding force field for stock gaff force field
                 cur_file = path_scell_dreiding_off.format(iteration, polymorph)
             else:
