@@ -207,9 +207,9 @@ if __name__ == '__main__':
     path_scell_dreiding_off = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_off/CBZ{1}_gaff-{0}-min.lmplog")
     path_scell_dreiding_on  = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_on/CBZ{1}_gaff-{0}-min.lmplog")
 
-    iterations_on = (0, 105, 107, 108, 110, 111, 112, 113, 114, 115)
-    iterations_off = (0, 105, 107, 111, 112, 113, 114, 115)
-    dreiding = True
+    iterations_on = (107, 115)
+    iterations_off = (0, 107, 115)
+    dreiding = "off"
 
     for iteration in iterations_off:
         lammps_polymorphs = {}
@@ -221,7 +221,7 @@ if __name__ == '__main__':
 
         for index, polymorph in enumerate(("I", "II", "III", "IV", "V")):
 
-            if iteration == 0 or dreiding is False:
+            if iteration == 0 or dreiding == "off":
                 # no dreiding force field for stock gaff force field
                 cur_file = path_scell_dreiding_off.format(iteration, polymorph)
             else:
@@ -246,7 +246,14 @@ rows = ["", "a", "b", "c", "alpha", "beta", "gamma", "vol p. molecule / A**3",
 df_combined = pd.DataFrame()
 #dataframes = {}
 
-frames = []
+#frames = []
+frames = {}
+frames["exp"] = []
+frames["abi"] = []
+frames["ff"]  = {}
+columnwidth = "{}"
+
+
 for polymorph in ("I", "II", "III", "IV", "V"):
     #frames = []
 
@@ -265,11 +272,11 @@ for polymorph in ("I", "II", "III", "IV", "V"):
             exp_polymorphs[polymorph].energy_gain,
         ], index=rows, columns=[polymorph])
 
-    frames.append(exp_dataframe)
+    frames["exp"].append(exp_dataframe)
 
     abinitio_dataframe = pd.DataFrame(
         [
-            "ab initio",
+            "ab initio PBE (USPP/Meyer)",
             abinitio_polymorphs[polymorph].box.ltc_a,
             abinitio_polymorphs[polymorph].box.ltc_b,
             abinitio_polymorphs[polymorph].box.ltc_c,
@@ -282,13 +289,20 @@ for polymorph in ("I", "II", "III", "IV", "V"):
             abinitio_polymorphs[polymorph].energy_gain,
         ], index=rows, columns=[polymorph])
 
-    frames.append(abinitio_dataframe)
+    frames["abi"].append(abinitio_dataframe)
     #pdb.set_trace()
 
     for iteration in lammps_iterations:
+
+        # create new list if key does not exist already
+        try:
+            frames["ff"][iteration]
+        except KeyError:
+            frames["ff"][iteration] = []
+
         forcefield_dataframe = pd.DataFrame(
             [
-                "gaff-{}".format(iteration),
+                "gaff-{} dreiding {}".format(iteration, dreiding),
                 lammps_iterations[iteration][polymorph].ucell_a,
                 lammps_iterations[iteration][polymorph].ucell_b,
                 lammps_iterations[iteration][polymorph].ucell_c,
@@ -301,10 +315,17 @@ for polymorph in ("I", "II", "III", "IV", "V"):
                 lammps_iterations[iteration][polymorph].energy_gain,
             ], index=rows, columns=[polymorph])
 
-        frames.append(forcefield_dataframe)
+        frames["ff"][iteration].append(forcefield_dataframe)
 
     #break
 
-result = pd.concat(frames, axis=1)
-result.to_csv("polymorphs.csv")
-#pdb.set_trace()
+table_exp = pd.concat(frames["exp"], axis=1)
+table_abi = pd.concat(frames["abi"], axis=1)
+pd.set_option('display.max_colwidth', 20)
+display(table_exp)
+display(table_abi)
+
+for key, iteration in frames["ff"].iteritems():
+    ctable = pd.concat(iteration, axis=1)
+    #print(ctable)
+    display(ctable)

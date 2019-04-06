@@ -463,6 +463,7 @@ class GauStuff(mdu.Universe):
         #print("Reading last frame of the output file.")
         if "scf_energies" not in self.gaussian_other_info or overwrite is True:
             self.gaussian_other_info["scf_energies"] = []
+            self.gaussian_other_info["Counterpoise corrected energy"] = None
 
         all_scf_cycles_coords = []
         current_scf_cycles_coords = []
@@ -560,6 +561,9 @@ class GauStuff(mdu.Universe):
 
                     #for scanned_coordinate in scanned_coordinates:
                     #    self.gaussian_other_info[scanned_coordinate] = []
+
+                elif "Counterpoise corrected energy" in line:
+                    self.gaussian_other_info["Counterpoise corrected energy"] = float(line.split()[-1]) * hartree_eV
 
                 # read the summary
                 elif line.startswith(" 1\\1\\") is True:

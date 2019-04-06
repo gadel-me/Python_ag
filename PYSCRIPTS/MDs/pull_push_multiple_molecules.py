@@ -325,7 +325,7 @@ def write_summary(distances, energies):
 
 if __name__ == "__main__":
     # force field and settings
-    ITERATION = "111"
+    ITERATION = "118"
     DREIDING = "on"
     SETTINGS_FILE = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/settings_dreiding_{}.lmpcfg".format(DREIDING)
     FF_FILE = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/CBZ_gaff-{}_dreiding_{}.lmpcfg".format(ITERATION, DREIDING)

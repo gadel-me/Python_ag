@@ -67,11 +67,11 @@ parser.add_argument("-out",
                     help="Name of output-file."
                     )
 
-parser.add_argument("-cgcmm",
-                    action="store_true",
-                    help="Write file with cgcmm style info.")
+#parser.add_argument("-cgcmm",
+#                    action="store_true",
+#                    help="Write file with cgcmm style info.")
 
-parser.add_argument("-guess_atom",
+parser.add_argument("-guess_atoms",
                     action="store_true",
                     help="Guess atoms by mass.")
 
@@ -99,4 +99,4 @@ if args.mix_pair_types is True:
     sys.mix_pair_types(mode="ij")
 
 sys.change_indices(incr=1, mode="increase")
-sys.write_lmpdat(args.out, frame_id=-1, title=args.sysname, cgcmm=args.cgcmm)
+sys.write_lmpdat(args.out, frame_id=-1, title=args.sysname, cgcmm=True)

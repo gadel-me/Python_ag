@@ -56,6 +56,8 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     xlabel : None or str
 
     """
+    fig = plt.figure()
+
     def plot_data_files():
         """
         Plot the given data and calculating chi square.
@@ -112,7 +114,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
 
     # plot settings
     marker = "."
-    plt.figure()
+    #plt.figure()
     plt.xlabel(xlabel)
     plt.ylabel("Energy / eV")
     plt.title(title)
@@ -137,8 +139,26 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     plot_data_files()
     #plt.legend(frameon=False)
     #plt.legend(edgecolor="white")
-    plt.legend(bbox_to_anchor=(1, 1))
-    plt.show()
+    #plt.legend(bbox_to_anchor=(0.5, 1.5))
+    plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
+    fig.show()
+
+
+def plot_results(rsgetters, rslabels, title="Default"):
+    """
+    Plot a list of Resultgetter instances
+    """
+    fig = plt.figure()
+    plt.xlabel("Distance / A")
+    plt.ylabel("Energy / eV")
+    plt.title(title)
+
+    for rsgetter, rslabel in zip(rsgetters, rslabels):
+        xvals, yvals = zip(*rsgetter.normed_results)
+        plt.plot(xvals, yvals, label=rslabel)
+
+    plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
+    fig.show()
 
 
 if __name__ == "__main__":
