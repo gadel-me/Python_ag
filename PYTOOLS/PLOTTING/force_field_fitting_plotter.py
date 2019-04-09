@@ -88,11 +88,11 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
             label = r"{:> 6} {} - $\chi^2$-err:{:> 8.7f} eV".format(iteration, addname, chi_square_error)
             color = cmap(norm(index))
             if x_offset is not None:
-                plt.plot([i + x_offset if i < 0 else i for i in data_x], data_y, linestyle="--", marker=marker, linewidth=0.2, markersize=0.5, color=color)
-                plt.plot([i + x_offset if i < 0 else i for i in ref_x], interp_y, linestyle="--", marker=marker, linewidth=0.2, color=color, label=label)
+                plt.plot([i + x_offset if i < 0 else i for i in data_x], data_y, linestyle=lstyle, marker=marker, linewidth=0.2, markersize=0.5, color=color)
+                plt.plot([i + x_offset if i < 0 else i for i in ref_x], interp_y, linestyle=lstyle, marker=marker, linewidth=0.2, color=color, label=label)
             else:
-                plt.plot(data_x, data_y, linestyle="--", marker=marker, linewidth=0.2, markersize=0.5, color=color)
-                plt.plot(ref_x, interp_y, linestyle="--", marker=marker, linewidth=1.0, color=color, label=label)
+                plt.plot(data_x, data_y, linestyle=lstyle, marker=marker, linewidth=0.2, markersize=0.5, color=color)
+                plt.plot(ref_x, interp_y, linestyle=lstyle, marker=marker, linewidth=1.0, color=color, label=label)
 
             # substract the reference from the current iteration
             if substract is True:
@@ -113,8 +113,9 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
                         fin.write("{:<20} {:<20}\n".format(i, j))
 
     # plot settings
-    marker = "."
-    #plt.figure()
+    #marker = "."
+    marker = ""
+    lstyle = "-"
     plt.xlabel(xlabel)
     plt.ylabel("Energy / eV")
     plt.title(title)
@@ -130,10 +131,10 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     #ref_x = [-180 - (180 - i) if i > 0 else i for i in ref_x]
 
     if x_offset is not None:
-        plt.plot([i + x_offset if i < 0 else i for i in ref_x], ref_y, linestyle="--", linewidth=0.2, marker=marker, label="ab initio")
+        plt.plot([i + x_offset if i < 0 else i for i in ref_x], ref_y, linestyle=lstyle, linewidth=0.2, marker=marker, label="ab initio")
     else:
         #plt.plot(ref_x, ref_y, linestyle="--", linewidth=0.02, marker=marker, label="ab initio")
-        plt.plot(ref_x, ref_y, linestyle="--", linewidth=1.0, marker=marker, label="ab initio")
+        plt.plot(ref_x, ref_y, linestyle=lstyle, linewidth=1.0, marker=marker, label="ab initio")
 
     # plot data
     plot_data_files()
