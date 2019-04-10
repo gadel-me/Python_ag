@@ -1,5 +1,6 @@
 import re
 import numpy as np
+import itertools
 import matplotlib
 import matplotlib.pyplot as plt
 import argparse
@@ -146,20 +147,26 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     #plt.show()
 
 
-def plot_results(rsgetters, rslabels, title="Default"):
+def plot_results(rsgetters, rslabels, linestyles=(), xlabel=r"Distance / $\AA$",
+                 ylabel=r"Energy / eV", title="Default"):
     """
     Plot a list of Resultgetter instances
     """
     fig = plt.figure()
-    plt.xlabel("Distance / A")
-    plt.ylabel("Energy / eV")
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.title(title)
 
-    for rsgetter, rslabel in zip(rsgetters, rslabels):
+    for rsgetter, rslabel, linestyle in itertools.izip_longest(rsgetters, rslabels, linestyles):
         xvals, yvals = zip(*rsgetter.normed_results)
-        plt.plot(xvals, yvals, label=rslabel)
+
+        if linestyle is None:
+            plt.plot(xvals, yvals, label=rslabel, linestyle="-")
+        else:
+            plt.plot(xvals, yvals, label=rslabel, linestyle=linestyle)
 
     plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
+    plt.axhline(0, color='black', linestyle="--", linewidth=0.5)
     fig.show()
 
 
