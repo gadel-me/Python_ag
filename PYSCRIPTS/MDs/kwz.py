@@ -6,6 +6,7 @@ import argparse
 from mpi4py import MPI
 import ag_kwz as agk
 import ag_lammps as aglmp
+import ag_lammps_sim as aglmpsim
 #import ag_lmplog as agl
 #import ag_statistics as ags
 import pdb
@@ -166,14 +167,14 @@ if __name__ == "__main__":
 
         # system preparation
         sysprep_out_lmpdat = sysprep_dir + "sysprep_out_{}.lmpdat".format(curcycle)
-        lmpsettings_sysprep = aglmp.LmpSim(output_lmpdat=sysprep_out_lmpdat)
+        lmpsettings_sysprep = aglmpsim.LmpSim(output_lmpdat=sysprep_out_lmpdat)
 
         # quench
         quench_out = quench_dir + "quench_out_{}.lmprst".format(curcycle)
         quench_rst = quench_dir + "quench_rst_{}.lmprst".format(curcycle)
         quench_dcd = quench_dir + "quench_{}.dcd".format(curcycle)
         quench_log = quench_dir + "quench_{}.lmplog".format(curcycle)
-        lmpsettings_quench = aglmp.LmpSim(tstart=args.quench_temp_start, tstop=args.quench_temp_stop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out_lmpdat, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
+        lmpsettings_quench = aglmpsim.LmpSim(tstart=args.quench_temp_start, tstop=args.quench_temp_stop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out_lmpdat, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
 
         # anneal -> solvent
         cut_solv_lmpdat = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
@@ -181,13 +182,13 @@ if __name__ == "__main__":
         cut_solv_out = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmprst"
         cut_solv_dcd = anneal_dir + "cut_solv_{}".format(curcycle) + ".dcd"
         cut_solv_log = anneal_dir + "cut_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_relax_cut = aglmp.LmpSim(tstart=args.relax_cut_tstart, tstop=args.relax_cut_tstop, pstart=args.relax_cut_pstart, pstop=args.relax_cut_pstop, logsteps=args.relax_cut_logsteps, runsteps=args.relax_cut_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_lmpdat, inter_lmprst=cut_solv_rst, output_lmprst=cut_solv_out, output_dcd=cut_solv_dcd, output_lmplog=cut_solv_log, gpu=args.gpu)
+        lmpsettings_relax_cut = aglmpsim.LmpSim(tstart=args.relax_cut_tstart, tstop=args.relax_cut_tstop, pstart=args.relax_cut_pstart, pstop=args.relax_cut_pstop, logsteps=args.relax_cut_logsteps, runsteps=args.relax_cut_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_lmpdat, inter_lmprst=cut_solv_rst, output_lmprst=cut_solv_out, output_dcd=cut_solv_dcd, output_lmplog=cut_solv_log, gpu=args.gpu)
 
         void_solv_rst = anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
         void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmprst"
         void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
         void_solv_log = anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_void = aglmp.LmpSim(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop,logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs,settings_file=args.settings_solvent, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd,output_lmplog=void_solv_log, gpu=args.gpu)
+        lmpsettings_void = aglmpsim.LmpSim(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop,logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs,settings_file=args.settings_solvent, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd,output_lmplog=void_solv_log, gpu=args.gpu)
 
         if args.lmps is not None:
             solution_lmpdat = anneal_dir + "solution_{}".format(curcycle) + "_out.lmpdat"
@@ -199,14 +200,14 @@ if __name__ == "__main__":
         relax_solv_rst = anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
         relax_solv_dcd = anneal_dir + "relax_solv_{}".format(curcycle) + ".dcd"
         relax_solv_log = anneal_dir + "relax_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_relax_solv = aglmp.LmpSim(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop,logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.pair_coeffs, settings_file=args.set,input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst,output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log,gpu=args.gpu)
+        lmpsettings_relax_solv = aglmpsim.LmpSim(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop,logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.pair_coeffs, settings_file=args.set,input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst,output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log,gpu=args.gpu)
 
         # anneal -> equilibration/heating
         heat_out = anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"
         heat_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
         heat_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
         heat_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_heat = aglmp.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop,pstart=args.heat_pstart, pstop=args.heat_pstop,logsteps=args.heat_logsteps, runsteps=args.heat_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst,output_lmprst=heat_out,output_dcd=heat_dcd, output_lmplog=heat_log,gpu=args.gpu)
+        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop,pstart=args.heat_pstart, pstop=args.heat_pstop,logsteps=args.heat_logsteps, runsteps=args.heat_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst,output_lmprst=heat_out,output_dcd=heat_dcd, output_lmplog=heat_log,gpu=args.gpu)
 
         if args.lmps is None:
             lmpsettings_heat.input_lmprst = lmpsettings_quench.output_lmprst
@@ -219,7 +220,7 @@ if __name__ == "__main__":
         anneal_rst = anneal_dir + "anneal_{}".format(curcycle) + "_tmp.lmprst"
         anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
         anneal_log = anneal_dir + "anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_anneal = aglmp.LmpSim(tstart=args.anneal_tstart, tstop=args.anneal_tstop,pstart=args.anneal_pstart, pstop=args.anneal_pstop,logsteps=args.anneal_logsteps, runsteps=args.anneal_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst,output_lmprst=anneal_out,output_dcd=anneal_dcd, output_lmplog=anneal_log,gpu=args.gpu)
+        lmpsettings_anneal = aglmpsim.LmpSim(tstart=args.anneal_tstart, tstop=args.anneal_tstop,pstart=args.anneal_pstart, pstop=args.anneal_pstop,logsteps=args.anneal_logsteps, runsteps=args.anneal_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst,output_lmprst=anneal_out,output_dcd=anneal_dcd, output_lmplog=anneal_log,gpu=args.gpu)
 
         # requench
         tmp_solvate_anneal_out = requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
@@ -227,7 +228,7 @@ if __name__ == "__main__":
         requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmprst"
         requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
         requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
-        lmpsettings_requench = lmpsettings_anneal = aglmp.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=requench_rst,output_lmprst=requench_out,output_dcd=requench_dcd, output_lmplog=requench_log)
+        lmpsettings_requench = lmpsettings_anneal = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=requench_rst,output_lmprst=requench_out,output_dcd=requench_dcd, output_lmplog=requench_log)
 
         # important files from previous run
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(PWD, curcycle - 1)

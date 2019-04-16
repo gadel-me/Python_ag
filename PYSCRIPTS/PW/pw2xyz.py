@@ -22,6 +22,10 @@ pw_file_handler = agum.Unification()
 # read last frame from pw output file
 pw_file_handler.read_pwout(args.pwscf_out)
 #pdb.set_trace()
-pw_file_handler.ts_boxes[-1].box_cart2lat()
-print(pw_file_handler.ts_boxes[-1].boxtype)
-pw_file_handler.write_xyz(args.o, "CBZI- pwout", False, -1)
+pdb.set_trace()
+try:
+    pw_file_handler.ts_boxes[-1].box_cart2lat()
+except IndexError:
+    print("No boxes found?")
+
+pw_file_handler.write_xyz(args.o, "From {}".format(args.pwscf_out), False, -1)

@@ -263,6 +263,7 @@ class PwStuff(mdu.Universe):
                             pass
 
                 elif line.startswith("CELL_PARAMETERS"):
+                    #TODO: calculate from Bohr to Angstrom in place?
                     box_unit = line.split()[1].strip("{}")
 
                     # get box vectors

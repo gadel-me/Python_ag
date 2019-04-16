@@ -32,11 +32,10 @@ comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
+
 #==============================================================================#
 # Helper functions
 #==============================================================================#
-
-
 def get_natms(lmpdat):
     """
     """

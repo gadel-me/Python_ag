@@ -145,12 +145,12 @@ class XYZ(mdu.Universe):
                     xyz_out.write("Boxtype {} ".format(self.ts_boxes[frame_id].boxtype))
 
                     if self.ts_boxes[frame_id].boxtype == "cartesian":
-                        xyz_out.write("a: {} b: {} c: {}\n".format(self.ts_boxes[frame_id].crt_a,
+                        xyz_out.write("a: {} b: {} c: {}".format(self.ts_boxes[frame_id].crt_a,
                                                                    self.ts_boxes[frame_id].crt_b,
                                                                    self.ts_boxes[frame_id].crt_c))
                     elif self.ts_boxes[frame_id].boxtype == "lattice":
                         xyz_out.write(("a: {} b: {} c: {} "
-                                       "alpha: {} beta: {} gamma: {}\n").format(self.ts_boxes[frame_id].ltc_a,
+                                       "alpha: {} beta: {} gamma: {}").format(self.ts_boxes[frame_id].ltc_a,
                                                                                 self.ts_boxes[frame_id].ltc_b,
                                                                                 self.ts_boxes[frame_id].ltc_c,
                                                                                 np.degrees(self.ts_boxes[frame_id].ltc_alpha),
@@ -169,6 +169,8 @@ class XYZ(mdu.Universe):
                                                                      self.ts_boxes[frame_id].lmp_xy,
                                                                      self.ts_boxes[frame_id].lmp_xz,
                                                                      self.ts_boxes[frame_id].lmp_yz))
+
+                xyz_out.write("\n")
 
                 for catm, ccoords in zip(self.atoms, self.ts_coords[frame_id]):
                     # write atom name

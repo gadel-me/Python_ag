@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+"""
+TODO EACH ITERATION OR AB INITIO OR EXPERIMENT SHOULD GET ITS OWN CELL IN
+TODO JUPYTER NOTEBOOK AND EXECUTED THERE
+TODO THIS PREVENTS CONFUSION AND MAKES EVERYTHING EASIER TO UNDERSTAND
+"""
+
 from __future__ import print_function, division
 import numpy as np
 import pandas as pd
@@ -128,13 +135,21 @@ class Polymorph(object):
         """
         self.volume_p_molecule = self.volume / self.nmols
 
-    def supercell_to_unitcell(self, original_cell_box):
+    def supercell_to_unitcell(self, unitcell_box, supercell_box=None):
         """
         Reduce the box vector side lengths to that of a unit cell.
+        To get the factor one could also use the original unchanged
+        supercell-box if the box stretched somewhat too strong in comparison
+        to its original box.
         """
-        factor_a = int(round(self.box.ltc_a / original_cell_box.ltc_a))
-        factor_b = int(round(self.box.ltc_b / original_cell_box.ltc_b))
-        factor_c = int(round(self.box.ltc_c / original_cell_box.ltc_c))
+        if supercell_box is None:
+            cbox = self.box
+        else:
+            cbox = supercell_box
+
+        factor_a = int(round(cbox.ltc_a / unitcell_box.ltc_a))
+        factor_b = int(round(cbox.ltc_b / unitcell_box.ltc_b))
+        factor_c = int(round(cbox.ltc_c / unitcell_box.ltc_c))
         self.ucell_a = self.box.ltc_a / factor_a
         self.ucell_b = self.box.ltc_b / factor_b
         self.ucell_c = self.box.ltc_c / factor_c
@@ -185,9 +200,9 @@ if __name__ == '__main__':
 
     abinitio_polymorphs = {}
 
-    for polymorph, filename in pw_ucell_files.iteritems():
+    for polymorph, cfile in pw_ucell_files.iteritems():
         cur_polymorph = Polymorph(30)
-        cur_polymorph.read_file(filename, "pwout")
+        cur_polymorph.read_file(cfile, "pwout")
         cur_polymorph.get_volume_p_molecule()
         # convert to kcal*mol-1
         cur_polymorph.convert_energy()
@@ -206,12 +221,20 @@ if __name__ == '__main__':
     main_path = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/3.cell_relax/{}"
     path_scell_dreiding_off = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_off/CBZ{1}_gaff-{0}-min.lmplog")
     path_scell_dreiding_on  = main_path.format("CBZ_gaff-{0}/CBZ{1}/min_dreiding_on/CBZ{1}_gaff-{0}-min.lmplog")
+    lmpdat_supercell        = main_path.format("CBZ_gaff-{0}/CBZ{1}/CBZ{1}_gaff-{0}_supercell.lmpdat")
 
-    iterations_on = (107, 115)
-    iterations_off = (0, 107, 115)
+    iterations_on = (0, 107)
+    #iterations_off = (0, 107, 115)
     dreiding = "off"
 
-    for iteration in iterations_off:
+    for iteration in iterations_on:
+        # get box from original (multiplied and untouched) supercell in order to get the
+        # factors of each unit cell it was built from
+        # using the box from the last snapshot could lead to inconsistencies due to rounding
+        #original_supercell = agum.Unification()
+        #original_supercell.read_lmpdat(lmpdat_supercell.format(iteration, polymorph))
+        #original_supercell.ts_boxes[0].box_lmp2lat()
+
         lammps_polymorphs = {}
 
         FF_SINGLE_MOLECULE = ag_lmplog.LmpLog()
@@ -240,92 +263,91 @@ if __name__ == '__main__':
 
         lammps_iterations[iteration] = lammps_polymorphs
 
-# create pandas table
-rows = ["", "a", "b", "c", "alpha", "beta", "gamma", "vol p. molecule / A**3",
-        "density / g*cm**-3", "E lattice p. molecule / kcal*mol**-1", "Energy gain / kcal*mol**-1"]
-df_combined = pd.DataFrame()
-#dataframes = {}
+    # create pandas table
+    rows = ["", "a", "b", "c", "alpha", "beta", "gamma", "vol p. molecule / A**3",
+            "density / g*cm**-3", "E lattice p. molecule / kcal*mol**-1", "Energy gain / kcal*mol**-1"]
+    df_combined = pd.DataFrame()
+    #dataframes = {}
 
-#frames = []
-frames = {}
-frames["exp"] = []
-frames["abi"] = []
-frames["ff"]  = {}
-columnwidth = "{}"
-
-
-for polymorph in ("I", "II", "III", "IV", "V"):
     #frames = []
+    frames = {}
+    frames["exp"] = []
+    frames["abi"] = []
+    frames["ff"]  = {}
+    columnwidth = "{}"
 
-    exp_dataframe = pd.DataFrame(
-        [
-            "experiment",
-            exp_polymorphs[polymorph].box.ltc_a,
-            exp_polymorphs[polymorph].box.ltc_b,
-            exp_polymorphs[polymorph].box.ltc_c,
-            exp_polymorphs[polymorph].box.ltc_alpha,
-            exp_polymorphs[polymorph].box.ltc_beta,
-            exp_polymorphs[polymorph].box.ltc_gamma,
-            exp_polymorphs[polymorph].volume_p_molecule,
-            exp_polymorphs[polymorph].density,
-            exp_polymorphs[polymorph].energy,
-            exp_polymorphs[polymorph].energy_gain,
-        ], index=rows, columns=[polymorph])
+    for polymorph in ("I", "II", "III", "IV", "V"):
+        #frames = []
 
-    frames["exp"].append(exp_dataframe)
-
-    abinitio_dataframe = pd.DataFrame(
-        [
-            "ab initio PBE (USPP/Meyer)",
-            abinitio_polymorphs[polymorph].box.ltc_a,
-            abinitio_polymorphs[polymorph].box.ltc_b,
-            abinitio_polymorphs[polymorph].box.ltc_c,
-            abinitio_polymorphs[polymorph].box.ltc_alpha,
-            abinitio_polymorphs[polymorph].box.ltc_beta,
-            abinitio_polymorphs[polymorph].box.ltc_gamma,
-            abinitio_polymorphs[polymorph].volume_p_molecule,
-            abinitio_polymorphs[polymorph].density,
-            abinitio_polymorphs[polymorph].energy_p_molecule,
-            abinitio_polymorphs[polymorph].energy_gain,
-        ], index=rows, columns=[polymorph])
-
-    frames["abi"].append(abinitio_dataframe)
-    #pdb.set_trace()
-
-    for iteration in lammps_iterations:
-
-        # create new list if key does not exist already
-        try:
-            frames["ff"][iteration]
-        except KeyError:
-            frames["ff"][iteration] = []
-
-        forcefield_dataframe = pd.DataFrame(
+        exp_dataframe = pd.DataFrame(
             [
-                "gaff-{} dreiding {}".format(iteration, dreiding),
-                lammps_iterations[iteration][polymorph].ucell_a,
-                lammps_iterations[iteration][polymorph].ucell_b,
-                lammps_iterations[iteration][polymorph].ucell_c,
-                lammps_iterations[iteration][polymorph].box.ltc_alpha,
-                lammps_iterations[iteration][polymorph].box.ltc_beta,
-                lammps_iterations[iteration][polymorph].box.ltc_gamma,
-                lammps_iterations[iteration][polymorph].volume_p_molecule,
-                lammps_iterations[iteration][polymorph].density,
-                lammps_iterations[iteration][polymorph].energy_p_molecule,
-                lammps_iterations[iteration][polymorph].energy_gain,
+                "experiment",
+                exp_polymorphs[polymorph].box.ltc_a,
+                exp_polymorphs[polymorph].box.ltc_b,
+                exp_polymorphs[polymorph].box.ltc_c,
+                exp_polymorphs[polymorph].box.ltc_alpha,
+                exp_polymorphs[polymorph].box.ltc_beta,
+                exp_polymorphs[polymorph].box.ltc_gamma,
+                exp_polymorphs[polymorph].volume_p_molecule,
+                exp_polymorphs[polymorph].density,
+                exp_polymorphs[polymorph].energy,
+                exp_polymorphs[polymorph].energy_gain,
             ], index=rows, columns=[polymorph])
 
-        frames["ff"][iteration].append(forcefield_dataframe)
+        frames["exp"].append(exp_dataframe)
 
-    #break
+        abinitio_dataframe = pd.DataFrame(
+            [
+                "ab initio PBE (USPP/Meyer)",
+                abinitio_polymorphs[polymorph].box.ltc_a,
+                abinitio_polymorphs[polymorph].box.ltc_b,
+                abinitio_polymorphs[polymorph].box.ltc_c,
+                abinitio_polymorphs[polymorph].box.ltc_alpha,
+                abinitio_polymorphs[polymorph].box.ltc_beta,
+                abinitio_polymorphs[polymorph].box.ltc_gamma,
+                abinitio_polymorphs[polymorph].volume_p_molecule,
+                abinitio_polymorphs[polymorph].density,
+                abinitio_polymorphs[polymorph].energy_p_molecule,
+                abinitio_polymorphs[polymorph].energy_gain,
+            ], index=rows, columns=[polymorph])
 
-table_exp = pd.concat(frames["exp"], axis=1)
-table_abi = pd.concat(frames["abi"], axis=1)
-pd.set_option('display.max_colwidth', 20)
-display(table_exp)
-display(table_abi)
+        frames["abi"].append(abinitio_dataframe)
+        #pdb.set_trace()
 
-for key, iteration in frames["ff"].iteritems():
-    ctable = pd.concat(iteration, axis=1)
-    #print(ctable)
-    display(ctable)
+        for iteration in lammps_iterations:
+
+            # create new list if key does not exist already
+            try:
+                frames["ff"][iteration]
+            except KeyError:
+                frames["ff"][iteration] = []
+
+            forcefield_dataframe = pd.DataFrame(
+                [
+                    "gaff-{} dreiding {}".format(iteration, dreiding),
+                    lammps_iterations[iteration][polymorph].ucell_a,
+                    lammps_iterations[iteration][polymorph].ucell_b,
+                    lammps_iterations[iteration][polymorph].ucell_c,
+                    lammps_iterations[iteration][polymorph].box.ltc_alpha,
+                    lammps_iterations[iteration][polymorph].box.ltc_beta,
+                    lammps_iterations[iteration][polymorph].box.ltc_gamma,
+                    lammps_iterations[iteration][polymorph].volume_p_molecule,
+                    lammps_iterations[iteration][polymorph].density,
+                    lammps_iterations[iteration][polymorph].energy_p_molecule,
+                    lammps_iterations[iteration][polymorph].energy_gain,
+                ], index=rows, columns=[polymorph])
+
+            frames["ff"][iteration].append(forcefield_dataframe)
+
+        #break
+
+    table_exp = pd.concat(frames["exp"], axis=1)
+    table_abi = pd.concat(frames["abi"], axis=1)
+    pd.set_option('display.max_colwidth', 20)
+    display(table_exp)
+    display(table_abi)
+
+    for key, iteration in frames["ff"].iteritems():
+        ctable = pd.concat(iteration, axis=1)
+        #print(ctable)
+        display(ctable)
