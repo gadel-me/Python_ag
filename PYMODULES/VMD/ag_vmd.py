@@ -1,14 +1,39 @@
+#!/usr/bin/env python
 from __future__ import print_function, division
+import pdb
+import os
+import time
 import numpy as np
 from pyquaternion import Quaternion
-import atomsel
-import graphics
+from PIL import Image
+import ag_unify_md as agum
+
+# VMD MODULES
+import atomsel   # Replaces AtomSel and atomselection
+import axes
 import color
-#import label
+import display
+import graphics
+import imd
+import label
+import material
 import molecule
+import molrep
+import mouse
+import render
+import trans
+import vmdmenu
+import Label
+import Material
+import Molecule
+import VMD
 
 
-def draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor="blue"):
+################################################################################
+# VMD HELPER FUNCTIONS
+################################################################################
+
+def vmd_draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor="blue"):
     """
     Draws part of a circle to visualize the measured angle.
 
@@ -84,7 +109,7 @@ def draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor="bl
                           resolution=20, filled=1)
 
 
-def label(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0)):
+def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0)):
     """
     Labels atoms by index, charge, etc.
 
@@ -126,7 +151,7 @@ def label(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.
         graphics.text(molid, tuple(label_pos), label_text, textsize)
 
 
-def draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resolution=50):
+def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resolution=50):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -144,3 +169,220 @@ def draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resoluti
                       radius=cylinder_radius, resolution=resolution)
     graphics.cone(molid, tuple(0.75 * end + start), tuple(end + start),
                   radius=cone_radius, resolution=resolution)
+
+
+def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal"):
+    """
+    Render the image using renderer with resolution image_size.
+    """
+    disp_default_size = display.get("size")
+    # higher resolution
+    display.set(size=image_size)
+    display.update()
+    display.update_ui()
+    VMD.evaltcl("light 0 off")
+    render.render(renderer, "{}.ppm".format(image_out))
+    VMD.evaltcl("light 0 on")
+    image = Image.open("{}.ppm".format(image_out))
+    image.save("{}.png".format(image_out), format="PNG")
+    display.set(size=disp_default_size)
+    os.remove("{}.ppm".format(image_out))
+
+
+def vmd_prepare_scene():
+    """Change the lighting and background so it is the same for each image when rendering."""
+    VMD.evaltcl("light 1 off")
+    VMD.evaltcl("display shadows off")
+    color_display = color.get_colormap("Display")
+    color_display["Background"] = "white"
+    color.set_colormap("Display", color_display)
+    display.set(depthcue=0)
+    display.update()
+    display.update_ui()
+
+
+def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
+                      selection="all", scale=0.0, molid=0,
+                      vmd_material="Basic1Pantone"):
+    """
+    """
+    if molecule.exists(molid) == 0:
+        CPK_STYLE = "CPK 1.000000 0.300000 12.000000 12.000000"
+
+        # load molecule in vmd
+        if dcd is not None:
+            print(dcd)
+            molecule.load(filetype, coordsfile, "dcd", dcd)
+        else:
+            molecule.load(filetype, coordsfile)
+
+        molrep.modrep(molid, 0, style=CPK_STYLE, material=vmd_material, color="Name", sel=selection)
+        trans.scale(scale)
+
+
+def vmd_draw_ucell_box(ucell_lines, molid=0, vmd_material="Basic1Pantone"):
+    """
+    Draw the unit cell in molid.
+
+    This function takes the output from the lines_to_draw function.
+
+    Parameters
+    ----------
+    molid : int, optional
+        id of loaded molecule in vmd
+
+    ucell_lines : {list{list, list}, list{list, list}}
+        all lines with starting and endpoints that are to be drawn;
+        this is the output from the lines_to_draw function
+    """
+    graphics.material(molid, vmd_material)
+
+    for ucell_line in ucell_lines:
+        graphics.line(molid, tuple(ucell_line[0]), tuple(ucell_line[1]))
+
+
+def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
+                          molid=0, vmd_material="Basic1Pantone"):
+    """
+    Draw the arrows that show the coordinate system of the box according to the lattice vectors.
+
+    Parameters
+    ----------
+    ucell_a : np-array
+        cell vector a
+
+    ucell_b : np-array
+        cell vector b
+
+    ucell_c : np-array
+        cell vector c
+
+    origin : tuple
+        origin where to place the lattice axis
+
+    molid : int; default = 0
+        molid in vmd to draw the lattice axes in
+
+    vmd_material : str
+        the material to draw the lattice axes in
+
+    """
+    # change vector size
+    ucell_a = ucell_a / np.linalg.norm(ucell_a) * 8
+    ucell_b = ucell_b / np.linalg.norm(ucell_b) * 8
+    ucell_c = ucell_c / np.linalg.norm(ucell_c) * 8
+
+    graphics.material(molid, vmd_material)
+    graphics.color(molid, "red")
+    vmd_draw_arrow(molid, origin, ucell_a, cylinder_radius=0.4, cone_radius=1.0)
+    graphics.color(molid, "green")
+    vmd_draw_arrow(molid, origin, ucell_b, cylinder_radius=0.4, cone_radius=1.0)
+    graphics.color(molid, "blue")
+    vmd_draw_arrow(molid, origin, ucell_c, cylinder_radius=0.4, cone_radius=1.0)
+
+
+# FUNCTIONS TO PLOT SUPERCELLS OF CRYSTAL STRUCTURES
+def ucell_scell_factors(lmpdat_ucell, lmpdat_scell):
+    """
+    Get the factors the unit cell was multiplied by to gain the super cell.
+
+    Parameters
+    ----------
+    lmpdat_ucell : str
+        lammps data file of the unit cell
+
+    lmpdat_scell : str
+        lammps data file of the super cell
+
+    """
+    supercell = agum.Unification()
+    supercell.read_lmpdat(lmpdat_scell)
+    unitcell = agum.Unification()
+    unitcell.read_lmpdat(lmpdat_ucell)
+    supercell.ts_boxes[-1].box_lmp2lat()
+    unitcell.ts_boxes[-1].box_lmp2lat()
+    fa = int(supercell.ts_boxes[-1].ltc_a / unitcell.ts_boxes[-1].ltc_a)
+    fb = int(supercell.ts_boxes[-1].ltc_b / unitcell.ts_boxes[-1].ltc_b)
+    fc = int(supercell.ts_boxes[-1].ltc_c / unitcell.ts_boxes[-1].ltc_c)
+    del (supercell, unitcell)
+    return [fa, fb, fc]
+
+
+def lines_to_draw(p0, ucell_a, ucell_b, ucell_c):
+    """
+    Get the starting and end points of each line to draw for the unit cell.
+
+    Parameters
+    ----------
+    p0 : np-array
+        origin where to place the line beginning
+
+    ucell_a : np-array
+        cell vector a
+
+    ucell_b : np-array
+        cell vector b
+
+    ucell_c : np-array
+        cell vector c
+
+    """
+    vectors = []
+
+    # vector a
+    for i in [0, 1]:
+        for j in [0, 1]:
+            vstart = p0 + i * ucell_b + j * ucell_c
+            vstop = vstart + ucell_a
+            cvect = [vstart, vstop]
+            vectors.append(cvect)
+
+    # vector b
+    for i in [0, 1]:
+        for j in [0, 1]:
+            vstart = p0 + i * ucell_a + j * ucell_c
+            vstop = vstart + ucell_b
+            cvect = [vstart, vstop]
+            vectors.append(cvect)
+
+    # vector c
+    for i in [0, 1]:
+        for j in [0, 1]:
+            vstart = p0 + i * ucell_a + j * ucell_b
+            vstop = vstart + ucell_c
+            cvect = [vstart, vstop]
+            vectors.append(cvect)
+
+    return vectors
+
+
+def ucell_vects(supercell_dcd, fa, fb, fc, frame_id=-1):
+    """
+    Get the unit cell vectors from a super cell according to the multiplication factors.
+
+    Parameters
+    ----------
+    supercell_dcd : str
+        the dcd file to get the super cell lattice vectors from
+
+    fa : int or float
+        the factor to divide the super cell lattice vector a by in order
+        to get the unit cell vector a
+
+    fb : int or float
+        the factor to divide the super cell lattice vector b by in order
+        to get the unit cell vector b
+
+    fc : int or float
+        the factor to divide the super cell lattice vector c by in order
+        to get the unit cell vector c
+
+    """
+    scell = agum.Unification()
+    scell.import_dcd(supercell_dcd)
+    scell.read_frames()
+    scell.ts_boxes[frame_id].box_lmp2cart()
+    ucell_a = np.array(scell.ts_boxes[frame_id].crt_a) / fa
+    ucell_b = np.array(scell.ts_boxes[frame_id].crt_b) / fb
+    ucell_c = np.array(scell.ts_boxes[frame_id].crt_c) / fc
+    return (ucell_a, ucell_b, ucell_c)
