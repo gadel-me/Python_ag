@@ -217,7 +217,8 @@ def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
             molecule.load(filetype, coordsfile)
 
         molrep.modrep(molid, 0, style=CPK_STYLE, material=vmd_material, color="Name", sel=selection)
-        trans.scale(scale)
+        #trans.scale(scale)
+        VMD.evaltcl("scale to {}".format(scale))
 
 
 def vmd_draw_ucell_box(ucell_lines, molid=0, vmd_material="Basic1Pantone"):
