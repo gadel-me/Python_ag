@@ -11,6 +11,7 @@ import math
 import numpy as np
 import copy
 import itertools as it
+import re
 import time
 from natsort import natsorted
 import Transformations as cgt
@@ -93,6 +94,7 @@ class Universe(object):
 
     # COMMON-STUFF -------------------------------------------------------------------
     def _sort(self, keyword, atm_keyword=None):
+        #TODO: SORT BONDS ALSO BY DIFFERENT PARAMETERS LIKE BOND-KEY, ATOM-ID2
         """
         Sort
             > atoms by id, key, charge, x-, y- or z-coordinates
@@ -1305,7 +1307,7 @@ class Universe(object):
         """
         # guess name by given mass
         if by_mass:
-            for cur_atom in self.atoms:
+            for idx, cur_atom in enumerate(self.atoms):
 
                 # overwrite entries having atom-names already assigned
                 if overwrite:
@@ -1328,6 +1330,7 @@ class Universe(object):
                             # get mass from atm_types-dictionary
                             mass = round(self.atm_types[ckey].weigh, 1)
                             cur_atom.sitnam = mde.elements[mass]
+                            #cur_atom.sitnam = "{}{}".format(mde.elements[mass], idx)
 
         # guess name by cgcmm-info from 'Masses'-section
         elif by_typename:
@@ -1533,7 +1536,7 @@ class Universe(object):
         if refresh_bonds is True:
             self.fetch_molecules_by_bonds()
 
-    def change_indices(self, incr=1, mode="increase", entries="atm_id, atm_grp_id, atm_key, "):
+    def change_indices(self, incr=1, mode="increase", entries="atm_id, atm_grp_id, atm_key, sitnam, "):
         """
         Programs, such as lammps, need (why so ever) to have the integers in
         data-files to run from 1-N. Since other programs (like VMD) have starting
@@ -1599,6 +1602,14 @@ class Universe(object):
 
             if hasattr(self.atoms[idx], "atm_key"):
                 self.atoms[idx].atm_key += mod
+
+            #if hasattr(self.atoms[idx], "sitnam") and "sitnam" in entries:
+            #    sitnam_idx = re.findall(r"\d+", self.atoms[idx].sitnam)
+            #
+            #    if sitnam_idx != []:
+            #        sitnam_idx[0] = int(sitnam_idx[0]) + 1
+            #
+            #    self.atoms[idx].sitnam = sitnam_idx[0]
 
         # bonds
         for idx in xrange(len(self.bonds)):

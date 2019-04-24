@@ -489,6 +489,7 @@ class LongRange(object):
     """
     lr_key: int or str; key of long range interactions
     sitnam_i, sitnam_j: atom names of atom i and atom j
+    #TODO: energy units, distance units
     """
     def __init__(self,
                  lr_key=None,

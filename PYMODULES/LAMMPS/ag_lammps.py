@@ -260,7 +260,7 @@ class LmpStuff(mdu.Universe):
                         cur_imptype.energy_unit = energy_unit
                         imp_key = int(line[0])
                         cur_imptype.prm_k = float(line[1])
-                        cur_imptype.prm_d = float(line[2])
+                        cur_imptype.prm_d = int(line[2])
                         cur_imptype.prm_n = int(line[3])
 
                         self.imp_types[impcnt] = cur_imptype
@@ -573,7 +573,9 @@ class LmpStuff(mdu.Universe):
 
         # check charge of the system
         total_charge = sum([float(i.chge) for i in self.atoms])
-        print("***Info: Total charge of the system is {}".format(total_charge))
+
+        if debug is True:
+            print("***Info: Total charge of the system is {}".format(total_charge))
 
     def _parse_cgcmm(self, cur_line):
         """
