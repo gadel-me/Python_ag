@@ -236,6 +236,8 @@ def vmd_draw_ucell_box(ucell_lines, molid=0, vmd_material="Basic1Pantone"):
         all lines with starting and endpoints that are to be drawn;
         this is the output from the lines_to_draw function
     """
+    #all_molids = molecule.listall()
+
     graphics.material(molid, vmd_material)
 
     for ucell_line in ucell_lines:

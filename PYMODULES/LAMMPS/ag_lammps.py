@@ -1,4 +1,5 @@
 from __future__ import print_function
+import pdb
 import os
 import numpy as np
 import copy
@@ -12,6 +13,7 @@ from natsort import natsorted
 #import collections
 
 __version__ = "2018-10-25"
+
 
 class LmpStuff(mdu.Universe):
     """
@@ -53,14 +55,15 @@ class LmpStuff(mdu.Universe):
         lmpdat_box = mdb.Box(boxtype="lammps")
 
         with open(lmpdat, "r") as lmpdat_in:
+            line = lmpdat_in.readline()
+
+            if "CGCMM" in line.upper() and debug is True:
+                print("***Info: CGCMM-Style found! " +
+                      "Trying to parse additional data.")
+
             for line in lmpdat_in:
-
-                if "CGCMM" in line.upper() and debug is True:
-                    print("***Info: CGCMM-Style found! " +
-                          "Trying to parse additional data.")
-
                 # /// general stuff ///
-                elif "atoms" in line:
+                if "atoms" in line:
                     total_atms = int(line.split()[0])
                 elif "bonds" in line:
                     total_bnds = int(line.split()[0])
@@ -433,7 +436,7 @@ class LmpStuff(mdu.Universe):
                     self.ts_coords.append(np.array(tmp_ts))
 
                 # /// bonds entry ///
-                elif "Bonds" in line:
+                elif line.startswith("Bonds"):
                     lmpdat_in.next()  # skip empty line
 
                     # parse bonds
