@@ -143,6 +143,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     #plt.legend(edgecolor="white")
     #plt.legend(bbox_to_anchor=(0.5, 1.5))
     plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
+    plt.savefig("file.png")
     fig.show()
     #plt.show()
 

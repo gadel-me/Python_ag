@@ -547,6 +547,7 @@ class PwStuff(mdu.Universe):
         #TODO WRITE FROZEN ATOMS
         """
         self.pw_entries["CONTROL"]["verbosity"] = verbosity
+        self.pw_entries["SYSTEM"]["nat"] = len(self.atoms)
         #self.pw_entries["SYSTEM"]["A"] = agv.get_mag(self.ts_boxes[frame_id].crt_a)
 
         with open(filename, "w") as opened_filename:
