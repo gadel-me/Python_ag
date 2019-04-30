@@ -4,6 +4,7 @@ import matplotlib.mlab as mlab
 import scipy.stats as stats
 import numpy as np
 import math
+import scipy.stats
 from statsmodels.graphics.gofplots import qqplot
 from statsmodels.graphics.tsaplots import plot_acf
 import pdb
@@ -172,8 +173,11 @@ def plot_histogram(data, key, label=None):
     # Tweak spacing to prevent clipping of ylabel
     plt.subplots_adjust(left=0.15)
 
+    # coefficient of variation
+    coeff_var = (sigma / mu) * 100
+
     # Set a title for current subplot
-    plt.title("Histogram of %r $\mu=%.4f$ $\sigma=%.4f$" % (key, mu, sigma),
+    plt.title("Histogram of %r $\mu=%.4f$ $\sigma=%.4f$ $VarCoeff=%.4f$ %%" % (key, mu, sigma, coeff_var),
               fontweight='bold', fontsize=11)
 
     # chi square test to check the quality of the fit

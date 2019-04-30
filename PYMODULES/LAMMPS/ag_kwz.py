@@ -9,7 +9,7 @@ import math
 import numpy as np
 #from natsort import natsorted
 #import itertools as it
-#import scipy.stats
+import scipy.stats
 from mpi4py import MPI
 from lammps import lammps, PyLammps
 import Transformations as cgt
@@ -854,7 +854,11 @@ def _test_anneal_equil(data):
     except Warning:
         pass
 
-    return qq_normal and (skew_normal or kurtosis_normal)
+    # coefficient of variation
+    coeff_var = scipy.stats.variation(data) * 100
+    # accept normal distribution if the coefficient of variation is below 0.5 %
+
+    return (qq_normal and (skew_normal or kurtosis_normal)) or coeff_var <= 0.5
 
 
 def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):

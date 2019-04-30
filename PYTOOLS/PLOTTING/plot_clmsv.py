@@ -2,6 +2,7 @@
 from __future__ import print_function, division
 import readline  # necessary for raw_input and using arrow keys
 import argparse
+import scipy.stats
 import numpy as np
 import ag_unify_log as agul
 import plot_clmsv_helper as pcsvh

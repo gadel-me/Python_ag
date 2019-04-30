@@ -4,7 +4,7 @@ import math
 import numpy as np
 import ag_cryst as agc
 
-__version__ = "2017-06-12"
+__version__ = "2019-04-30"
 
 
 class LinkedCells(object):
@@ -63,7 +63,7 @@ class LinkedCells(object):
         # change coordinates to fractional coordinates
         return converted_coords
 
-    def create_lnk_cells(self, rcut_a=2, rcut_b=2, rcut_c=2, debug=False):
+    def create_lnk_cells(self, rcut_a=2, rcut_b=2, rcut_c=2, debug=True):
         """
         Divide the cell into ra*rb*rc sub-cells with side-lengths rcut_a|_b|_c
 
@@ -178,5 +178,5 @@ class LinkedCells(object):
         total_cells = self.ra*self.rb*self.rc
 
         if debug is True:
-            print("***Linked-Cells Info: Took {} to build {} linked cells.".format((end-start),
+            print("***Linked-Cells Info: Took {} seconds to build {} linked cells.".format((end - start),
                   total_cells))
