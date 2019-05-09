@@ -118,6 +118,10 @@ parser.add_argument("-out",
                     help="output name for all output-files"
                     )
 
+parser.add_argument("-rn_start_velocity",
+                    action="store_true",
+                    help="Always (independently from restart) start with random velocities.")
+
 parser.add_argument("-debug",
                     action="store_true",
                     help="Write all system info to a file called 'info.txt'"
@@ -161,10 +165,15 @@ if args.gpu is not None:
 lmp.file(args.set)
 lmp.command("box tilt large")  # ignore too tilted boxes
 
+#print(args.lmprst)
 # read file
 if args.lmprst is not None and os.path.isfile(args.lmprst):
     lmp.command("read_restart {}".format(args.lmprst))
-elif os.path.isfile(args.lmpdat) is True:
+
+    if args.rn_start_velocity is True:
+        lmp.command(("velocity all create {} 483806 rot yes dist gaussian").format(start_temp))
+
+elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
     lmp.command("read_data {}".format(args.lmpdat))
 
     if not args.minimize:

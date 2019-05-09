@@ -18,6 +18,8 @@ Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-te
 
 from __future__ import print_function, division
 import scipy.stats
+from scipy.optimize import curve_fit
+import numpy as np
 #import pdb
 
 
@@ -245,3 +247,33 @@ def chi_square_error(data1, data2):
         chi_squares.append(abs(en1 - en2)**2)
 
     return sum(chi_squares)
+
+
+def gnuplot_gaussfit(x_values, y_values):
+
+    ### Gaussian function to fit with
+    def gauss(x, *p):
+        A, mu, sigma = p
+        return A / np.sqrt(2 * sigma**2 * np.pi) * np.exp(-(x - mu)**2 / (2.0 * sigma**2))
+
+    ### RMSE to evaluate goodness of fit
+    def rmse(predictions, targets):
+        return np.sqrt(((predictions - targets) ** 2).mean())
+
+    xmax = max(x_values)  # minimum x value of data to plot
+    xmin = min(x_values)  # maximum x value of data to plot
+    p0 = [1., (xmax + xmin) / 2, (xmax - xmin) / 8]  # initial value to start fitting with
+
+    ### fitting procedure
+    coeff, var_matrix = curve_fit(gauss, x_values, y_values, p0=p0, maxfev=1000000)
+
+    hist_fit = gauss(x_values, *coeff)
+
+    gauss_data = np.array((x_values, hist_fit))
+    rmse_val = rmse(gauss_data[1], y_values)
+
+    print("Rms error: {0}".format(rmse_val))
+    print('Fitted mean = {0}'.format(coeff[1]))
+    print('Fitted standard deviation = {0}\n'.format(coeff[2]))
+
+    return(gauss_data)

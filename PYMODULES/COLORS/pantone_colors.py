@@ -1,3 +1,5 @@
+__version__ = "2019-05-07"
+
 rgb_colors = (0.003922, 0.309804, 0.631373,
               0.745098, 0.188235, 0.101961,
               0.352941, 0.356863, 0.364706,
@@ -67,3 +69,48 @@ color_names = ("blue",
                "orange3")
 
 pantone_rgb = dict(zip(color_names, rgb_colors))
+
+pantone_colors_hex = {
+    'blue': '#3597D8',    # Process Blue
+    'red': '#AA2A23',    # 1807
+    'gray': '#5B5B5D',    # CG11
+    'orange': '#F0903E',    # Orange
+    'yellow': '#FAF420',    # Yellow
+    'tan': '#915D1B',    # 4635
+    'silver': '#B3B3B8',    # CG5
+    'green': '#69BE4B',    # 368
+    'white': '#FFFFFF',    # standard white
+    'pink': '#EB6EAB',    # 224
+    'cyan': '#33ADA7',    # 326
+    'purple': '#983795',    # Purple
+    'lime': '#9CCD67',    # 375
+    'mauve': '#D773AE',    # 674
+    'ochre': '#79490A',    # 469
+    'iceblue': '#8EC7EE',    # 2905
+    'black': '#000000',    # standard black
+    'yellow2': '#FCF774',    # 3935
+    'yellow3': '#BCD943',    # 382
+    'green2': '#4B6B1E',    # 371
+    'green3': '#A3D49A',    # 359
+    'cyan2': '#207066',    # 3292
+    'cyan3': '#38B4C6',    # 3125
+    'blue2': '#2C72BE',    # 2935
+    'blue3': '#255EA8',    # Refl. Blue
+    'violet': '#3E3C97',    # Violet
+    'violet2': '#681A7E',    # 259
+    'magenta': '#E5008B',    # Magenta
+    'magenta2': '#E6007C',    # Rubine Red
+    'red2': '#E95936',    # warm red
+    'red3': '#E7383A',    # Red032
+    'orange2': '#D46C27',    # 1525
+    'orange3': '#F29855'     # 164
+}
+
+
+def pantone_colors_rgb(color):
+    """
+    """
+    red = int(pantone_colors_hex[color][1:3], 16)
+    green = int(pantone_colors_hex[color][3:5], 16)
+    blue = int(pantone_colors_hex[color][5:7], 16)
+    return(red, green, blue)

@@ -70,6 +70,8 @@ class XYZ(mdu.Universe):
                         self.ts_boxes = []
 
                     self.ts_boxes.append(current_box)
+                else:
+                    pass
 
                 cframe = []
 
@@ -151,24 +153,24 @@ class XYZ(mdu.Universe):
                     elif self.ts_boxes[frame_id].boxtype == "lattice":
                         xyz_out.write(("a: {} b: {} c: {} "
                                        "alpha: {} beta: {} gamma: {}").format(self.ts_boxes[frame_id].ltc_a,
-                                                                                self.ts_boxes[frame_id].ltc_b,
-                                                                                self.ts_boxes[frame_id].ltc_c,
-                                                                                np.degrees(self.ts_boxes[frame_id].ltc_alpha),
-                                                                                np.degrees(self.ts_boxes[frame_id].ltc_beta),
-                                                                                np.degrees(self.ts_boxes[frame_id].ltc_gamma)))
+                                                                              self.ts_boxes[frame_id].ltc_b,
+                                                                              self.ts_boxes[frame_id].ltc_c,
+                                                                              np.degrees(self.ts_boxes[frame_id].ltc_alpha),
+                                                                              np.degrees(self.ts_boxes[frame_id].ltc_beta),
+                                                                              np.degrees(self.ts_boxes[frame_id].ltc_gamma)))
                     else:
                         xyz_out.write(("xlo {} xhi {} "
                                        "ylo {} yhi {} "
                                        "zlo {} zhi {} "
-                                       "xy {} xz {} yz {}\n").format(self.ts_boxes[frame_id].lmp_xlo,
-                                                                     self.ts_boxes[frame_id].lmp_xhi,
-                                                                     self.ts_boxes[frame_id].lmp_ylo,
-                                                                     self.ts_boxes[frame_id].lmp_yhi,
-                                                                     self.ts_boxes[frame_id].lmp_zlo,
-                                                                     self.ts_boxes[frame_id].lmp_zhi,
-                                                                     self.ts_boxes[frame_id].lmp_xy,
-                                                                     self.ts_boxes[frame_id].lmp_xz,
-                                                                     self.ts_boxes[frame_id].lmp_yz))
+                                       "xy {} xz {} yz {}").format(self.ts_boxes[frame_id].lmp_xlo,
+                                                                   self.ts_boxes[frame_id].lmp_xhi,
+                                                                   self.ts_boxes[frame_id].lmp_ylo,
+                                                                   self.ts_boxes[frame_id].lmp_yhi,
+                                                                   self.ts_boxes[frame_id].lmp_zlo,
+                                                                   self.ts_boxes[frame_id].lmp_zhi,
+                                                                   self.ts_boxes[frame_id].lmp_xy,
+                                                                   self.ts_boxes[frame_id].lmp_xz,
+                                                                   self.ts_boxes[frame_id].lmp_yz))
 
                 xyz_out.write("\n")
 

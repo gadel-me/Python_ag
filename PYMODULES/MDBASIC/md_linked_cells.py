@@ -63,7 +63,7 @@ class LinkedCells(object):
         # change coordinates to fractional coordinates
         return converted_coords
 
-    def create_lnk_cells(self, rcut_a=2, rcut_b=2, rcut_c=2, debug=True):
+    def create_lnk_cells(self, rcut_a=2, rcut_b=2, rcut_c=2, debug=False):
         """
         Divide the cell into ra*rb*rc sub-cells with side-lengths rcut_a|_b|_c
 
@@ -82,7 +82,7 @@ class LinkedCells(object):
                             cell
         """
         if debug is True:
-            print("******Linked-Cells Info: Building linked cells.")
+            print("***Linked-Cells Info: Building linked cells.")
             start = time.time()
 
         # cell division-factors

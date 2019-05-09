@@ -171,7 +171,8 @@ class LmpStuff(mdu.Universe):
                         bnd_tp_old_new[bnd_key] = bndcnt
 
                         # Check if force field units are o.k.
-                        self.bnd_types[bndcnt].check_bnd_type()
+                        if debug is True:
+                            self.bnd_types[bndcnt].check_bnd_type()
 
                 # /// angle types(coeffs) ///
                 elif "Angle Coeffs" in line:
@@ -239,7 +240,8 @@ class LmpStuff(mdu.Universe):
                         dih_tp_old_new[dih_key] = dihcnt
 
                         # check force field units
-                        self.dih_types[dihcnt].check_dih_type()
+                        if debug is True:
+                            self.dih_types[dihcnt].check_dih_type()
 
                 # /// improper types(coeffs) ///
                 elif "Improper Coeffs" in line:
@@ -268,8 +270,10 @@ class LmpStuff(mdu.Universe):
 
                         self.imp_types[impcnt] = cur_imptype
                         imp_tp_old_new[imp_key] = impcnt
+
                         # check force field units
-                        self.imp_types[impcnt].check_imp_type()
+                        if debug is True:
+                            self.imp_types[impcnt].check_imp_type()
 
                 # /// pair coefficients entry ///
                 elif "Pair Coeffs" in line:
