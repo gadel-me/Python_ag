@@ -221,7 +221,8 @@ def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
         VMD.evaltcl("scale to {}".format(scale))
 
 
-def vmd_draw_ucell_box(ucell_lines, molid=0, vmd_material="Basic1Pantone"):
+def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", lcolor="blue",
+                 lstyle="solid", lwidth=1, lfreq=15):
     """
     Draw the unit cell in molid.
 
@@ -232,20 +233,55 @@ def vmd_draw_ucell_box(ucell_lines, molid=0, vmd_material="Basic1Pantone"):
     molid : int, optional
         id of loaded molecule in vmd
 
-    ucell_lines : {list{list, list}, list{list, list}}
+    lines : {list{list, list}, list{list, list}}
         all lines with starting and endpoints that are to be drawn;
         this is the output from the lines_to_draw function
+
+    lstyle : str; 'solid' or 'dashed' or '--'
+        draw dashed lines or own dashed lines
+
+    lwidth : int
+        width of the line
+
+    lfreq : int
+        frequency a line shall be drawn, which is lfreq / 2 since every
+        second line is skipped
+
     """
     #all_molids = molecule.listall()
 
     graphics.material(molid, vmd_material)
+    graphics.color(molid, lcolor)
 
-    for ucell_line in ucell_lines:
-        graphics.line(molid, tuple(ucell_line[0]), tuple(ucell_line[1]))
+    for ucell_line in lines:
+        #print(ucell_line)
+
+        # use a more rough dashing than the built-in one
+        if lstyle == "--":
+            # divide current line into sublines
+            pstart = ucell_line[0]
+
+            # get the subline and norm it
+            subline = ucell_line[1] - ucell_line[0]
+            subline /= lfreq
+
+            for cntr in range(lfreq):
+                pstop = pstart + subline
+
+                if cntr % 2 == 0:
+                    #print(cntr)
+                    graphics.line(molid, tuple(pstart), tuple(pstop),
+                                  style="solid", width=lwidth)
+
+                pstart = pstop
+        else:
+            graphics.line(molid, tuple(ucell_line[0]), tuple(ucell_line[1]),
+                          style=lstyle, width=lwidth)
 
 
 def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
-                          molid=0, vmd_material="Basic1Pantone"):
+                          molid=0, vmd_material="Basic1Pantone", textsize=1.0,
+                          offset=(0.0, 0.0, 0.0)):
     """
     Draw the arrows that show the coordinate system of the box according to the lattice vectors.
 
@@ -276,12 +312,24 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     ucell_c = ucell_c / np.linalg.norm(ucell_c) * 8
 
     graphics.material(molid, vmd_material)
+
+    # axis a
     graphics.color(molid, "red")
     vmd_draw_arrow(molid, origin, ucell_a, cylinder_radius=0.4, cone_radius=1.0)
+    label_pos = ucell_a * 1.05 + offset + origin
+    graphics.text(molid, tuple(label_pos), "a", textsize)
+
+    # axis a
     graphics.color(molid, "green")
     vmd_draw_arrow(molid, origin, ucell_b, cylinder_radius=0.4, cone_radius=1.0)
+    label_pos = ucell_b * 1.05 + offset + origin
+    graphics.text(molid, tuple(label_pos), "b", textsize)
+
+    # axis c
     graphics.color(molid, "blue")
     vmd_draw_arrow(molid, origin, ucell_c, cylinder_radius=0.4, cone_radius=1.0)
+    label_pos = ucell_c * 1.05 + offset + origin
+    graphics.text(molid, tuple(label_pos), "c", textsize)
 
 
 # FUNCTIONS TO PLOT SUPERCELLS OF CRYSTAL STRUCTURES
