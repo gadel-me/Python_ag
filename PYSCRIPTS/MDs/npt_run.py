@@ -5,6 +5,7 @@ import pdb
 import argparse
 import os
 import re
+import random
 from lammps import lammps
 from mpi4py import MPI
 
@@ -171,13 +172,13 @@ if args.lmprst is not None and os.path.isfile(args.lmprst):
     lmp.command("read_restart {}".format(args.lmprst))
 
     if args.rn_start_velocity is True:
-        lmp.command(("velocity all create {} 483806 rot yes dist gaussian").format(start_temp))
+        lmp.command(("velocity all create {} {} rot yes dist gaussian").format(start_temp, random.randint(10000, 5000000)))
 
 elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
     lmp.command("read_data {}".format(args.lmpdat))
 
     if not args.minimize:
-        lmp.command(("velocity all create {} 483806 rot yes dist gaussian").format(start_temp))
+        lmp.command(("velocity all create {} {} rot yes dist gaussian").format(start_temp, random.randint(10000, 100000)))
 
 else:
     raise IOError("No data nor restart files given.")

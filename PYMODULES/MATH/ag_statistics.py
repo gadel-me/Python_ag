@@ -249,7 +249,7 @@ def chi_square_error(data1, data2):
     return sum(chi_squares)
 
 
-def gnuplot_gaussfit(x_values, y_values):
+def gnuplot_gaussfit(x_values, y_values, debug=False):
 
     ### Gaussian function to fit with
     def gauss(x, *p):
@@ -272,8 +272,9 @@ def gnuplot_gaussfit(x_values, y_values):
     gauss_data = np.array((x_values, hist_fit))
     rmse_val = rmse(gauss_data[1], y_values)
 
-    print("Rms error: {0}".format(rmse_val))
-    print('Fitted mean = {0}'.format(coeff[1]))
-    print('Fitted standard deviation = {0}\n'.format(coeff[2]))
+    if debug is True:
+        print("Rms error: {0}".format(rmse_val))
+        print('Fitted mean = {0}'.format(coeff[1]))
+        print('Fitted standard deviation = {0}\n'.format(coeff[2]))
 
     return(gauss_data)
