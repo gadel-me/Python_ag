@@ -151,7 +151,7 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
         graphics.text(molid, tuple(label_pos), label_text, textsize)
 
 
-def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resolution=50):
+def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resolution=50, double_arrow=True, vmd_material="Basic1Pantone", lcolor="blue", tip_length=0.15):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -165,10 +165,27 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, reso
         > cylinder_radius   float; radius of the arrow base
         > cone_radius       float; radius of the cone
     """
-    graphics.cylinder(molid, tuple(start), tuple(0.9 * end + start),
-                      radius=cylinder_radius, resolution=resolution)
-    graphics.cone(molid, tuple(0.75 * end + start), tuple(end + start),
-                  radius=cone_radius, resolution=resolution)
+    graphics.material(molid, vmd_material)
+    graphics.color(molid, lcolor)
+    p_vector = end - start
+
+    # shift starting point of the vector 10 % towards the end point
+    if double_arrow is True:
+        p_start = start + p_vector * tip_length
+    else:
+        p_start = start
+
+    # shift starting point of the vector 90 % towards the end point
+    p_end = start + p_vector * (1 - tip_length)
+
+    graphics.cylinder(molid, tuple(p_start), tuple(p_end), radius=cylinder_radius, resolution=resolution)
+    graphics.cone(molid, tuple(p_end), tuple(end), radius=cone_radius, resolution=resolution)
+    graphics.cone(molid, tuple(p_start), tuple(start), radius=cone_radius, resolution=resolution)
+
+    # old stuff (working but why?)
+    #graphics.cylinder(molid, tuple(start), tuple(0.9 * end + start),
+    #                  radius=cylinder_radius, resolution=resolution)
+    #graphics.cone(molid, tuple(0.75 * end + start), tuple(end + start), radius=cone_radius, resolution=resolution)
 
 
 def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal"):
