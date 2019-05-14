@@ -34,6 +34,7 @@ import VMD
 ################################################################################
 
 def vmd_draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor="blue"):
+    #TODO: not working!
     """
     Draws part of a circle to visualize the measured angle.
 
@@ -73,6 +74,7 @@ def vmd_draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor
     vt1    = atm1Crds - atm2Crds
     vt2    = atm3Crds - atm2Crds
     vtRot  = np.cross(vt1, vt2)
+
     # unit vectors for quaternions
     vt1   /= np.linalg.norm(vt1)
     vt2   /= np.linalg.norm(vt2)
@@ -151,7 +153,9 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
         graphics.text(molid, tuple(label_pos), label_text, textsize)
 
 
-def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, resolution=50, double_arrow=True, vmd_material="Basic1Pantone", lcolor="blue", tip_length=0.15):
+def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
+                   cone_length=0.15, resolution=50, double_arrow=False,
+                   vmd_material="Basic1Pantone", lcolor="blue"):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -169,14 +173,15 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0, reso
     graphics.color(molid, lcolor)
     p_vector = end - start
 
-    # shift starting point of the vector 10 % towards the end point
+    # shift starting point of the vector by cone_length towards the end point
     if double_arrow is True:
-        p_start = start + p_vector * tip_length
+        # shorten vector so there is place for the cone at the starting point
+        p_start = start + p_vector * cone_length
     else:
         p_start = start
 
-    # shift starting point of the vector 90 % towards the end point
-    p_end = start + p_vector * (1 - tip_length)
+    # shorten vector so there is place for the cone at the ending point
+    p_end = start + p_vector * (1 - cone_length)
 
     graphics.cylinder(molid, tuple(p_start), tuple(p_end), radius=cylinder_radius, resolution=resolution)
     graphics.cone(molid, tuple(p_end), tuple(end), radius=cone_radius, resolution=resolution)
@@ -220,20 +225,18 @@ def vmd_prepare_scene():
 
 def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
                       selection="all", scale=0.0, molid=0,
-                      vmd_material="Basic1Pantone"):
+                      vmd_material="Basic1Pantone", style="CPK 1.000000 0.300000 12.000000 12.000000"):
     """
     """
     if molecule.exists(molid) == 0:
-        CPK_STYLE = "CPK 1.000000 0.300000 12.000000 12.000000"
 
         # load molecule in vmd
         if dcd is not None:
-            print(dcd)
             molecule.load(filetype, coordsfile, "dcd", dcd)
         else:
             molecule.load(filetype, coordsfile)
 
-        molrep.modrep(molid, 0, style=CPK_STYLE, material=vmd_material, color="Name", sel=selection)
+        molrep.modrep(molid, 0, style=style, material=vmd_material, color="Name", sel=selection)
         #trans.scale(scale)
         VMD.evaltcl("scale to {}".format(scale))
 
@@ -454,3 +457,50 @@ def ucell_vects(supercell_dcd, fa, fb, fc, frame_id=-1):
     ucell_b = np.array(scell.ts_boxes[frame_id].crt_b) / fb
     ucell_c = np.array(scell.ts_boxes[frame_id].crt_c) / fc
     return (ucell_a, ucell_b, ucell_c)
+
+
+def draw_dotted_line(molid, start, end, sradius=0.01, scolor="blue", sdist=0.1, vmd_material="Basic1Pantone"):
+    """
+    Draw a dotted line between two pints 'start' and 'end'.
+
+    Parameters
+    ----------
+    molid : int
+        id of the molecule to draw the arrow to
+
+    start : np-array; (1,3)-tuple
+        starting coordinates
+
+    end : np-array; (1,3)-tuple
+        ending coordinates
+
+    sradius : float
+        radii of the dots
+
+    scolor : str
+        color of the dots
+
+    sdist : float
+        distance between points
+
+    """
+    graphics.material(molid, vmd_material)
+    graphics.color(molid, scolor)
+
+    # vector between start and end
+    p_vector = end - start
+    length_p_vector = np.linalg.norm(p_vector)
+
+    # normed p_vector
+    normed_p_vector = p_vector / length_p_vector
+
+    # number of points
+    num_points = int(length_p_vector / sdist)
+    print(num_points)
+
+    # first sphere
+
+
+    for pt in range(num_points):
+        csphere = start + normed_p_vector * sdist * pt
+        graphics.sphere(molid, center=tuple(csphere), radius=sradius)
