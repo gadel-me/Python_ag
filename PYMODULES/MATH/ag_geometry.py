@@ -240,7 +240,7 @@ def arb_rot_matrix(vector):
     return Mr
 
 
-def get_dihedral(ptI, ptJ, ptK, ptL):
+def get_dihedral(ptI, ptJ, ptK, ptL, return_cross=False):
     """
     Define a dihedral/improper between the points I, J, K and L. Defines the planes
     IJK and JKL (if improper is intended to be used, consider right order of atoms).
@@ -273,7 +273,10 @@ def get_dihedral(ptI, ptJ, ptK, ptL):
 
     # angle between two planes is the same as the two vectors which are orthogonal
     # to each plane
-    return cgt.angle_between_vectors(cp1, cp2)
+    if return_cross is True:
+        return (cgt.angle_between_vectors(cp1, cp2), cp1, cp2)
+    else:
+        return cgt.angle_between_vectors(cp1, cp2)
 
 
 def new_dihedral(p):

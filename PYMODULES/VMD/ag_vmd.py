@@ -7,6 +7,7 @@ import numpy as np
 from pyquaternion import Quaternion
 from PIL import Image
 import ag_unify_md as agum
+import ag_geometry
 
 # VMD MODULES
 import atomsel   # Replaces AtomSel and atomselection
@@ -33,8 +34,7 @@ import VMD
 # VMD HELPER FUNCTIONS
 ################################################################################
 
-def vmd_draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor="blue"):
-    #TODO: not working!
+def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=50, radius=0.5, drawcolor="blue"):
     """
     Draws part of a circle to visualize the measured angle.
 
@@ -45,8 +45,84 @@ def vmd_draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor
                          point
             > canvas     boolean; draw a canvas between bow and angle axis
             > resolution int; number of cylinders and spheres that form the angle
+
     """
-    id1, id2, id3 = atomids
+    if atomids is not None:
+        id1, id2, id3 = atomids
+        # select all atoms
+        sel = atomsel.atomsel("all", molid, frame)
+        # get coordinates
+        x = sel.get("x")
+        y = sel.get("y")
+        z = sel.get("z")
+        # get rotational axis
+        atm1Crds = np.array([x[id1], y[id1], z[id1]])
+        atm2Crds = np.array([x[id2], y[id2], z[id2]])
+        atm3Crds = np.array([x[id3], y[id3], z[id3]])
+    elif atm_coords is not None:
+        atm1Crds, atm2Crds, atm3Crds = atm_coords
+    else:
+        raise Warning("At least atomic coordinates or atom ids have to be provided!")
+
+    # draw bows in the current molecule, transparent canvas in a new molecule
+    if canvas is True:
+        molecule.new("angle canvas")
+        graphics_id = molecule.num() - 1  # ids start with 0
+    else:
+        graphics_id = molid
+
+    graphics.color(graphics_id, drawcolor)
+
+    #pdb.set_trace()
+    # define angle and rotational axis
+    vt1    = atm1Crds - atm2Crds
+    vt2    = atm3Crds - atm2Crds
+    vtRot  = np.cross(vt1, vt2)
+
+    # unit vectors for quaternions
+    vt1   /= np.linalg.norm(vt1)
+    vt2   /= np.linalg.norm(vt2)
+    vtRot /= np.linalg.norm(vtRot)
+
+    # define angle offset
+    max_angle = np.arccos(np.dot(vt1, vt2))  # denominator is 1 since vectors are normed
+    print("Measured angles: {}".format(np.degrees(max_angle)))
+    angle_offset = np.pi / resolution
+
+    vt1 *= radius
+    vt2 *= radius
+
+    for cntr, theta in enumerate(np.arange(0, max_angle, angle_offset)):
+        # previous vector
+        if cntr == 0:
+            vt_pre = vt1 + atm2Crds
+
+        # define quaternion
+        q = Quaternion(axis=vtRot, angle=theta)
+
+        # rotate vector
+        vt_cur = q.rotate(vt1)
+        vt_cur += atm2Crds
+
+        if canvas is True and cntr != 0:
+            graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt_cur))
+        else:
+            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=0.01,
+                              resolution=20, filled=1)
+        vt_pre = vt_cur
+
+    if canvas is True:
+        graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt2 + atm2Crds))
+        graphics.material(graphics_id, "Transparent")
+    else:
+        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2 + atm2Crds), radius=0.01,
+                          resolution=20, filled=1)
+
+
+def draw_torsion(molid, frame, atomids, canvas=False, resolution=50, radius=0.5, drawcolor="blue"):
+    """
+    """
+    id1, id2, id3, id4 = atomids
 
     # draw bows in the current molecule, transparent canvas in a new molecule
     if canvas is True:
@@ -69,46 +145,26 @@ def vmd_draw_angle(molid, frame, atomids, canvas=False, resolution=50, drawcolor
     atm1Crds = np.array([x[id1], y[id1], z[id1]])
     atm2Crds = np.array([x[id2], y[id2], z[id2]])
     atm3Crds = np.array([x[id3], y[id3], z[id3]])
+    atm4Crds = np.array([x[id4], y[id4], z[id4]])
+
 
     # define angle and rotational axis
-    vt1    = atm1Crds - atm2Crds
-    vt2    = atm3Crds - atm2Crds
-    vtRot  = np.cross(vt1, vt2)
+    #vt1    = atm1Crds - atm2Crds
+    #vt2    = atm3Crds - atm2Crds
+    #vtRot  = np.cross(vt1, vt2)
 
     # unit vectors for quaternions
-    vt1   /= np.linalg.norm(vt1)
-    vt2   /= np.linalg.norm(vt2)
-    vtRot /= np.linalg.norm(vtRot)
+    #vt1   /= np.linalg.norm(vt1)
+    #vt2   /= np.linalg.norm(vt2)
+    #vtRot /= np.linalg.norm(vtRot)
+    print(atm1Crds)
+    _, cp1, cp2 = ag_geometry.get_dihedral(atm1Crds, atm2Crds, atm3Crds, atm4Crds, return_cross=True)
 
-    # define angle offset
-    max_angle = np.arccos(np.dot(vt1, vt2))  # denominator is 1 since vectors are normed
-    angle_offset = np.pi/resolution
-
-    for cntr, theta in enumerate(np.arange(0, max_angle, angle_offset)):
-        # previous vector
-        if cntr == 0:
-            vt_pre = vt1 + atm2Crds
-
-        # define quaternion
-        q = Quaternion(axis=vtRot, angle=theta)
-
-        # rotate vector
-        vt_cur = q.rotate(vt1)
-        vt_cur += atm2Crds
-
-        if canvas is True and cntr != 0:
-            graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt_cur))
-        else:
-            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=0.01,
-                              resolution=20, filled=1)
-        vt_pre = vt_cur
-
-    if canvas is True:
-        graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt2+atm2Crds))
-        graphics.material(graphics_id, "Transparent")
-    else:
-        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2+atm2Crds), radius=0.01,
-                          resolution=20, filled=1)
+    # draw vectors between id2 and id3, therefor get the relevant vector
+    center_pt = atm2Crds + (atm3Crds - atm2Crds) * 0.5
+    cp1 += center_pt
+    cp2 += center_pt
+    vmd_draw_angle(molid, frame, atm_coords=[cp1, center_pt, cp2], canvas=False, resolution=resolution, radius=radius, drawcolor="blue")
 
 
 def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0)):
@@ -496,11 +552,19 @@ def draw_dotted_line(molid, start, end, sradius=0.01, scolor="blue", sdist=0.1, 
 
     # number of points
     num_points = int(length_p_vector / sdist)
-    print(num_points)
 
     # first sphere
-
-
     for pt in range(num_points):
         csphere = start + normed_p_vector * sdist * pt
         graphics.sphere(molid, center=tuple(csphere), radius=sradius)
+
+
+def vmd_coords_numpy_arrays(molid, frame_id, selection="all"):
+    """
+    """
+    sel = atomsel.atomsel(selection, molid, frame_id)
+    # get coordinates
+    x = sel.get("x")
+    y = sel.get("y")
+    z = sel.get("z")
+    return [np.array([i, j, k]) for i, j, k in zip(x, y, z)]
