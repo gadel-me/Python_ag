@@ -567,4 +567,82 @@ def vmd_coords_numpy_arrays(molid, frame_id, selection="all"):
     x = sel.get("x")
     y = sel.get("y")
     z = sel.get("z")
-    return [np.array([i, j, k]) for i, j, k in zip(x, y, z)]
+    coords = [np.array([i, j, k]) for i, j, k in zip(x, y, z)]
+
+    # omit the list the coords are in, if the coordinates of only one atom are desired
+    if len(coords) == 1:
+        return coords[0]
+    else:
+        return coords
+
+
+def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True):
+    """
+    Draw double bonds using cylinders given a dictionary with according bonds.
+
+    Parameters
+    ----------
+    molid : int
+        molecule id to draw the cylinder in
+    frame_id : int
+        id of the frame to use the coordinates from
+    bonds : list {list {int, int, int, int}, list {int, int, int, int}, ...}
+        first two integers of each sublist form the bond, the others form
+        the vector which forms the plane in which the double will be located
+    """
+
+    selection_str = "index {}"
+    element_colors = color.get_colormap("Element")
+
+    for cbond in bonds:
+        selection_str1 = selection_str.format(cbond[0])
+        selection_str2 = selection_str.format(cbond[1])
+        selection_str3 = selection_str.format(cbond[2])
+        selection_str4 = selection_str.format(cbond[3])
+
+        # get vector which is the bond
+        vt1_coords = vmd_coords_numpy_arrays(molid, frame_id, selection_str1)
+        vt2_coords = vmd_coords_numpy_arrays(molid, frame_id, selection_str2)
+        #print(vt1_coords)
+        bond = vt2_coords - vt1_coords
+
+        # get vector forms the plane with bond vector
+        vt3_coords = vmd_coords_numpy_arrays(molid, frame_id, selection_str3)
+        vt4_coords = vmd_coords_numpy_arrays(molid, frame_id, selection_str4)
+        bond_neigh = vt4_coords - vt3_coords
+
+        # get normal to bond vector and neighbor vector
+        normal1 = np.cross(bond_neigh, bond)
+        normal1 /= np.linalg.norm(normal1)
+
+        # get normal to normal of bond and bond neigh
+        # and bond - this is the desired shift vector for the bond
+        normal2 = np.cross(bond, normal1)
+        normal2 /= np.linalg.norm(normal2)
+
+        # draw double bond
+        tail_bond2 = vt1_coords + normal2 * 0.1
+        head_bond2 = vt2_coords + normal2 * 0.1
+
+        # center between tail and head (for coloring)
+        center = bond / 2 + vt1_coords + normal2 * 0.1
+
+        # get color of atoms
+        selection1 = atomsel.atomsel(selection_str1)
+        selection2 = atomsel.atomsel(selection_str2)
+
+        # get element name
+        atom1_element = selection1.get("element")[0]
+        atom2_element = selection2.get("element")[0]
+
+        # get element color
+        atom1_color = element_colors[atom1_element]
+        atom2_color = element_colors[atom2_element]
+
+        # draw double bond - atom 1 to center using corresponding color
+        graphics.color(molid, atom1_color)
+        graphics.cylinder(molid, tuple(tail_bond2), tuple(center), radius=radius, filled=filled)
+
+        # draw double bond - center to atom 2 using corresponding color
+        graphics.color(molid, atom2_color)
+        graphics.cylinder(molid, tuple(center), tuple(head_bond2), radius=radius, filled=filled)
