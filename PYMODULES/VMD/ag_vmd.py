@@ -211,7 +211,7 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
 
 def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
                    cone_length=0.15, resolution=50, double_arrow=False,
-                   vmd_material="Basic1Pantone", lcolor="blue"):
+                   vmd_material="Basic1Pantone", drawcolor="blue"):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -226,7 +226,7 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
         > cone_radius       float; radius of the cone
     """
     graphics.material(molid, vmd_material)
-    graphics.color(molid, lcolor)
+    graphics.color(molid, drawcolor)
     p_vector = end - start
 
     # shift starting point of the vector by cone_length towards the end point
@@ -297,7 +297,7 @@ def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
         VMD.evaltcl("scale to {}".format(scale))
 
 
-def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", lcolor="blue",
+def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", drawcolor="blue",
                  lstyle="solid", lwidth=1, lfreq=15):
     """
     Draw the unit cell in molid.
@@ -327,7 +327,7 @@ def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", lcolor="blue",
     #all_molids = molecule.listall()
 
     graphics.material(molid, vmd_material)
-    graphics.color(molid, lcolor)
+    graphics.color(molid, drawcolor)
 
     for ucell_line in lines:
         #print(ucell_line)
@@ -515,7 +515,7 @@ def ucell_vects(supercell_dcd, fa, fb, fc, frame_id=-1):
     return (ucell_a, ucell_b, ucell_c)
 
 
-def draw_dotted_line(molid, start, end, sradius=0.01, scolor="blue", sdist=0.1, vmd_material="Basic1Pantone"):
+def draw_dotted_line(molid, start, end, sradius=0.01, drawcolor="blue", sdist=0.1, vmd_material="Basic1Pantone"):
     """
     Draw a dotted line between two pints 'start' and 'end'.
 
@@ -533,7 +533,7 @@ def draw_dotted_line(molid, start, end, sradius=0.01, scolor="blue", sdist=0.1, 
     sradius : float
         radii of the dots
 
-    scolor : str
+    drawcolor : str
         color of the dots
 
     sdist : float
@@ -541,7 +541,7 @@ def draw_dotted_line(molid, start, end, sradius=0.01, scolor="blue", sdist=0.1, 
 
     """
     graphics.material(molid, vmd_material)
-    graphics.color(molid, scolor)
+    graphics.color(molid, drawcolor)
 
     # vector between start and end
     p_vector = end - start
@@ -576,7 +576,7 @@ def vmd_coords_numpy_arrays(molid, frame_id, selection="all"):
         return coords
 
 
-def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True):
+def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True, vmd_material="Basic1Pantone"):
     """
     Draw double bonds using cylinders given a dictionary with according bonds.
 
@@ -591,8 +591,12 @@ def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True):
         the vector which forms the plane in which the double will be located
     """
 
+    # TODO: since a double bond is always in a plane, both neighbor bonds
+    # TODO: are also in that plane, therefor a plane can always easily
+    #       be defined without explicitly naming the neighbors
     selection_str = "index {}"
     element_colors = color.get_colormap("Element")
+    graphics.material(molid, vmd_material)
 
     for cbond in bonds:
         selection_str1 = selection_str.format(cbond[0])
@@ -646,3 +650,85 @@ def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True):
         # draw double bond - center to atom 2 using corresponding color
         graphics.color(molid, atom2_color)
         graphics.cylinder(molid, tuple(center), tuple(head_bond2), radius=radius, filled=filled)
+
+
+def draw_circle(molid, rotaxis, center, angle=360, drawcolor="blue", circle_radius=0.2,
+                vmd_material="Basic1Pantone", cylinder_radius=0.01,
+                cone_radius=0.02, cone_length=10):
+    """
+    Draw a circle around center using a rotational axis.
+
+    Parameters
+    ----------
+    molid : int
+    frame_id : int
+
+    rotaxis : numpy-array {float float float}
+        rotational axis
+
+    center : numpy-array {float float float}
+        center to rotate around
+
+    angle : float or int
+        angle to rotate about in degrees
+
+    color : str
+        color of the circle
+
+    circle_radius : float
+        circle_radius of the circle
+
+    resolution : int
+        vectors the circle consists of
+
+    """
+    # change color and material of circle
+    graphics.color(molid, drawcolor)
+    graphics.material(molid, vmd_material)
+
+    # norm rotational axis
+    rotaxis /= np.linalg.norm(rotaxis)
+
+    # create and scale first vector according to given radius
+    normal1 = np.cross(rotaxis, center)
+    normal1 /= np.linalg.norm(normal1)
+    normal1 *= circle_radius
+
+    vector_start = normal1
+
+    # double angle for more points
+    angle *= 2
+
+    for cangle in range(angle - cone_length):
+        #print(cangle)
+        # convert angle to radians
+        cangle = np.radians(cangle / 2)
+        #print(cangle)
+
+        # define quaternion according to current angle
+        quaternion = Quaternion(axis=rotaxis, angle=cangle)
+
+        # define end of vector
+        vector_end = quaternion.rotate(normal1)
+        #vector_end /= np.linalg.norm(vector_end)
+        #vector_end *= radius
+
+        graphics.cylinder(molid,
+                          tuple(center + vector_start),
+                          tuple(center + vector_end),
+                          radius=cylinder_radius, resolution=20, filled=1)
+        #graphics.sphere(molid, tuple(center + vector_start), radius=0.02)
+
+        # new starting point is old ending
+        vector_start = vector_end
+
+    # draw an arrow beginning 5 degrees before the last angle
+    vector_start = vector_end
+
+    quaternion = Quaternion(axis=rotaxis, angle=np.radians(angle / 2 + cone_length))
+    vector_end = quaternion.rotate(normal1)
+
+    graphics.cone(molid,
+                  tuple(center + vector_start),
+                  tuple(center + vector_end),
+                  radius=cone_radius, resolution=20)
