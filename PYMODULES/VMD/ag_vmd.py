@@ -30,9 +30,9 @@ import Molecule
 import VMD
 
 
-################################################################################
+#=============================================================================================#
 # VMD HELPER FUNCTIONS
-################################################################################
+#=============================================================================================#
 
 def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=50, radius=0.5, drawcolor="blue"):
     """
@@ -264,6 +264,8 @@ def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiX
     image = Image.open("{}.ppm".format(image_out))
     image.save("{}.png".format(image_out), format="PNG")
     display.set(size=disp_default_size)
+    display.update()
+    display.update_ui()
     os.remove("{}.ppm".format(image_out))
 
 
