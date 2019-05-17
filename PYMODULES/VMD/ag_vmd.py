@@ -8,6 +8,8 @@ from pyquaternion import Quaternion
 from PIL import Image
 import ag_unify_md as agum
 import ag_geometry
+import ag_vectalg as agv
+import Transformations as cgt
 
 # VMD MODULES
 import atomsel   # Replaces AtomSel and atomselection
@@ -33,6 +35,42 @@ import VMD
 #=============================================================================================#
 # VMD HELPER FUNCTIONS
 #=============================================================================================#
+pantone_colors = {
+  "blue" : "#3597D8",  # Process Blue
+  "red " : "#AA2A23",  # 1807
+  "gray" : "#5B5B5D",  # CG11
+  "orange" : "#F0903E",  # Orange
+  "yellow" : "#FAF420",  # Yellow
+  "tan" : "#915D1B",  # 4635
+  "silver" : "#B3B3B8",  # CG5
+  "green" : "#69BE4B",  # 368
+  "white" : "#FFFFFF",  # white
+  "pink" : "#EB6EAB",  # 224
+  "cyan" : "#33ADA7",  # 326
+  "purple" : "#983795",  # Purple
+  "lime" : "#9CCD67",  # 375
+  "mauve" : "#D773AE",  # 674
+  "ochre" : "#79490A",  # 469
+  "iceblue" : "#8EC7EE",  # 2905
+  "black" : "#000000",  # black
+  "yellow2" : "#FCF774",  # 3935
+  "yellow3" : "#BCD943",  # 382
+  "green2" : "#4B6B1E",  # 371
+  "green3" : "#A3D49A",  # 359
+  "cyan2" : "#207066",  # 3292
+  "cyan3" : "#38B4C6",  # 3125
+  "blue2" : "#2C72BE",  # 2935
+  "blue3" : "#255EA8",  # Refl. Blue
+  "violet" : "#3E3C97",  # Violet
+  "violet2" : "#681A7E",  # 259
+  "magenta" : "#E5008B",  # Magenta
+  "magenta2" : "#E6007C",  # Rubine Red
+  "red2" : "#E95936",  # warm red
+  "red3" : "#E7383A",  # Red032
+  "orange2" : "#D46C27",  # 1525
+  "orange3" : "#F29855",  # 164
+}
+
 
 def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=50, radius=0.5, drawcolor="blue"):
     """
@@ -99,6 +137,7 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
 
         # define quaternion
         q = Quaternion(axis=vtRot, angle=theta)
+        #print(q)
 
         # rotate vector
         vt_cur = q.rotate(vt1)
@@ -157,7 +196,7 @@ def draw_torsion(molid, frame, atomids, canvas=False, resolution=50, radius=0.5,
     #vt1   /= np.linalg.norm(vt1)
     #vt2   /= np.linalg.norm(vt2)
     #vtRot /= np.linalg.norm(vtRot)
-    print(atm1Crds)
+    #print(atm1Crds)
     _, cp1, cp2 = ag_geometry.get_dihedral(atm1Crds, atm2Crds, atm3Crds, atm4Crds, return_cross=True)
 
     # draw vectors between id2 and id3, therefor get the relevant vector
@@ -734,3 +773,62 @@ def draw_circle(molid, rotaxis, center, angle=360, drawcolor="blue", circle_radi
                   tuple(center + vector_start),
                   tuple(center + vector_end),
                   radius=cone_radius, resolution=20)
+
+
+def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, frame_id=-1):
+    """
+    Get the matrix that rotates the bond between atom 1 and atom 2 onto axis.
+
+    All atoms of selection are rotated on the axis defined by axis_start and
+    axis_end. The rotational matrix is then defined by the axis formed of
+    atom_idx1 and atom_idx2 (it is rotated so it lies on the former axis).
+
+
+    Parameters
+    ----------
+    atom_idx1 : int
+        index of first atom
+
+    atom_idx2 : int
+        index of second atom
+
+    axis_start : numpy-array
+        starting point of the axis (atom_idx1 will be translated onto that point)
+
+    axis_stop : numpy-array
+        ending point of the axis; start and end form the axis and therefor
+        determine the rotation
+
+    Returns
+    -------
+    trans_matrix : list {float float ...}
+        translational matrix to move atom_idx1 to axis_start
+    rot_matrix : list {float float ...}
+        rotational matrix to rotate given axis to the desired one
+
+    """
+    # get relevant coordinates
+    atom_coords1 = vmd_coords_numpy_arrays(molid, frame_id, selection="index {}".format(atom_idx1))
+    atom_coords2 = vmd_coords_numpy_arrays(molid, frame_id, selection="index {}".format(atom_idx2))
+
+    # define both axis
+    axis1 = atom_coords2 - atom_coords1
+    axis1 /= np.linalg.norm(axis1)
+
+    axis2 = axis_end - axis_start
+
+    try:
+        axis2 /= np.linalg.norm(axis2)
+    except TypeError:
+        # vector of length 1 already
+        pass
+
+    # angle alpha between axis1 and axis2 (so we can rotate about it)
+    alpha = np.arccos(np.dot(axis1, axis2) / (np.linalg.norm(axis1) * np.linalg.norm(axis2)))
+
+    # rotational axis is crossproduct of axis1 and axis2
+    rotaxis = np.cross(axis1, axis2)
+
+    # create rotational matrix
+    matrix1 = cgt.rotation_matrix(alpha, rotaxis)
+    return list(matrix1.flatten())
