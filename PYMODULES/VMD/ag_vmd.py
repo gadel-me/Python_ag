@@ -834,9 +834,12 @@ def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, fra
     return list(matrix1.flatten())
 
 
-def measure_bonds(selection):
+def measure_bonds(selection, molid, frame=-1):
     """
     Measure all bonds in the given atomsel.atomsel object.
+
+    Should be imported from ag_vmd but currently this is not working, therefor
+    this duplicate.
 
     Parameters
     ----------
@@ -848,12 +851,12 @@ def measure_bonds(selection):
     bondbond_lengths : dict {tuple{int, int}: float, ...}
 
     """
-    bond_lengths = {}
+    bond_lengths = OrderedDict()
 
     for atom_idx, bond in enumerate(selection.bonds):
         for atom_idx2 in bond:
             cpair = sorted([atom_idx + 1, atom_idx2 + 1])
-            cbond = measure.bond(atom_idx, atom_idx2)
+            cbond = measure.bond(atom_idx, atom_idx2, molid=molid, frame=frame)[0]
             bond_lengths[tuple(cpair)] = cbond
 
     return bond_lengths
