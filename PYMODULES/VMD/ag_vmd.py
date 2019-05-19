@@ -35,40 +35,40 @@ import VMD
 #=============================================================================================#
 # VMD HELPER FUNCTIONS
 #=============================================================================================#
-pantone_colors = {
-  "blue" : "#3597D8",  # Process Blue
-  "red " : "#AA2A23",  # 1807
-  "gray" : "#5B5B5D",  # CG11
-  "orange" : "#F0903E",  # Orange
-  "yellow" : "#FAF420",  # Yellow
-  "tan" : "#915D1B",  # 4635
-  "silver" : "#B3B3B8",  # CG5
-  "green" : "#69BE4B",  # 368
-  "white" : "#FFFFFF",  # white
-  "pink" : "#EB6EAB",  # 224
-  "cyan" : "#33ADA7",  # 326
-  "purple" : "#983795",  # Purple
-  "lime" : "#9CCD67",  # 375
-  "mauve" : "#D773AE",  # 674
-  "ochre" : "#79490A",  # 469
-  "iceblue" : "#8EC7EE",  # 2905
-  "black" : "#000000",  # black
-  "yellow2" : "#FCF774",  # 3935
-  "yellow3" : "#BCD943",  # 382
-  "green2" : "#4B6B1E",  # 371
-  "green3" : "#A3D49A",  # 359
-  "cyan2" : "#207066",  # 3292
-  "cyan3" : "#38B4C6",  # 3125
-  "blue2" : "#2C72BE",  # 2935
-  "blue3" : "#255EA8",  # Refl. Blue
-  "violet" : "#3E3C97",  # Violet
-  "violet2" : "#681A7E",  # 259
-  "magenta" : "#E5008B",  # Magenta
-  "magenta2" : "#E6007C",  # Rubine Red
-  "red2" : "#E95936",  # warm red
-  "red3" : "#E7383A",  # Red032
-  "orange2" : "#D46C27",  # 1525
-  "orange3" : "#F29855",  # 164
+PANTONE_COLORS = {
+    "blue": "#3597D8",  # Process Blue
+    "red": "#AA2A23",  # 1807
+    "gray": "#5B5B5D",  # CG11
+    "orange": "#F0903E",  # Orange
+    "yellow": "#FAF420",  # Yellow
+    "tan": "#915D1B",  # 4635
+    "silver": "#B3B3B8",  # CG5
+    "green": "#69BE4B",  # 368
+    "white": "#FFFFFF",  # white
+    "pink": "#EB6EAB",  # 224
+    "cyan": "#33ADA7",  # 326
+    "purple": "#983795",  # Purple
+    "lime": "#9CCD67",  # 375
+    "mauve": "#D773AE",  # 674
+    "ochre": "#79490A",  # 469
+    "iceblue": "#8EC7EE",  # 2905
+    "black": "#000000",  # black
+    "yellow2": "#FCF774",  # 3935
+    "yellow3": "#BCD943",  # 382
+    "green2": "#4B6B1E",  # 371
+    "green3": "#A3D49A",  # 359
+    "cyan2": "#207066",  # 3292
+    "cyan3": "#38B4C6",  # 3125
+    "blue2": "#2C72BE",  # 2935
+    "blue3": "#255EA8",  # Refl. Blue
+    "violet": "#3E3C97",  # Violet
+    "violet2": "#681A7E",  # 259
+    "magenta": "#E5008B",  # Magenta
+    "magenta2": "#E6007C",  # Rubine Red
+    "red2": "#E95936",  # warm red
+    "red3": "#E7383A",  # Red032
+    "orange2": "#D46C27",  # 1525
+    "orange3": "#F29855",  # 164
 }
 
 
@@ -832,3 +832,28 @@ def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, fra
     # create rotational matrix
     matrix1 = cgt.rotation_matrix(alpha, rotaxis)
     return list(matrix1.flatten())
+
+
+def measure_bonds(selection):
+    """
+    Measure all bonds in the given atomsel.atomsel object.
+
+    Parameters
+    ----------
+    selection : atomsel.atomsel
+        selection of atoms to measure the bonds for
+
+    Returns
+    -------
+    bondbond_lengths : dict {tuple{int, int}: float, ...}
+
+    """
+    bond_lengths = {}
+
+    for atom_idx, bond in enumerate(selection.bonds):
+        for atom_idx2 in bond:
+            cpair = sorted([atom_idx + 1, atom_idx2 + 1])
+            cbond = measure.bond(atom_idx, atom_idx2)
+            bond_lengths[tuple(cpair)] = cbond
+
+    return bond_lengths
