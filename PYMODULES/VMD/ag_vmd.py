@@ -4,6 +4,7 @@ import pdb
 import os
 import time
 import numpy as np
+from collections import OrderedDict
 from pyquaternion import Quaternion
 from PIL import Image
 import ag_unify_md as agum
@@ -834,7 +835,7 @@ def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, fra
     return list(matrix1.flatten())
 
 
-def measure_bonds(selection, molid, frame=-1):
+def measure_geometry(selection, molid, frame=-1, geometry_type="BOND"):
     """
     Measure all bonds in the given atomsel.atomsel object.
 
@@ -851,12 +852,53 @@ def measure_bonds(selection, molid, frame=-1):
     bondbond_lengths : dict {tuple{int, int}: float, ...}
 
     """
-    bond_lengths = OrderedDict()
+    # not sure if this works as intended therefor only imported in this function
+    import vmd
+    import measure
+
+    geometry_type = geometry_type.upper()
+
+    if geometry_type != "BOND" and geometry_type != "ANGLE" and geometry_type != "DIHEDRAL":
+        raise IOError("{} Unknown geometry type!".format(geometry_type))
+
+    geometry_vals = OrderedDict()
 
     for atom_idx, bond in enumerate(selection.bonds):
         for atom_idx2 in bond:
-            cpair = sorted([atom_idx + 1, atom_idx2 + 1])
-            cbond = measure.bond(atom_idx, atom_idx2, molid=molid, frame=frame)[0]
-            bond_lengths[tuple(cpair)] = cbond
 
-    return bond_lengths
+            # measure bond
+            if geometry_type == "BOND":
+                # skip reversed bond
+                if atom_idx2 == atom_idx:
+                    continue
+
+                catms = sorted([atom_idx, atom_idx2])
+                cvalue = measure.bond(atom_idx, atom_idx2, molid=molid, frame=frame)[0]
+                catms = [i + 1 for i in catms]
+                geometry_vals[tuple(catms)] = cvalue
+            elif geometry_type == "ANGLE" or geometry_type == "DIHEDRAL":
+                for atom_idx3 in selection.bonds[atom_idx2]:
+                    # skip reversed bond
+                    if atom_idx3 == atom_idx:
+                        continue
+
+                    # measure angle
+                    if geometry_type == "ANGLE":
+                        catms = sorted([atom_idx, atom_idx2, atom_idx3])
+                        cvalue = measure.angle(atom_idx, atom_idx2, atom_idx3, molid=molid, frame=frame)[0]
+                        catms = [i + 1 for i in catms]
+                        geometry_vals[tuple(catms)] = cvalue
+                    else:
+                        # measure dihedral
+                        for atom_idx4 in selection.bonds[atom_idx2]:
+                            # skip if just the reversed bond is checked
+
+                            if atom_idx4 == atom_idx3:
+                                continue
+
+                            catms = sorted([atom_idx, atom_idx2, atom_idx3, atom_idx4])
+                            cvalue = measure.dihedral(atom_idx, atom_idx2, atom_idx3, atom_idx4, molid=molid, frame=frame)[0]
+                            catms = [i + 1 for i in catms]
+                            geometry_vals[tuple(catms)] = cvalue
+
+    return geometry_vals
