@@ -73,7 +73,7 @@ PANTONE_COLORS = {
 }
 
 
-def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=50, radius=0.5, drawcolor="blue"):
+def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=50, radius=0.5, drawcolor="blue", linesize=0.01):
     """
     Draws part of a circle to visualize the measured angle.
 
@@ -147,7 +147,7 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
         if canvas is True and cntr != 0:
             graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt_cur))
         else:
-            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=0.01,
+            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=linesize,
                               resolution=20, filled=1)
         vt_pre = vt_cur
 
@@ -155,7 +155,7 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
         graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt2 + atm2Crds))
         graphics.material(graphics_id, "Transparent")
     else:
-        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2 + atm2Crds), radius=0.01,
+        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2 + atm2Crds), radius=linesize,
                           resolution=20, filled=1)
 
 
@@ -303,7 +303,7 @@ def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiX
     VMD.evaltcl("light 0 on")
     image = Image.open("{}.ppm".format(image_out))
     image.save("{}.png".format(image_out), format="PNG")
-    #display.set(size=disp_default_size)
+    display.set(size=disp_default_size)
     display.update()
     display.update_ui()
     os.remove("{}.ppm".format(image_out))
@@ -414,7 +414,7 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     ucell_c : np-array
         cell vector c
 
-    origin : tuple
+    origin : tuple or list or numpy.ndarray {float float float}
         origin where to place the lattice axis
 
     molid : int; default = 0
@@ -423,8 +423,17 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     vmd_material : str
         the material to draw the lattice axes in
 
+    offset : tuple or list or numpy.ndarray {float float float}
+        offset where to place the letters for the lattice coordinates
+
     """
-    # change vector size
+    if not isinstance(origin, np.ndarray):
+        origin = np.array(origin)
+
+    if not isinstance(offset, np.ndarray):
+        offset = np.array(offset)
+
+    # change vector size to 8
     ucell_a = ucell_a / np.linalg.norm(ucell_a) * 8
     ucell_b = ucell_b / np.linalg.norm(ucell_b) * 8
     ucell_c = ucell_c / np.linalg.norm(ucell_c) * 8
@@ -432,21 +441,18 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     graphics.material(molid, vmd_material)
 
     # axis a
-    graphics.color(molid, "red")
-    vmd_draw_arrow(molid, origin, ucell_a, cylinder_radius=0.4, cone_radius=1.0)
-    label_pos = ucell_a * 1.05 + offset + origin
+    vmd_draw_arrow(molid, origin, origin + ucell_a, cylinder_radius=0.4, cone_radius=1.0, drawcolor="red")
+    label_pos = origin + ucell_a * 1.05 + offset
     graphics.text(molid, tuple(label_pos), "a", textsize)
 
     # axis a
-    graphics.color(molid, "green")
-    vmd_draw_arrow(molid, origin, ucell_b, cylinder_radius=0.4, cone_radius=1.0)
-    label_pos = ucell_b * 1.05 + offset + origin
+    vmd_draw_arrow(molid, origin, origin + ucell_b, cylinder_radius=0.4, cone_radius=1.0, drawcolor="green")
+    label_pos = origin + ucell_b * 1.05 + offset
     graphics.text(molid, tuple(label_pos), "b", textsize)
 
     # axis c
-    graphics.color(molid, "blue")
-    vmd_draw_arrow(molid, origin, ucell_c, cylinder_radius=0.4, cone_radius=1.0)
-    label_pos = ucell_c * 1.05 + offset + origin
+    vmd_draw_arrow(molid, origin, origin + ucell_c, cylinder_radius=0.4, cone_radius=1.0, drawcolor="blue")
+    label_pos = origin + ucell_c * 1.05 + offset
     graphics.text(molid, tuple(label_pos), "c", textsize)
 
 
