@@ -167,7 +167,7 @@ class ResultGetter(ag_fileio.FileHandler):
 
         # convert eV to kcal/mol
         if self.energy_unit == "eV":
+            print(normed_results)
             self.normed_results = [i * ev_kcal for i in self.normed_results]
             self.results = [i * ev_kcal for i in self.results]
-
-        self.energy_unit = "kcal/mol"
+            self.energy_unit = "kcal/mol"
