@@ -149,7 +149,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
 
 
 def plot_results(rsgetters, rslabels, linestyles=(), xlabel=r"Distance / $\AA$",
-                 ylabel=r"Energy / eV", title="Default"):
+                 ylabel=r"Energy / eV", title="Default", filename="default.png"):
     """
     Plot a list of Resultgetter instances
     """
@@ -168,7 +168,7 @@ def plot_results(rsgetters, rslabels, linestyles=(), xlabel=r"Distance / $\AA$",
 
     plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
     plt.axhline(0, color='black', linestyle="--", linewidth=0.5)
-    fig.savefig("0H_anti_scan.png", dpi=600)
+    fig.savefig(filename, dpi=600)
     fig.show()
 
 
