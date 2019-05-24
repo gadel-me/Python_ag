@@ -2,7 +2,12 @@ import re
 import numpy as np
 import itertools
 import matplotlib
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 import argparse
 import ag_statistics as ags
 from restrain_scan import norm_energy

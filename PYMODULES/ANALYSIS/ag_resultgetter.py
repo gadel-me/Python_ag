@@ -162,12 +162,11 @@ class ResultGetter(ag_fileio.FileHandler):
         #pbar.finish()
         self._norm_results()
 
-    def _ev_to_kcal_mol(self):
+    def ev_to_kcal_mol(self):
         ev_kcal = 23.061
 
         # convert eV to kcal/mol
         if self.energy_unit == "eV":
-            print(normed_results)
-            self.normed_results = [i * ev_kcal for i in self.normed_results]
-            self.results = [i * ev_kcal for i in self.results]
+            self.normed_results = [[i[0], i[1] * ev_kcal] for i in self.normed_results]
+            self.results = [[i[0], i[1] * ev_kcal] for i in self.results]
             self.energy_unit = "kcal/mol"
