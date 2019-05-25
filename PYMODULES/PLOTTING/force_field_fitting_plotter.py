@@ -2,12 +2,7 @@ import re
 import numpy as np
 import itertools
 import matplotlib
-
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
+import matplotlib.pyplot as plt
 import argparse
 import ag_statistics as ags
 from restrain_scan import norm_energy
@@ -153,28 +148,38 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     #plt.show()
 
 
-def plot_results(rsgetters, rslabels, linestyles=(), xlabel=r"Distance / $\AA$",
-                 ylabel=r"Energy / eV", title="Default", filename="default.png"):
-    """
-    Plot a list of Resultgetter instances
-    """
-    fig = plt.figure()
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
+#def plot_results(rsgetters, param_dict, xlabel=r"Distance / $\AA$",
+#                 ylabel=r"Energy / eV", title="Default", filename="default.png"):
+#    """
+#    Plot a list of Resultgetter instances
+#    """
+#    fig = plt.figure()
+#    plt.xlabel(xlabel)
+#    plt.ylabel(ylabel)
+#    plt.title(title)
+#
+#    for rsgetter in rsgetters:
+#        pdb.set_trace()
+#        xvals, yvals = zip(*rsgetter.normed_results)
+#        plt.plot(xvals, yvals, **param_dict)
+#
+#    plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
+#    plt.axhline(0, color='black', linestyle="--", linewidth=0.5)
+#    fig.savefig(filename, dpi=600)
+#    #fig.show()
 
-    for rsgetter, rslabel, linestyle in itertools.izip_longest(rsgetters, rslabels, linestyles):
-        xvals, yvals = zip(*rsgetter.normed_results)
-
-        if linestyle is None:
-            plt.plot(xvals, yvals, label=rslabel, linestyle="-")
-        else:
-            plt.plot(xvals, yvals, label=rslabel, linestyle=linestyle)
-
-    plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
-    plt.axhline(0, color='black', linestyle="--", linewidth=0.5)
-    fig.savefig(filename, dpi=600)
-    fig.show()
+#def plot_results(ax, rsgetters, param_dict):
+#    """
+#    Plot a list of Resultgetter instances
+#    """
+#    # horizontal line at 0.0
+#    ax.axhline(0, color='black', linestyle="--", linewidth=0.5)
+#
+#    for rsgetter in rsgetters:
+#        xvals, yvals = zip(*rsgetter.normed_results)
+#        ax.plot(xvals, yvals, **param_dict)
+#
+#    ax.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
 
 
 if __name__ == "__main__":
