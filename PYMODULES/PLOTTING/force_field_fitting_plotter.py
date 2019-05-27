@@ -3,9 +3,12 @@ import numpy as np
 import itertools
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import argparse
 import ag_statistics as ags
 from restrain_scan import norm_energy
+from ag_statistics import gnuplot_gaussfit
+from pantone_colors import pantone_colors_hex
 import pdb
 
 
@@ -180,6 +183,95 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
 #        ax.plot(xvals, yvals, **param_dict)
 #
 #    ax.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
+
+
+def plot_multiple_histo(
+        data_dict,
+        xlim=(3.2, 6),
+        xlabel=r"$\mathrm{r_{cog-cog}}$ / $\mathrm{\AA}$",
+        png_name="default.png",
+        x_ticks=(0.1, 0.5),
+        y_ticks=(0.5, 1.0)):
+    """
+    Plot histograms for cog-cog distances.
+
+    Parameters
+    ----------
+    **data : dict {str : list of floats}
+        the data from each polymorph to plot the histogram from
+
+    """
+    # number of subplots depends on the number of values
+    fontsize = 11
+    nrows = len(data_dict)
+    fig, axes = plt.subplots(nrows, 1, sharex=True, sharey=True, figsize=(10, 10))
+    ax = fig.add_subplot(111, frameon=False)
+    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    plt.grid(False)
+    ax.set_xlabel(xlabel, fontweight='bold', fontsize=fontsize)
+    ax.set_ylabel("Frequency (normalized)", fontweight='bold', fontsize=fontsize)
+
+    for idx, (key, data) in enumerate(data_dict.iteritems()):
+        mu = np.mean(data)
+        median = np.median(data)
+        sigma = np.std(data)
+        coeff_var = (sigma / mu) * 100
+        num_bins = np.sqrt(len(data))
+        num_bins = int(num_bins)
+
+        if num_bins > 200:
+            num_bins = 200  # cap number of bins to max. 200
+
+        # make bins of same width
+        data = sorted(data)
+        x_min = data[0]
+        x_max = data[-1]
+        x_range = np.linspace(x_min, x_max, num_bins)
+
+        # measured histogram
+        nhist, bins, patches = axes[idx].hist(data, bins=x_range, density=True, histtype="step", align="mid", color=pantone_colors_hex["blue"])
+
+        # fitted gaussian curve
+        fitted_x, fitted_y = gnuplot_gaussfit(bins[1:], nhist)
+
+        if idx == 0:
+            clabel = "Fitted data"
+        else:
+            clabel = None
+
+        axes[idx].plot(fitted_x, fitted_y, color=pantone_colors_hex["red"], linewidth=1.0, label=clabel)
+
+        # line that goes through mu (=max. of gauss-function)
+        #axes[idx].axvline(x=mu, linewidth=0.5, color="red", alpha=3.0, label="average")
+        #axes[idx].axvline(x=median, linewidth=0.5, color="green", alpha=3.0, label="median")
+
+        # coefficient of variation
+        coeff_var = (sigma / mu) * 100
+
+        # Set a title for current subplot
+        #axes[idx].set_title("Form {} $\mu={:.3f}$ $\sigma={:.3f}$ $VarCoeff={:.3f}$ %".format(key, mu, sigma, coeff_var))
+        axes[idx].text(0.02, 0.97, "Form {} $\mu={:.3f}$ $\sigma={:.3f}$ $VarCoeff={:.3f}$ %".format(key, mu, sigma, coeff_var), transform=axes[idx].transAxes, fontsize=fontsize, fontweight='bold', )
+        #axes[idx].text(0.02, 0.97, "Form {}".format(key), transform=axes[idx].transAxes, fontweight='bold')
+        #axes[idx].legend(loc='upper right')
+
+        # length of x-axis
+        axes[idx].set_xlim(left=xlim[0], right=xlim[1])
+        #axes[idx].set_ylim(0, 4.5)
+
+        # ticker
+        axes[idx].spines['right'].set_color('none')
+        axes[idx].spines['top'].set_color('none')
+        axes[idx].xaxis.set_minor_locator(ticker.MultipleLocator(x_ticks[0]))
+        axes[idx].xaxis.set_major_locator(ticker.MultipleLocator(x_ticks[1]))
+        axes[idx].yaxis.set_minor_locator(ticker.MultipleLocator(y_ticks[0]))
+        axes[idx].yaxis.set_major_locator(ticker.MultipleLocator(y_ticks[1]))
+
+    # distance between subplots
+    fig.subplots_adjust(left=0.025, right=0.95, bottom=0.1, top=1.01)
+    fig.tight_layout()
+    fig.legend(frameon=False)
+    plt.savefig(png_name, dpi=300)
+    #plt.show()
 
 
 if __name__ == "__main__":
