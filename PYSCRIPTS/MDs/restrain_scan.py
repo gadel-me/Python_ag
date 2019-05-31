@@ -167,7 +167,7 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     return (cur_geometry, null_coeff_id)
 
 
-def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=True):
+def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=True, pair_coeffs=None):
     """
     Scan a bond, angle or dihedral.
 
@@ -183,6 +183,9 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
         e.g. {"3 4 5 12": 180.05, "4 5 2 6 1": 168.90, ...}
     output : str
         appendix to output files
+
+    pair_coeffs : None or str
+        file with all pair coefficients
 
     Sources:    (https://lammps.sandia.gov/threads/msg17271.html)
                 https://lammps.sandia.gov/doc/fix_restrain.html
@@ -226,6 +229,10 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     lmp.command("fix MOMENT all momentum 100 linear 1 1 1 angular")
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
+    # read file which provides the pair coefficients
+    if pair_coeffs is not None:
+        lmp.file(pair_coeffs)
+
     # annealing -> achieve wanted angle (may be omitted?)
     print(bcolors.red + "Annealing on rank {}: ".format(rank) + output + bcolors.endc)
     ###########################################################################
@@ -244,12 +251,13 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     restrain_anneal = compile_restrain_string(indices_and_values, ks, hold=0)
     lmp.command(restrain_anneal)
     lmp.command("fix_modify REST energy yes")
+    lmp.command("run {}".format(anneal_step))
 
-    try:
-        lmp.command("run {}".format(anneal_step))
-    except Exception:
-        print("***Error: Simulation crashed (annealing)! Force constants too high?")
-        MPI.COMM_WORLD.Abort()
+    #try:
+    #    lmp.command("run {}".format(anneal_step))
+    #except Exception:
+    #    print("***Error: Simulation crashed (annealing)! Force constants too high? Pair Coeffs set?")
+    #    MPI.COMM_WORLD.Abort()
 
     # quenching
     print(bcolors.yellow + "Quenching on rank {}: ".format(rank) + output + bcolors.endc)
@@ -446,7 +454,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
                       temps=None, force_constants=None,
                       energy_file_out="defaultname",
                       energy_file_wo_entity="defaultname2",
-                      output_idx=0):
+                      output_idx=0, pc_file=None):
     """
     Calculate md energy.
 
@@ -546,8 +554,9 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
             print(output_appendix + ".lmplog" + " already exists!")
             continue
 
+        #pdb.set_trace()
         # annealing with quenching and minimization using lammps
-        scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, force_constants, temps=temps)
+        scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, force_constants, temps=temps, pair_coeffs=pc_file)
 
         # since minimized md-structure != minimized ab initio structure,
         # the real value of the geometry of interest must be derived from the
@@ -674,6 +683,10 @@ if __name__ == "__main__":
                             default="DEFAULTNAME",
                             help="Name of energy files.")
 
+        PARSER.add_argument("-pair_coeffs",
+                            default="DEFAULTNAME",
+                            help="Name of energy files.")
+
         ARGS = PARSER.parse_args()
 
         if rank == 0:
@@ -716,7 +729,8 @@ if __name__ == "__main__":
                               energy_file_out=OUTPUT_FILE,
                               energy_file_wo_entity=OUTPUT_FILE2,
                               output_idx=gau_file_idx,
-                              force_constants=ARGS.k)
+                              force_constants=ARGS.k,
+                              pc_file=ARGS.pair_coeffs)
 
     # wait for all ranks to finish
     time.sleep(2)
