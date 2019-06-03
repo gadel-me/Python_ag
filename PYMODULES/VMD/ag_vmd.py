@@ -40,7 +40,7 @@ import VMD
 PANTONE_COLORS = pantone_colors.pantone_colors_hex
 
 
-def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=50, radius=0.5, drawcolor="blue", linesize=0.01):
+def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=200, radius=0.5, drawcolor="blue", cylinder_radius=0.01):
     """
     Draws part of a circle to visualize the measured angle.
 
@@ -114,7 +114,7 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
         if canvas is True and cntr != 0:
             graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt_cur))
         else:
-            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=linesize,
+            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=cylinder_radius,
                               resolution=20, filled=1)
         vt_pre = vt_cur
 
@@ -122,7 +122,7 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
         graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt2 + atm2Crds))
         graphics.material(graphics_id, "Transparent")
     else:
-        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2 + atm2Crds), radius=linesize,
+        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2 + atm2Crds), radius=cylinder_radius,
                           resolution=20, filled=1)
 
 
