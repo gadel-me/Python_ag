@@ -270,7 +270,7 @@ def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiX
     VMD.evaltcl("light 0 on")
     image = Image.open("{}.ppm".format(image_out))
     image.save("{}.png".format(image_out), format="PNG")
-    display.set(size=disp_default_size)
+    #display.set(size=disp_default_size)
     display.update()
     display.update_ui()
     os.remove("{}.ppm".format(image_out))
@@ -365,7 +365,7 @@ def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", drawcolor="blue",
 
 
 def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
-                          molid=0, vmd_material="Basic1Pantone", textsize=1.0,
+                          molid=0, vmd_material="Basic1Pantone", label_axis=True, textsize=1.0,
                           offset=(0.0, 0.0, 0.0)):
     """
     Draw the arrows that show the coordinate system of the box according to the lattice vectors.
@@ -410,17 +410,23 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     # axis a
     vmd_draw_arrow(molid, origin, origin + ucell_a, cylinder_radius=0.4, cone_radius=1.0, drawcolor="red")
     label_pos = origin + ucell_a * 1.05 + offset
-    graphics.text(molid, tuple(label_pos), "a", textsize)
+
+    if label_axis is False:
+        graphics.text(molid, tuple(label_pos), "a", textsize)
 
     # axis a
     vmd_draw_arrow(molid, origin, origin + ucell_b, cylinder_radius=0.4, cone_radius=1.0, drawcolor="green")
     label_pos = origin + ucell_b * 1.05 + offset
-    graphics.text(molid, tuple(label_pos), "b", textsize)
+
+    if label_axis is False:
+        graphics.text(molid, tuple(label_pos), "b", textsize)
 
     # axis c
     vmd_draw_arrow(molid, origin, origin + ucell_c, cylinder_radius=0.4, cone_radius=1.0, drawcolor="blue")
     label_pos = origin + ucell_c * 1.05 + offset
-    graphics.text(molid, tuple(label_pos), "c", textsize)
+
+    if label_axis is False:
+        graphics.text(molid, tuple(label_pos), "c", textsize)
 
 
 # FUNCTIONS TO PLOT SUPERCELLS OF CRYSTAL STRUCTURES
