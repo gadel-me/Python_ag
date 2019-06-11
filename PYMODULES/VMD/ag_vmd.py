@@ -33,6 +33,11 @@ import Material
 import Molecule
 import VMD
 
+try:
+    import measure
+except ImportError:
+    pass
+
 
 #=============================================================================================#
 # VMD HELPER FUNCTIONS
