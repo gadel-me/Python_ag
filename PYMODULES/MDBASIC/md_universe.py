@@ -1535,6 +1535,7 @@ class Universe(object):
 
         if refresh_bonds is True:
             self.fetch_molecules_by_bonds()
+            self.mols_to_grps()
 
     def change_indices(self, incr=1, mode="increase", entries="atm_id, atm_grp_id, atm_key, sitnam, "):
         """

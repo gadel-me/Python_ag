@@ -71,6 +71,7 @@ def create_lmpdat(lmptop, xyz, output_name="foobar"):
     else:
         raise Warning("Number of atoms in coordinates file is not a multiple of atoms in topology file!")
 
+    #pdb.set_trace()
     sys_lmptop.change_indices(incr=1, mode="increase")
     sys_lmptop.write_lmpdat(output_name, cgcmm=True)
 
@@ -325,21 +326,21 @@ def write_summary(distances, energies):
 
 if __name__ == "__main__":
     # force field and settings
-    ITERATION = "118"
+    ITERATION = "208"
     DREIDING = "on"
-    SETTINGS_FILE = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/settings_dreiding_{}.lmpcfg".format(DREIDING)
-    FF_FILE = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/CBZ_gaff-{}_dreiding_{}.lmpcfg".format(ITERATION, DREIDING)
-    LMPDAT = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/4.forcefields/CBZ_gaff-{}_novdw.lmpdat".format(ITERATION)
+    SETTINGS_FILE = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/settings_dreiding_{}.lmpcfg".format(DREIDING)
+    FF_FILE = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/CBZ_gaff-{}_dreiding_{}.lmpcfg".format(ITERATION, DREIDING)
+    LMPDAT = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/4.forcefields/CBZ_gaff-{}_novdw.lmpdat".format(ITERATION)
 
     # H0 dimer
     execute_0H_scan = True
 
     if execute_0H_scan is True:
 
-        XYZ_H0 = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/0H_anti_opt/1.gaussian09/CBZ_0H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
+        XYZ_H0 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/0H_anti_opt/1.gaussian09/CBZ_0H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
         # iteration specific force field and settings
         # scan of the H-Bonds of two Carbamazepine molecules
-        EMIN_FOLDER = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/0H_anti_opt/gaff-{}_dreiding_{}/".format(ITERATION, DREIDING)
+        EMIN_FOLDER = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/0H_anti_opt/gaff-{}_dreiding_{}/".format(ITERATION, DREIDING)
         EMIN_OUT = "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_minimized".format(ITERATION, DREIDING)
 
         # MINIMIZATION
@@ -357,7 +358,7 @@ if __name__ == "__main__":
         create_lmpdat(LMPDAT, XYZ_H0, output_name=LMPDAT_H0)
         minimize(LMPDAT_H0, SETTINGS_FILE, FF_FILE, output=EMIN_OUT)
 
-        WORKING_DIR = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/0H_anti_relaxed_scan/1.vertical_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
+        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/0H_anti_relaxed_scan/1.vertical_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
 
         # scan
         try:
@@ -380,9 +381,9 @@ if __name__ == "__main__":
     execute_2H_scan = True
 
     if execute_2H_scan is True:
-        XYZ_H2 = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/2H_anti_opt/1.gaussian09/CBZ_2H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
+        XYZ_H2 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/2H_anti_opt/1.gaussian09/CBZ_2H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
         # scan of the H-Bonds of two Carbamazepine molecules
-        EMIN_FOLDER = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/2H_anti_opt/gaff-{}_dreiding_{}/".format(ITERATION, DREIDING)
+        EMIN_FOLDER = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/2H_anti_opt/gaff-{}_dreiding_{}/".format(ITERATION, DREIDING)
         EMIN_OUT = "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_minimized".format(ITERATION, DREIDING)
 
         # MINIMIZATION
@@ -399,7 +400,7 @@ if __name__ == "__main__":
         create_lmpdat(LMPDAT, XYZ_H2, output_name=LMPDAT_H2)
         minimize(LMPDAT_H2, SETTINGS_FILE, FF_FILE, output=EMIN_OUT)
 
-        WORKING_DIR = "/home/gadelmeier/hdd/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/2H_anti_relaxed_scan/1.horizontal_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
+        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/2H_anti_relaxed_scan/1.horizontal_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
 
         # scan
         try:

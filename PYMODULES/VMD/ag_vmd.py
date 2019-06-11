@@ -881,3 +881,106 @@ def measure_geometry(selection, molid, frame=-1, geometry_type="BOND"):
                             geometry_vals[tuple(catms)] = cvalue
 
     return geometry_vals
+
+
+def measure_geometry(selection, molid, frame=-1, geometry_type="bond"):
+    """
+    Measure all bonds in the given vmd.atomsel object.
+
+    Should be imported from ag_vmd but currently this is not working, therefor
+    this duplicate.
+
+    Parameters
+    ----------
+    selection : vmd.atomsel
+        selection of atoms to measure the bonds for
+
+    Returns
+    -------
+    bondbond_lengths : collections.OrderedDict {tuple{int, int}: float, ...}
+        each bond/angle/dihedral with the corresponding value
+
+    """
+    checked_entity = []
+
+    geometry_type = geometry_type.upper()
+
+    if geometry_type != "BOND" and geometry_type != "ANGLE" and geometry_type != "DIHEDRAL":
+        raise IOError("{} Unknown geometry type!".format(geometry_type))
+
+    geometries_and_values = OrderedDict()
+
+    for atom_idx, bond in enumerate(selection.bonds):
+        for atom_idx2 in bond:
+
+            # skip reversed bond
+            if atom_idx2 in [atom_idx]:
+                continue
+
+            # measure bond
+            if geometry_type == "BOND":
+                catms = [atom_idx, atom_idx2]
+
+                # skip checked entity
+                checked_entity.append(tuple(catms[::-1]))
+
+                if tuple(catms) in checked_entity:
+                    continue
+
+                cvalue = measure.bond(atom_idx, atom_idx2, molid=molid, frame=frame)[0]
+                #catms = [i + 1 for i in catms]
+                #geometries_and_values[tuple(catms)] = cvalue
+                atm1_name = selection.name[atom_idx][0]
+                atm2_name = selection.name[atom_idx2][0]
+                ckey = "{}{} {}{}".format(atm1_name, atom_idx + 1, atm2_name, atom_idx2 + 1)
+                geometries_and_values[ckey] = cvalue
+            else:
+                for atom_idx3 in selection.bonds[atom_idx2]:
+
+                    # skip reversed bond
+                    if atom_idx3 in [atom_idx, atom_idx2]:
+                        continue
+
+                    # measure angle
+                    if geometry_type == "ANGLE":
+                        catms = [atom_idx, atom_idx2, atom_idx3]
+
+                        # skip checked entity
+                        checked_entity.append(tuple(catms[::-1]))
+                        if tuple(catms) in checked_entity:
+                            continue
+
+                        cvalue = measure.angle(atom_idx, atom_idx2, atom_idx3, molid=molid, frame=frame)[0]
+                        #catms = [i + 1 for i in catms]
+                        #geometries_and_values[tuple(catms)] = cvalue
+                        atm1_name = selection.name[atom_idx][0]
+                        atm2_name = selection.name[atom_idx2][0]
+                        atm3_name = selection.name[atom_idx3][0]
+                        ckey = "{}{} {}{} {}{}".format(atm1_name, atom_idx + 1, atm2_name, atom_idx2 + 1, atm3_name, atom_idx3 + 1)
+                        geometries_and_values[ckey] = cvalue
+                    else:
+                        # measure dihedral
+                        for atom_idx4 in selection.bonds[atom_idx3]:
+                            # skip if just the reversed bond is checked
+
+                            if atom_idx4 in [atom_idx, atom_idx2, atom_idx3]:
+                                continue
+
+                            catms = [atom_idx, atom_idx2, atom_idx3, atom_idx4]
+
+                            # skip checked entity
+                            checked_entity.append(tuple(catms[::-1]))
+                            if tuple(catms) in checked_entity:
+                                continue
+
+                            cvalue = measure.dihedral(atom_idx, atom_idx2, atom_idx3, atom_idx4, molid=molid, frame=frame)[0]
+                            #catms = [i + 1 for i in catms]
+                            #geometries_and_values[tuple(catms)] = cvalue
+                            atm1_name = selection.name[atom_idx][0]
+                            atm2_name = selection.name[atom_idx2][0]
+                            atm3_name = selection.name[atom_idx3][0]
+                            atm4_name = selection.name[atom_idx4][0]
+                            ckey = "{}{} {}{} {}{} {}{}".format(atm1_name, atom_idx + 1, atm2_name, atom_idx2 + 1, atm3_name, atom_idx3 + 1, atm4_name, atom_idx4 + 1)
+                            geometries_and_values[ckey] = cvalue
+
+    return geometries_and_values
