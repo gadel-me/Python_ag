@@ -368,9 +368,12 @@ if __name__ == "__main__":
 
         os.chdir(WORKING_DIR)
         VT_SHIFT = get_shift_vector(LMPDAT_H0, [14, 15, 16, 18, 20, 22], [44, 45, 46, 48, 50, 52], dcd=EMIN_DCD_H0)
+        FROZEN_COORDS = [14, 15, 16, 18, 20, 22, 44, 45, 46, 48, 50, 52]
+        #FROZEN_COORDS = range(60)
+
         scan_coordinates(
             EMIN_LMPRST_H0,
-            range(31, 61), [14, 15, 16, 18, 20, 22, 44, 45, 46, 48, 50, 52],
+            range(31, 61), FROZEN_COORDS,
             VT_SHIFT, "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
             SETTINGS_FILE, lmpcfg=FF_FILE)
 
