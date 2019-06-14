@@ -1,6 +1,7 @@
 import os
 import pdb
 import fnmatch
+from pathlib import Path
 
 
 class FileHandler(object):
@@ -28,13 +29,8 @@ class FileHandler(object):
         https://docs.python.org/2/library/fnmatch.html#fnmatch.filter
 
         """
-        #path = os.path.abspath(path)
-
-        self.files = [
-            os.path.join(dirpath, f)
-            for dirpath, dirnames, files in os.walk(path)
-            for f in fnmatch.filter(files, name_pattern)
-        ]
+        for filename in Path(path).glob('**/*{}'.format(name_pattern)):
+            self.files.append(filename)
 
     def link_files(self, directory):
         """Link files to the directory.
@@ -46,9 +42,5 @@ class FileHandler(object):
 
         """
         for filename in self.files:
-            try:
-                os.symlink(
-                    filename, "{}/{}".format(directory, os.path.basename(filename))
-                )
-            except OSError:
-                pass
+            symlink = Path(directory + filename.name)
+            symlink.symlink_to(filename.resolve())
