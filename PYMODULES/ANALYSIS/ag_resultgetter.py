@@ -48,7 +48,7 @@ class ResultGetter(ag_fileio.FileHandler):
         # find files according to name_pattern
         if directory is not None and name_pattern is not None:
             self.find_files(directory, name_pattern)
-            self.files = [os.path.abspath(i) for i in self.files]
+            #self.files = [os.path.abspath(i) for i in self.files]
 
         # list of results
         self.energy_unit = "eV"
@@ -108,6 +108,8 @@ class ResultGetter(ag_fileio.FileHandler):
 
         """
         dimer_sys = agum.Unification()
+        # convert filename to str since PosixPath does not have an 'endswith' method
+        filename = str(filename)
 
         if filename.endswith(".pwscf_out") or filetype == "pwscf_out":
             dimer_sys.read_pwout(filename, read_crystal_sections=True)

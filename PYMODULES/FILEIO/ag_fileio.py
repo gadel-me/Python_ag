@@ -43,4 +43,8 @@ class FileHandler(object):
         """
         for filename in self.files:
             symlink = Path(directory + filename.name)
-            symlink.symlink_to(filename.resolve())
+
+            try:
+                symlink.symlink_to(filename.resolve())
+            except OSError:
+                pass

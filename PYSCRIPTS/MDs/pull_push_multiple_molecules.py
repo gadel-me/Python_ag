@@ -162,7 +162,7 @@ def minimize(lmpdat, settings_file, lmpcfg=None, output="foobar"):
 
 
 def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
-                     settings_file, save_step=100000, lmpcfg=None):
+                     settings_file, save_step=100000, lmpcfg=None, lmpdat=None, rigid=False):
     """
     Move one part of the molecule along a shifting vector with sp calculations.
 
@@ -198,6 +198,14 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
 
     lmpcfg : str
         file with force field parameters for the run, most often for vdw settings
+
+    lmpdat : str
+        lammps data file with coordinates of the system (use instead of restart)
+
+    pre_minimize : bool
+        execute a pre_minimization of the whole system before freezing the
+        other atoms
+
     """
     thermargs = ["step", "temp", "pe", "ebond", "eangle", "edihed", "eimp", "evdwl", "ecoul"]
 
@@ -206,7 +214,9 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
     lmp.file(settings_file)
 
     # read file
-    if os.path.isfile(lmprst):
+    if lmpdat is not None:
+        lmp.command("read_data {}".format(lmpdat))
+    elif os.path.isfile(lmprst):
         lmp.command("read_restart {}".format(lmprst))
     else:
         raise Warning("Could not find restart file.")
@@ -230,11 +240,13 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
     lmp.command("dump DUMP all dcd {} {}.dcd".format(save_step, output))
 
     # perform a minimization of the whole system
-    try:
-        lmp.command("minimize 1e-6 1e-9 2000000 1000000")
-    except:
-        print("***Error:  Simulation crashed (minimization)!")
-        MPI.COMM_WORLD.Abort()
+    if rigid is False:
+
+        try:
+            lmp.command("minimize 1e-6 1e-9 2000000 1000000")
+        except:
+            print("***Error:  Simulation crashed (minimization)!")
+            MPI.COMM_WORLD.Abort()
 
     # scanning of the atoms
     atoms = " ".join(map(str, displace_atoms))
@@ -256,9 +268,14 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
         lmp.command("displace_atoms displaced move {a[0]} {a[1]} {a[2]} units box".format(a=vt_add))
 
         try:
-            lmp.command("minimize 1e-6 1e-9 2000000 1000000")
+
+            if rigid is True:
+                lmp.command("run 1")
+            else:
+                lmp.command("minimize 1e-6 1e-9 2000000 1000000")
+
         except:
-            print("***Error:  Simulation crashed (minimization)!")
+            print("***Error:  Simulation crashed (minimization/sp)!")
             MPI.COMM_WORLD.Abort()
 
 
@@ -333,7 +350,7 @@ if __name__ == "__main__":
     LMPDAT = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/4.forcefields/CBZ_gaff-{}_novdw.lmpdat".format(ITERATION)
 
     # H0 dimer
-    execute_0H_scan = True
+    execute_0H_scan = False
 
     if execute_0H_scan is True:
 
@@ -381,7 +398,7 @@ if __name__ == "__main__":
         norm_energy("md_energies.txt", "md_energies_normed.txt")
 
     # H2 dimer
-    execute_2H_scan = True
+    execute_2H_scan = False
 
     if execute_2H_scan is True:
         XYZ_H2 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/2H_anti_opt/1.gaussian09/CBZ_2H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
@@ -425,5 +442,43 @@ if __name__ == "__main__":
                 LMPDAT_H2, "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan.dcd".format(ITERATION, DREIDING),
                 [25], [55]),
             get_energies("CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan.lmplog".format(ITERATION, DREIDING)))
+
+        norm_energy("md_energies.txt", "md_energies_normed.txt")
+
+    # CH-O26 dimer - rigid scan
+    EXECUTE_CH_O25_SCAN = True
+
+    if EXECUTE_CH_O25_SCAN is True:
+        XYZ_CH_O26 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/3.scans/1.dimer_scans/CH-O_rigid_scan/2.quantum_espresso/1.rigid_geometry/1.InputFiles/CBZ_Dimer_CH-O.xyz"
+        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/CH-O_rigid_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
+
+        # scan
+        try:
+            os.mkdir(WORKING_DIR)
+        except OSError:
+            pass
+
+        os.chdir(WORKING_DIR)
+        LMPDAT_CH_O25 = "CBZ_Dimer_CH-O.lmpdat"
+        create_lmpdat(LMPDAT, XYZ_CH_O26, output_name=LMPDAT_CH_O25)
+        VT_SHIFT = get_shift_vector(LMPDAT_CH_O25, [13], [56])
+
+        scan_coordinates(
+            "dummy",
+            range(31, 61),
+            range(1, 61),
+            VT_SHIFT,
+            "CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
+            SETTINGS_FILE,
+            lmpcfg=FF_FILE,
+            lmpdat=LMPDAT_CH_O25,
+            save_step=1,
+            rigid=True)
+
+        write_summary(
+            calculate_distances(
+                LMPDAT_CH_O25, "CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan.dcd".format(ITERATION, DREIDING),
+                [13], [56]),
+            get_energies("CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan.lmplog".format(ITERATION, DREIDING)))
 
         norm_energy("md_energies.txt", "md_energies_normed.txt")

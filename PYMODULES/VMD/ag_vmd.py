@@ -411,21 +411,21 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     vmd_draw_arrow(molid, origin, origin + ucell_a, cylinder_radius=0.4, cone_radius=1.0, drawcolor="red")
     label_pos = origin + ucell_a * 1.05 + offset
 
-    if label_axis is False:
+    if label_axis is True:
         graphics.text(molid, tuple(label_pos), "a", textsize)
 
     # axis a
     vmd_draw_arrow(molid, origin, origin + ucell_b, cylinder_radius=0.4, cone_radius=1.0, drawcolor="green")
     label_pos = origin + ucell_b * 1.05 + offset
 
-    if label_axis is False:
+    if label_axis is True:
         graphics.text(molid, tuple(label_pos), "b", textsize)
 
     # axis c
     vmd_draw_arrow(molid, origin, origin + ucell_c, cylinder_radius=0.4, cone_radius=1.0, drawcolor="blue")
     label_pos = origin + ucell_c * 1.05 + offset
 
-    if label_axis is False:
+    if label_axis is True:
         graphics.text(molid, tuple(label_pos), "c", textsize)
 
 
