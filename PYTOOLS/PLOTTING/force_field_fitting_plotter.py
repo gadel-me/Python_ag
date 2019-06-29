@@ -119,8 +119,8 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
                         fin.write("{:<20} {:<20}\n".format(i, j))
 
     # plot settings
-    #marker = "."
-    marker = ""
+    marker = "."
+    #marker = ""
     lstyle = "-"
     plt.xlabel(xlabel)
     plt.ylabel("Energy / eV")
@@ -150,7 +150,7 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     plt.legend(loc='upper right', bbox_to_anchor=(0.7, 1.0))
     plt.savefig("file.png")
     fig.show()
-    #plt.show()
+    plt.show()
 
 
 def plot_results(rsgetters, rslabels, linestyles=(), xlabel=r"Distance / $\AA$",

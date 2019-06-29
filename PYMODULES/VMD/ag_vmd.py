@@ -198,6 +198,11 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
     if key == "index":
         values = [i + 1 for i in values]
 
+    if key == "charge":
+        total_charge = sum(values)
+        print("Total charge is {}".format(total_charge))
+        del total_charge
+
     # set a label color
     graphics.color(molid, label_color)
 
