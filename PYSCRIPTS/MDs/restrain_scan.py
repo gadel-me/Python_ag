@@ -730,7 +730,8 @@ if __name__ == "__main__":
                               energy_file_wo_entity=OUTPUT_FILE2,
                               output_idx=gau_file_idx,
                               force_constants=ARGS.k,
-                              pc_file=ARGS.pair_coeffs)
+                              pc_file=ARGS.pair_coeffs,
+                              temps=(350, 0.0))
 
     # wait for all ranks to finish
     time.sleep(2)
