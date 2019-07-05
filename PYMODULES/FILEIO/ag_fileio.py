@@ -32,6 +32,19 @@ class FileHandler(object):
         for filename in Path(path).glob('**/*{}'.format(name_pattern)):
             self.files.append(filename)
 
+    def files_to_strings(self):
+        """
+        Convert PosixPath to str.
+        """
+        str_filenames = []
+
+        for filename in self.files:
+            full_path = filename.resolve()
+            str_filename = full_path.as_posix()
+            str_filenames.append(str_filename)
+
+        self.files = str_filenames
+
     def link_files(self, directory):
         """Link files to the directory.
 

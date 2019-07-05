@@ -294,7 +294,7 @@ def vmd_prepare_scene():
 
 
 def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
-                      selection="all", scale=0.0, molid=0,
+                      selection="all", scale=1.0, molid=0,
                       vmd_material="Basic1Pantone", style="CPK 1.000000 0.300000 12.000000 12.000000"):
     """
     """
