@@ -97,7 +97,8 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
         atom ids and according entity values, e.g. {"1 2 3 4": 120, ...}
 
     force_constants : list of lists
-        starting and ending values of the force constants to use
+        starting and ending values of the force constants to use. Must be
+        defined for each entity that will be scanned simultaneously.
 
     hold : 0 or 1
         assign the force constant to ending and start (1) or just
@@ -113,7 +114,7 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
     restrain_string = "fix REST all restrain "
 
     for index, (key, value) in enumerate(indices_and_values.iteritems()):
-        pdb.set_trace()
+        #pdb.set_trace()
         k_start = force_constants[index][hold]
         k_stop = force_constants[index][1]
         cur_geometry = get_geometry_by_key(key)
