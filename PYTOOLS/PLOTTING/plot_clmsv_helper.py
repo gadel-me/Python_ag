@@ -7,6 +7,7 @@ import math
 import scipy.stats
 from statsmodels.graphics.gofplots import qqplot
 from statsmodels.graphics.tsaplots import plot_acf
+import ag_statistics as ags
 import pdb
 
 
@@ -157,14 +158,19 @@ def plot_histogram(data, key, label=None):
     plt.ylabel("Probability density", fontsize=10, fontweight='bold')
 
     # histogram
-    n, bins, patches = plt.hist(data, bins=x_range, density=True, color="#E6E6FA",
-                                align="mid", cumulative=False)
+    nhist, bins, patches = plt.hist(data, bins=x_range, density=True, color="#E6E6FA",
+                                    align="mid", cumulative=False)
 
     # define best fit line for given x_range, mu and sigma
     pdf_x_values = bins
     pdf_y_values = mlab.normpdf(pdf_x_values, mu, sigma)
-    plt.plot(pdf_x_values, pdf_y_values, "r--", linewidth=0.5, alpha=0.5,
-             label="Fitted data")
+    #pdb.set_trace()
+    plt.plot(pdf_x_values, pdf_y_values, "g--", linewidth=0.5, alpha=0.5,
+             label="Fitted data - estimated values")
+
+    fitted_x, fitted_y = ags.gnuplot_gaussfit(bins[1:], nhist)
+    plt.plot(fitted_x, fitted_y, "r--", linewidth=0.5, alpha=0.5,
+             label="Fitted data - gnuplot fitting")
 
     # line that goes through mu (=max. of gauss-function)
     plt.axvline(x=mu, linewidth=0.5, color="red", alpha=3.0, label="average")

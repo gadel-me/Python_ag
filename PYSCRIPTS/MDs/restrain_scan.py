@@ -198,6 +198,7 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     # and one without -> important for fitting when using the difference curve)
 
     igeom, icoeff_id = add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0)
+    #pdb.set_trace()
 
     save_step = 50000
     anneal_step = 750000
@@ -292,7 +293,7 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
         print("***Error:  Simulation crashed (single step calculation)!")
         MPI.COMM_WORLD.Abort()
 
-    # omit energy contribution of the scanned entity
+    # omit energy contribution of the scanned entity by setting its value to 0.0
     if omit_entity is True:
         lmp.command("group entity_atoms id {}".format(indices_and_values.keys()[0]))
         lmp.command("set group entity_atoms {} {}".format(igeom, icoeff_id))
@@ -541,7 +542,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
 
         # define a dictionary with atom ids as key and the current
         # geometry value as value
-        cur_geom_atm_ids_geom_value = {}
+        cur_geom_atm_ids_geom_value = OrderedDict()
 
         for idx, geom_ids in enumerate(total_geom_ids):
             geom_entity = total_scan_entities[idx][task_id]
@@ -733,7 +734,7 @@ if __name__ == "__main__":
                               output_idx=gau_file_idx,
                               force_constants=ARGS.k,
                               pc_file=ARGS.pair_coeffs,
-                              temps=(350, 0.0))
+                              temps=(600, 0.0))
 
     # wait for all ranks to finish
     time.sleep(2)

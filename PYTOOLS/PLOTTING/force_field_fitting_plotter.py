@@ -2,7 +2,7 @@ import re
 import numpy as np
 import itertools
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 
 try:
     import matplotlib.pyplot as plt
@@ -63,7 +63,8 @@ def plot_all(ref_file, data_files, xlabel=None, title=None, substract=False, x_o
     xlabel : None or str
 
     """
-    fig = plt.figure(figsize=(15, 10), dpi=300)
+    #fig = plt.figure(figsize=(15, 10), dpi=300)
+    fig = plt.figure()
 
     def plot_data_files():
         """
