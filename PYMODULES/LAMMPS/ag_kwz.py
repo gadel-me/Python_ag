@@ -63,12 +63,16 @@ def get_remaining_cycles(total_cycles):
         def get_finished_cycles():
             """
             """
-
             fc = []
             folders_pwd = ["{}/{}".format(pwd, i) for i in os.listdir(pwd) if os.path.isdir(i)]
 
             # get last cycle from directory
             for folder in folders_pwd:
+                # skip all folders where anything went wrong
+                if "fail" in folder:
+                    continue
+
+                print(folder)
                 cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
                 cycle = int(cycle)
 
