@@ -60,13 +60,14 @@ args = parser.parse_args()
 sys_all = []
 
 for lmpdat in args.lmpdats:
-    sys  = agum.Unification()
+    sys = agum.Unification()
     sys.read_lmpdat(lmpdat, energy_unit="eV", angle_unit="deg")
     sys_all.append(sys)
 
 for idx in xrange(1, len(sys_all)):
     sys_all[0].extend_universe(sys_all[idx])
 
+sys_all[0].mix_pair_types(mode="ij")
 sys_all[0].fetch_molecules_by_bonds()
 sys_all[0].mols_to_grps()
 sys_all[0].change_indices(incr=1, mode="increase")

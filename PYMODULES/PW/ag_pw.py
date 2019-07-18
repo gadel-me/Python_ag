@@ -433,7 +433,9 @@ class PwStuff(mdu.Universe):
                 if read_crystal_sections is True:
 
                     if line.startswith("     lattice parameter (alat)"):
-                        alat = float(line.split()[-2]) * BOHR_ANGSTROM
+                        # not sure why alat was converted here before, seems to be wrong
+                        # when the whole box is converted later anyway
+                        alat = float(line.split()[-2])  #* BOHR_ANGSTROM
                         #print(alat)
 
                     # get box with box vectors

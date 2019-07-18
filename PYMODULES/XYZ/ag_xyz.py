@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+import pdb
 import numpy as np
 #import copy
 import md_stars as mds
@@ -25,6 +26,9 @@ class XYZ(mdu.Universe):
         """
         Read the contents of a xyz-file.
         XYZ-Format: https://en.wikipedia.org/wiki/XYZ_file_format
+
+        A boxtype may be given in the comment line. The line has to look like the following
+        Boxtype lattice a 52.213276 b 52.213276 c 52.213276 alpha 90.000000 beta 90.000000 gamma 90.000000
         """
         with open(xyzfile, "r") as xyz_in:
             for line in xyz_in:
@@ -36,7 +40,7 @@ class XYZ(mdu.Universe):
                 if "Boxtype" in comment_line:
                     comment_line = comment_line.split()
                     box = [None if i == "None" else None if round(float(i), 8) == 0 else float(i) for i in comment_line[3::2]]
-                    print("************", box)
+                    #print("************", box)
 
                     if comment_line[1] == "cartesian":
                         current_box = mdb.Box(boxtype=comment_line[1],
@@ -48,9 +52,9 @@ class XYZ(mdu.Universe):
                                               ltc_a=box[0],
                                               ltc_b=box[1],
                                               ltc_c=box[2],
-                                              ltc_alpha=box[3],
-                                              ltc_beta=box[4],
-                                              ltc_gamma=box[5])
+                                              ltc_alpha=np.radians(box[3]),
+                                              ltc_beta=np.radians(box[4]),
+                                              ltc_gamma=np.radians(box[5]))
                     else:
                         current_box = mdb.Box(boxtype=comment_line[1],
                                               lmp_xlo=box[0],
@@ -112,11 +116,11 @@ class XYZ(mdu.Universe):
                                 self.atoms[iid].chge = ccharge
 
                     except IndexError:
-                            catm = mds.Atom(atm_id=iid,
-                                            sitnam=csitnam)
-                            if ccharge is not None:
-                                catm.chge = ccharge
-                            self.atoms.append(catm)
+                        catm = mds.Atom(atm_id=iid,
+                                        sitnam=csitnam)
+                        if ccharge is not None:
+                            catm.chge = ccharge
+                        self.atoms.append(catm)
 
                     cframe.append(ccoords)
 

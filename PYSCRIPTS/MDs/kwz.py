@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("-gpu", default=False, action="store_true", help=gpu_help)
     parser.add_argument("-cycles", type=int, default=5, help=cycles_help)
     parser.add_argument("-timeout", metavar="00:01:00", default="00:00:05", help=timeout_help)
-    parser.add_argument("-pa", "-pattern_add", nargs="*", default=0, type=int, help=pa_help)
+    parser.add_argument("-pa", "-pattern_add", nargs="*", default=[0], type=int, help=pa_help)
 
     # quenching
     parser.add_argument("-quench_temp_start", type=int, default=5)
@@ -111,6 +111,7 @@ if __name__ == "__main__":
 
     # relax solvent in solution
     parser.add_argument("-relax_solv_tstart", type=int, default=250)
+    #parser.add_argument("-relax_solv_style", type=str, default="berendsen")
     parser.add_argument("-relax_solv_tstop", type=int, default=300)
     parser.add_argument("-relax_solv_pstart", type=int, default=10)
     parser.add_argument("-relax_solv_pstop", type=int, default=1)
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     #==============================================================================#
     # Remaining cycles and molecule to add pattern
     #==============================================================================#
-    remaining_cycles, requench_out = agk.get_remaining_cycles(args.total_cycles)
+    remaining_cycles, requench_out = agk.get_remaining_cycles(args.cycles)
     #resnames = set(args.solvate_resnames.split())
 
     #==============================================================================#
@@ -151,7 +152,13 @@ if __name__ == "__main__":
     #==============================================================================#
     PWD = os.getcwd()
 
-    for curcycle, idx_lmpa in remaining_cycles:
+    for curcycle in remaining_cycles:
+        # get index of the pattern args.pa according to the current cycle
+        pattern_idx = curcycle % len(args.pa)
+
+        # get the index of args.lmpa according to the index the pattern gives
+        # (args.pa is a list of indices (of args.lmpa) that are to be docked next)
+        idx_lmpa = args.pa[pattern_idx]
 
         #==========================================================#
         # Define folders and files, retrieve stage of current cycle
@@ -220,15 +227,19 @@ if __name__ == "__main__":
         anneal_rst = anneal_dir + "anneal_{}".format(curcycle) + "_tmp.lmprst"
         anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
         anneal_log = anneal_dir + "anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_anneal = aglmpsim.LmpSim(tstart=args.anneal_tstart, tstop=args.anneal_tstop,pstart=args.anneal_pstart, pstop=args.anneal_pstop,logsteps=args.anneal_logsteps, runsteps=args.anneal_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst,output_lmprst=anneal_out,output_dcd=anneal_dcd, output_lmplog=anneal_log,gpu=args.gpu)
+        lmpsettings_anneal = aglmpsim.LmpSim(tstart=args.anneal_tstart, tstop=args.anneal_tstop, pstart=args.anneal_pstart, pstop=args.anneal_pstop, logsteps=args.anneal_logsteps, runsteps=args.anneal_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst, output_lmprst=anneal_out, output_dcd=anneal_dcd, output_lmplog=anneal_log, gpu=args.gpu)
 
         # requench
         tmp_solvate_anneal_out = requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
         #requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
         requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmprst"
+        requench_rst = anneal_dir + "requench_{}".format(curcycle) + "_tmp.lmprst"
         requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
         requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
-        lmpsettings_requench = lmpsettings_anneal = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=requench_rst,output_lmprst=requench_out,output_dcd=requench_dcd, output_lmplog=requench_log)
+
+        # not sure if "lmpsettings_requench = lmpsettings_anneal" is just a typo
+        #lmpsettings_requench = lmpsettings_anneal = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
+        lmpsettings_requench = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
 
         # important files from previous run
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(PWD, curcycle - 1)
@@ -253,13 +264,17 @@ if __name__ == "__main__":
             quench_attempts = 0
             while not os.path.isfile(lmpsettings_quench.output_lmprst):
                 sysprep_attempt = 0
-                while not os.path.isfile(lmpsettings.lmpdat_out):
+                while not os.path.isfile(lmpsettings_sysprep.output_lmpdat):
                     #==================================================================#
                     # 1. System Preparation
                     #==================================================================#
                     if rank == 0:
                         agk.create_folder(sysprep_dir)
-                        sysprep_success = agk.sysprep(lmpsettings.lmpdat_out, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
+
+                        if not os.path.isfile(requench_dcd):
+                            sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=None, frame_idx=-1)
+                        else:
+                            sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
 
                         if sysprep_success is False:
                             sl.move(sysprep_dir, sysprep_dir + "failed_{}".format(sysprep_attempt))
@@ -272,7 +287,7 @@ if __name__ == "__main__":
                 # 2. System Quenching
                 #===================================================================
 
-                if os.path.isfile(lmpsettings_quench.lmprst_out) is False:
+                if os.path.isfile(lmpsettings_quench.output_lmprst) is False:
                     if rank == 0:
                         agk.create_folder(quench_dir)
                     quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
@@ -285,10 +300,11 @@ if __name__ == "__main__":
                         quench_attempts += 1
                     else:
                         print("***Quenching-Info: Quenching done!")
-                        del quench_attempts
 
                     if quench_attempts > 20 and quench_success is False:
                         exit(101)
+
+                    del quench_attempts
 
             #======================================================================#
             # 3. ANNEALING
@@ -296,7 +312,8 @@ if __name__ == "__main__":
             if os.path.isfile(lmpsettings_anneal.output_lmprst) is False:
                 if rank == 0:
                     agk.create_folder(anneal_dir)
-                    solvate_sys = aglmp.read_lmpdat(lmpsettings_quench.input_lmpdat, dcd=lmpsettings_quench.output_dcd)
+                    solvate_sys = aglmp.read_lmpdat(lmpsettings_quench.input_lmpdat,
+                                                    dcd=lmpsettings_quench.output_dcd)
                     solvate_sys_natoms = len(solvate_sys.atoms)
                     atm_idxs_solvate = range(solvate_sys_natoms)
                 else:
@@ -313,11 +330,11 @@ if __name__ == "__main__":
 
                     # relax cut box
                     if not os.path.isdir(lmpsettings_relax_cut.output_lmprst):
-                        lmpsettings_relax_cut.runsteps=20000
+                        lmpsettings_relax_cut.runsteps = 20000
                         # 20000 steps, 500 bar to 1 bar, 20 to 280 K, iso
-                        agk.md_simulation(lmpsettings_relax_cut, group="all", style=style, ensemble="nvt", keyword="iso")
+                        agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="nvt", keyword="iso")
                         lmpsettings_relax_cut.tstart = lmpsettings_relax_cut.tstop
-                        agk.md_simulation(lmpsettings_relax_cut, group="all", style=style, ensemble="npt", keyword="iso")
+                        agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="npt", keyword="iso")
 
                     # create voids and write lammps data with solvate and solvent combined
                     if not os.path.isfile(lmpsettings_void.output_lmprst):
@@ -341,20 +358,34 @@ if __name__ == "__main__":
                     # a solvent atom
                     agk.md_simulation(lmpsettings_relax_solv, group="group solvate id > {}".format(solvate_sys_natoms), style="berendsen", ensemble="nvt", keyword=None)
 
-                # heat whole solution
-                agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword="iso")
+                # heat the system up
+                if args.lmps is not None:
+                    agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso")
+                else:
+                    # no solvent given -> keep volume constant
+                    agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt")
 
                 # check if aggregate is still ok
                 if rank == 0:
                     solution_sys = aglmp.read_lmpdat(lmpsettings_heat.input_lmpdat, lmpsettings_heat.output_dcd)
                     solution_sys_atoms_idxs = range(len(solution_sys.atoms))
-                    aggregate_ok = solution_sys.check_aggregate(solvate_sys, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+
+                    # not sure if remains of previous code
+                    #aggregate_ok = solution_sys.check_aggregate(solvate_sys, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+
+                    # check aggregation state of the last frame
+                    aggregate_ok = solution_sys.check_aggregate(-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
 
                     # stop further calculations and start from the beginning
                     if not aggregate_ok:
-                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
-                        sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
-                        sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
+                        print("***Error: Aggregation failed :(")
+                        #sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
+                        #sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
+                        #sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
+                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed")
+                        sl.move(quench_dir, quench_dir.rstrip("/") + "failed")
+                        sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed")
+
                 else:
                     aggregate_ok = False
 
@@ -368,7 +399,10 @@ if __name__ == "__main__":
                     continue
 
                 # productive run
-                anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check)
+                if args.lmps is not None:
+                    anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "npt", keyword="iso")
+                else:
+                    anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt")
 
                 if not anneal_success:
                     anneal_attempts = 0

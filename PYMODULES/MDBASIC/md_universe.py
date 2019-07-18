@@ -1866,8 +1866,7 @@ class Universe(object):
         if debug is True:
             print("***Check Aggregate Info: Cube side {}".format(cube_side))
 
-        self.create_linked_cells(frame_id, rcut_a=cube_side, rcut_b=cube_side,
-                                 rcut_c=cube_side)
+        self.create_linked_cells(frame_id, rcut_a=cube_side, rcut_b=cube_side, rcut_c=cube_side)
 
         # include same molecule or it gets missing in our aggregates set
         close_atoms, aggregates = self.chk_atm_dist(frame_id, min_dist=atm_atm_dist, exclude_same_molecule=False, get_aggregates=True, excluded_atm_idxs=excluded_atm_idxs, debug=False)

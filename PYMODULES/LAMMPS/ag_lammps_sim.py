@@ -1,3 +1,4 @@
+import os
 from mpi4py import MPI
 
 #==============================================================================#
@@ -69,6 +70,8 @@ class LmpSim(object):
             lmp.command("undump {}".format(dump))
 
     def thermo(self, lmp, hb_group="all"):
+        #TODO:  hb_group is not necessary since hbonds will only be calculated
+        #       for the defined atom types
         """
         Log thermodynamic data.
         """
@@ -87,7 +90,7 @@ class LmpSim(object):
         #lmp.command("thermo_modify line multi format float %g")
         lmp.command("thermo {}".format(self.logsteps))
 
-    def dump(self, lmp, ndcd=None, nrst=None, unwrap=True):
+    def dump(self, lmp, ndcd=None, nrst=None, unwrap=False):
         """
         Dump dcd and lammps restart files.
         """
@@ -146,7 +149,7 @@ class LmpSim(object):
             relaxation keyword if box should be scaled as well: iso, aniso, tri
 
         """
-        if keyword:
+        if keyword is not None:
             lmp.command("fix box_relax all box/relax {} {}".format(keyword, self.pstart))
 
         lmp.command("min_style {}".format(style))

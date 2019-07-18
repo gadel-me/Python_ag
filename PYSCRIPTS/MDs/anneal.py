@@ -73,12 +73,13 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
             print(bcolors.red + "Annealing" + bcolors.endc)
 
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(0.0, tmax))
+        lmp.command("run {}".format(steps))
 
-        try:
-            lmp.command("run {}".format(steps))
-        except:
-            print("***Error: Simulation crashed (annealing)! Force constants too high?")
-            MPI.COMM_WORLD.Abort()
+        #try:
+        #    lmp.command("run {}".format(steps))
+        #except:
+        #    print("***Error: Simulation crashed (annealing)! Force constants too high?")
+        #    MPI.COMM_WORLD.Abort()
 
         if rank == 0:
             print(bcolors.yellow + "Quenching 1" + bcolors.endc)

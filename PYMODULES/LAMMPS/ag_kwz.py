@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+import pdb
 import os
 #import copy
 #import shutil as sl
@@ -22,7 +23,6 @@ import ag_lammps as aglmp
 import ag_lmplog as agl
 #import ag_vectalg as agv
 import ag_statistics as ags
-import pdb
 
 #==============================================================================#
 # Setup MPI
@@ -64,7 +64,7 @@ def get_remaining_cycles(total_cycles):
             """
             """
 
-            finished_cycles = []
+            fc = []
             folders_pwd = ["{}/{}".format(pwd, i) for i in os.listdir(pwd) if os.path.isdir(i)]
 
             # get last cycle from directory
@@ -73,13 +73,18 @@ def get_remaining_cycles(total_cycles):
                 cycle = int(cycle)
 
                 # avoid duplicates
-                if cycle not in finished_cycles:
-                    finished_cycles.append(cycle)
+                if cycle not in fc:
+                    fc.append(cycle)
 
-            return finished_cycles
+            return fc
 
         finished_cycles = get_finished_cycles()
-        current_cycle = max(finished_cycles)
+
+        try:
+            current_cycle = max(finished_cycles)
+        except ValueError:
+            current_cycle = 0
+
         last_requench_file = pwd + "/requench_{}/".format(current_cycle) + "requench_{}.dcd".format(current_cycle)
 
         if len(finished_cycles) >= 1:
@@ -137,7 +142,7 @@ def write_to_log(string, filename="kwz_log"):
 ################################################################################
 
 
-def md_simulation(lmpcuts, group, style, ensemble, keyword=None):
+def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None):
     """
     """
     lmp = lammps()
@@ -157,7 +162,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword=None):
 
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
         #lmp.command("min_modify line quadratic")
-        lmpcuts.minimize(lmp, style="cg", keyword=keyword)
+        lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
 
     # barostatting, thermostatting
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -170,7 +175,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword=None):
         raise Warning("Style (currently) unkown")
 
     lmp.command("run {}".format(lmpcuts.runsteps))
-    lmpcuts.minimize(lmp, style="cg", keyword=keyword)
+    lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
     lmpcuts.unfix_undump(pylmp, lmp)
     #lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
@@ -405,8 +410,11 @@ def quench(lmpcuts, lmpdat_main):
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
-    # change box type to not be periodic
-    lmp.command("boundary f f f")
+
+    # change box type to not be periodic - does not work since future boxes
+    # will not be periodic as well
+    #lmp.command("boundary f f f")
+
     lmpcuts.load_system(lmp)
     lmp.command("velocity all create {} 8455461 mom yes rot yes dist gaussian".format(lmpcuts.tstart))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -439,7 +447,7 @@ def quench(lmpcuts, lmpdat_main):
         cog = None
 
     cog = comm.bcast(cog, 0)
-    # barostatting, thermostatting
+    # barostatting, thermostatting only for atoms that will be docked
     lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
     quench_success = False
 
@@ -716,7 +724,8 @@ def _append_data(data, lmplog):
     """
     cur_log = agl.LmpLog()
     cur_log.read_lmplog(lmplog)
-    cur_pes = cur_log.data[-1]["c_pe"]
+    #pdb.set_trace()
+    cur_pes = cur_log.data[-1]["c_pe_sovate_complete"]
     data.extend(cur_pes)
 
 
@@ -790,11 +799,10 @@ def vmd_rmsd_and_cluster(lmpdat_solution, lmpdat_solvate, dcd_files, atm_idxs, x
 # Annealing
 ################################################################################
 
-def _anneal(lmpcuts, pe_atm_idxs):
+def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     """
     Use nose-hoover baro- and thermostat for productive annealing run.
     """
-
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
     lmp.command("log {} append".format(lmpcuts.output_lmplog))
@@ -814,14 +822,15 @@ def _anneal(lmpcuts, pe_atm_idxs):
     # compute potential energy of the solvate (pair, bond, ...)
     # in order to compute the pe of the solvent, the solvent atom-ids must be
     # known
-    pe_atm_ids = [i + 1 for i in range(pe_atm_idxs)]
+    pe_atm_ids = [i + 1 for i in pe_atm_idxs]
     atm_ids_str = " ".join(map(str, pe_atm_ids))
-    lmp.command("group resname_atoms " + atm_ids_str)
-    lmp.command("compute pe_solvate resname_atoms pe/atom")
-    lmp.command("compute pe resname_atoms reduce sum c_pe_solvate")
-    lmpcuts.thermargs.append("c_pe_solvate")
+    lmp.command("group resname_atoms id {}".format(atm_ids_str))
+    lmp.command("compute pe_per_atom_solvate resname_atoms pe/atom")
+    lmp.command("compute pe_sovate_complete resname_atoms reduce sum c_pe_per_atom_solvate")
+    lmpcuts.thermargs.append("c_pe_sovate_complete")
     lmpcuts.thermo(lmp, hb_group="resname_atoms")
-    lmpcuts.fix_hoover(lmp)
+    #pdb.set_trace()
+    lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
@@ -861,8 +870,12 @@ def _test_anneal_equil(data):
     return (qq_normal and (skew_normal or kurtosis_normal)) or coeff_var <= 0.5
 
 
-def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
+def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None):
     """
+    #TODO   super buggy, best would be to change the complete behavior;
+    #       e.g. concatenate all dcds to a new one using vmd or my internal tools
+    #       and find the final frame there
+
     #TODO check pressure, temperature equilibration?
     #TODO print picture of rmsd w/ cluster coloring?
     """
@@ -874,8 +887,24 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
 
     for run_idx in xrange(5):
         # rename current _anneal attempt
-        lmpcuts.output_dcd = "{}_{}".format(run_idx, lmpcuts.output_dcd)
-        lmpcuts.output_lmplog = "{}_{}".format(run_idx, lmpcuts.output_lmplog)
+
+        # get just the base name of the files
+        dcd_path, dcd_filename = os.path.split(lmpcuts.output_dcd)
+        log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
+
+        # prepend the index to the basename
+        if dcd_filename[0].isdigit() is True:
+            dcd_filename = "{}{}".format(run_idx, dcd_filename[1:])
+        else:
+            dcd_filename = str(run_idx) + "_" + dcd_filename
+
+        if log_filename[0].isdigit() is True:
+            log_filename = "{}{}".format(run_idx, log_filename[1:])
+        else:
+            log_filename = str(run_idx) + "_" + log_filename
+
+        lmpcuts.output_dcd = "{}/{}".format(dcd_path, dcd_filename)
+        lmpcuts.output_lmplog = "{}/{}".format(log_path, log_filename)
 
         # read previous log- and dcd-files if they exist already
         if os.path.isfile(lmpcuts.output_dcd) and os.path.isfile(lmpcuts.output_lmplog):
@@ -884,13 +913,23 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check):
 
             # read potential energy of the solvate and all coordinates
             if rank == 0:
-                _append_data(all_pe, lmpcuts.output_lmplog)
+
+                # if this fails, then a lmplog was written but not simulation
+                # was carried out
+                try:
+                    _append_data(all_pe, lmpcuts.output_lmplog)
+                except IndexError:
+                    os.remove(lmpcuts.output_dcd)
+                    os.remove(lmpcuts.output_lmplog)
+                    dcd_files.pop(-1)
+                    log_files.pop(-1)
+
                 #molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
 
             continue
 
         else:
-            _anneal(lmpcuts, atm_idxs_solvate)
+            _anneal(lmpcuts, atm_idxs_solvate, ensemble, group, keyword)
             dcd_files.append(lmpcuts.output_dcd)
             log_files.append(lmpcuts.output_lmplog)
 

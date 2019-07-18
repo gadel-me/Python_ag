@@ -159,8 +159,10 @@ lmp.command("log {}.lmplog".format(args.out))
 if args.gpu is not None:
     #args.gpu = args.gpu[0].split()
     #print(args.gpu)
+    #args.gpu = ["neigh", "no"]
     args.gpu = ["neigh", "no"]
     lmp.command("package gpu 1 {neigh[0]} {neigh[1]}".format(neigh=args.gpu))
+    #lmp.command("package gpu 1 neigh no")
     lmp.command("suffix gpu")
 
 lmp.file(args.set)
