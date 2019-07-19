@@ -278,8 +278,8 @@ if __name__ == "__main__":
                             sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
 
                         if sysprep_success is False:
-                            #sl.move(sysprep_dir, sysprep_dir + "_failed_{}".format(sysprep_attempt))
-                            sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                            #agk.rename(sysprep_dir, sysprep_dir + "_failed_{}".format(sysprep_attempt))
+                            agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
                             sysprep_attempt += 1
 
                     if sysprep_success is False and sysprep_attempt > 20:
@@ -296,11 +296,11 @@ if __name__ == "__main__":
 
                     if quench_success is False:
                         #fail_appendix = "failed_{}".format(quench_attempts)
-                        #sl.move(sysprep_dir, sysprep_dir.rstrip("/") + fail_appendix)
-                        #sl.move(quench_dir, quench_dir.rstrip("/") + fail_appendix)
+                        #agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + fail_appendix)
+                        #agk.rename(quench_dir, quench_dir.rstrip("/") + fail_appendix)
 
-                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                        sl.move(quench_dir, quench_dir.rstrip("/") + "_failed")
+                        agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                        agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
 
                         #del fail_appendix
                         quench_attempts += 1
@@ -352,7 +352,7 @@ if __name__ == "__main__":
 
                         else:
                             print("Could not create large enough voids, void creation needs revision")
-                            sl.move(lmpsettings_void.output_lmprst, lmpsettings_void.inter_lmprst)
+                            agk.rename(lmpsettings_void.output_lmprst, lmpsettings_void.inter_lmprst)
                             exit(102)
 
                     # combine solute and solvent
@@ -385,12 +385,12 @@ if __name__ == "__main__":
                     # stop further calculations and start from the beginning
                     if not aggregate_ok:
                         print("***Error: Aggregation failed :(")
-                        #sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
-                        #sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
-                        #sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
-                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                        sl.move(quench_dir, quench_dir.rstrip("/") + "_failed")
-                        sl.move(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+                        #agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
+                        #agk.rename(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
+                        #agk.rename(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
+                        agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                        agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                        agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
 
                 else:
                     aggregate_ok = False
@@ -410,15 +410,18 @@ if __name__ == "__main__":
                 else:
                     anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt")
 
+                # start all over if annealing failed
                 if not anneal_success:
                     anneal_attempts = 0
                     quench_attempts = 0
                     sysprep_attempt = 0
-                    sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed")
-                    sl.move(quench_dir, quench_dir.rstrip("/") + "failed")
-                    sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed")
+                    agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                    agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                    agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
                     continue
                 else:
+                    # cluster results or take frame with lowest energy from the
+                    # equilibrated run
                     if rank == 0:
                         # calculate rmsd values and cluster and write a
                         # representative of the cluster as xyz file

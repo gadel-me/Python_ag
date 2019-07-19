@@ -2,7 +2,7 @@ from __future__ import print_function, division
 import pdb
 import os
 #import copy
-#import shutil as sl
+import shutil as sl
 import re
 #import argparse
 import math
@@ -36,6 +36,17 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helper functions
 #==============================================================================#
+def rename(src, dst):
+    """
+    Force renaming by deleting a folder with the same name as dst.
+    """
+    try:
+        os.rename(src, dst)
+    except OSError:
+        sl.rmtree(dst)
+        os.rename(src, dst)
+
+
 def get_natms(lmpdat):
     """
     """
@@ -209,7 +220,6 @@ def nose_hoover_md(lmpcuts, group="all"):
     # minimize cut box if not done already
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
         lmpcuts.minimize(lmp, style="cg")
-
 
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
@@ -723,13 +733,19 @@ def requench(lmpcuts):
     lmp.close()
 
 
-def _append_data(data, lmplog):
+def _append_data(data, lmplog, fstart=1):
     """
+    fstart : int
+        frame to start recording from
     """
     cur_log = agl.LmpLog()
     cur_log.read_lmplog(lmplog)
     #pdb.set_trace()
-    cur_pes = cur_log.data[-1]["c_pe_sovate_complete"]
+    # omit the first frame since it is not written to the dcd file?
+    #cur_pes = cur_log.data[-1]["c_pe_sovate_complete"][fstart:]
+
+    # potential energy of the whole system (solvent included if part of system)
+    cur_pes = cur_log.data[-1]["c_pe"][fstart:]
     data.extend(cur_pes)
 
 
@@ -938,11 +954,13 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             log_files.append(lmpcuts.output_lmplog)
 
         if rank == 0:
-            all_pe = all_pe[1:]
+            #TODO: save a picture of the qq-plot
+
+            # caveat:   each first frame of output_lmplog is omitted since
+            #           it is not part of the dcd file
             _append_data(all_pe, lmpcuts.output_lmplog)
             # check last N % of all frames
             num_frames_to_check = int(percentage_to_check / 100 * len(all_pe))
-            pdb.set_trace()
             pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
 
             # check if aggregate is still fine after the md run
@@ -951,7 +969,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             if pe_normal is True:
                 solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
                 solution_sys_atoms_idxs = range(len(solution_sys.atoms))
-                aggregate_ok = solution_sys.check_aggregate(excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+                aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
         else:
             aggregate_ok = False
 
