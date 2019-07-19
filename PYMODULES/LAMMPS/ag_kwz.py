@@ -296,7 +296,7 @@ def _create_new_box(md_sys):
     """
     # add new orthogonal box
     md_sys.ts_boxes = []  # delete all previous unneeded boxes
-    box_diameter = md_sys.get_system_radius(-1) + 30
+    box_diameter = md_sys.get_system_radius(-1) + 100
     pi_2 = math.pi / 2
     new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
                       ltc_c=box_diameter, ltc_alpha=pi_2, ltc_beta=pi_2,
@@ -865,7 +865,7 @@ def _test_anneal_equil(data):
     try:
         kurtosis_normal = ags.test_gauss_shape("kurtosis", data)
     except Warning:
-        pass
+        kurtosis_normal = False
 
     # coefficient of variation
     coeff_var = scipy.stats.variation(data) * 100
@@ -938,12 +938,14 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             log_files.append(lmpcuts.output_lmplog)
 
         if rank == 0:
+            all_pe = all_pe[1:]
             _append_data(all_pe, lmpcuts.output_lmplog)
-            num_frames_to_check = percentage_to_check / 100 * len(all_pe)
+            # check last N % of all frames
+            num_frames_to_check = int(percentage_to_check / 100 * len(all_pe))
+            pdb.set_trace()
             pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
 
-            # check if aggregate is still fine after the annealing run, i.e. last
-            # frame has a solvate aggregate that is still complete
+            # check if aggregate is still fine after the md run
             aggregate_ok = False
 
             if pe_normal is True:

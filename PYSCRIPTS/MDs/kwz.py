@@ -259,6 +259,7 @@ if __name__ == "__main__":
         else:
             main_prep_lmpdat = os.path.abspath(args.lmpm)
 
+        #TODO: requench missing
         anneal_attempts = 0
         while not os.path.isfile(lmpsettings_anneal.output_lmprst):
             quench_attempts = 0
@@ -277,7 +278,8 @@ if __name__ == "__main__":
                             sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=requench_dcd, frame_idx=-1)
 
                         if sysprep_success is False:
-                            sl.move(sysprep_dir, sysprep_dir + "failed_{}".format(sysprep_attempt))
+                            #sl.move(sysprep_dir, sysprep_dir + "_failed_{}".format(sysprep_attempt))
+                            sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
                             sysprep_attempt += 1
 
                     if sysprep_success is False and sysprep_attempt > 20:
@@ -293,10 +295,14 @@ if __name__ == "__main__":
                     quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
 
                     if quench_success is False:
-                        fail_appendix = "failed_{}".format(quench_attempts)
-                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + fail_appendix)
-                        sl.move(quench_dir, quench_dir.rstrip("/") + fail_appendix)
-                        del fail_appendix
+                        #fail_appendix = "failed_{}".format(quench_attempts)
+                        #sl.move(sysprep_dir, sysprep_dir.rstrip("/") + fail_appendix)
+                        #sl.move(quench_dir, quench_dir.rstrip("/") + fail_appendix)
+
+                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                        sl.move(quench_dir, quench_dir.rstrip("/") + "_failed")
+
+                        #del fail_appendix
                         quench_attempts += 1
                     else:
                         print("***Quenching-Info: Quenching done!")
@@ -382,9 +388,9 @@ if __name__ == "__main__":
                         #sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
                         #sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
                         #sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
-                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed")
-                        sl.move(quench_dir, quench_dir.rstrip("/") + "failed")
-                        sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed")
+                        sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                        sl.move(quench_dir, quench_dir.rstrip("/") + "_failed")
+                        sl.move(anneal_dir, anneal_dir.rstrip("/") + "_failed")
 
                 else:
                     aggregate_ok = False
@@ -408,9 +414,9 @@ if __name__ == "__main__":
                     anneal_attempts = 0
                     quench_attempts = 0
                     sysprep_attempt = 0
-                    sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
-                    sl.move(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
-                    sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
+                    sl.move(sysprep_dir, sysprep_dir.rstrip("/") + "failed")
+                    sl.move(quench_dir, quench_dir.rstrip("/") + "failed")
+                    sl.move(anneal_dir, anneal_dir.rstrip("/") + "failed")
                     continue
                 else:
                     if rank == 0:
