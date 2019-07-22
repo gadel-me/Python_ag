@@ -80,8 +80,13 @@ class LmpSim(object):
             lmp.command("compute hb all pair hbond/dreiding/lj\n")
             lmp.command("variable n_hbond equal c_hb[1]")
             lmp.command("variable E_hbond equal c_hb[2]")
-            self.thermargs.append("v_n_hbond")
-            self.thermargs.append("v_E_hbond")
+
+            if "v_n_hbond" not in self.thermargs:
+                self.thermargs.append("v_n_hbond")
+
+            if "v_E_hbond" not in self.thermargs:
+                self.thermargs.append("v_E_hbond")
+
         except:
             pass
 

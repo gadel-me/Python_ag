@@ -1886,6 +1886,7 @@ class Universe(object):
             if debug is True:
                 print("***Check Aggregate Info: Aggregate looks fine!")
 
+        print("***Error: Aggregation failed :(")
         return aggregate_ok
 
 

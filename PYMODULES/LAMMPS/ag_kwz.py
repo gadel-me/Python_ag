@@ -23,6 +23,7 @@ import ag_lammps as aglmp
 import ag_lmplog as agl
 #import ag_vectalg as agv
 import ag_statistics as ags
+#import vmd
 
 #==============================================================================#
 # Setup MPI
@@ -83,7 +84,7 @@ def get_remaining_cycles(total_cycles):
                 if "fail" in folder:
                     continue
 
-                print(folder)
+                #print(folder)
                 cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
                 cycle = int(cycle)
 
@@ -710,11 +711,11 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     return close_atoms == []
 
 
-def requench(lmpcuts):
+def requench(lmpcuts, minstyle="cg"):
     """
     """
     lmp = lammps()
-    pylmp = PyLammps(ptr=lammps)
+    pylmp = PyLammps(ptr=lmp)
     lmp.file(lmpcuts.settings_file)
     # read restart file from previous run
     lmpcuts.load_system(lmp)
@@ -725,7 +726,7 @@ def requench(lmpcuts):
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
-    lmpcuts.minimize(lmp, style="cg", box_relax=False)
+    lmpcuts.minimize(lmp, style=minstyle)
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
@@ -733,7 +734,7 @@ def requench(lmpcuts):
     lmp.close()
 
 
-def _append_data(data, lmplog, fstart=1):
+def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
     """
     fstart : int
         frame to start recording from
@@ -742,10 +743,10 @@ def _append_data(data, lmplog, fstart=1):
     cur_log.read_lmplog(lmplog)
     #pdb.set_trace()
     # omit the first frame since it is not written to the dcd file?
-    #cur_pes = cur_log.data[-1]["c_pe_sovate_complete"][fstart:]
+    #cur_pes = cur_log.data[-1]["c_pe_solvate_complete"][fstart:]
 
     # potential energy of the whole system (solvent included if part of system)
-    cur_pes = cur_log.data[-1]["c_pe"][fstart:]
+    cur_pes = cur_log.data[-1][thermo][fstart:]
     data.extend(cur_pes)
 
 
@@ -846,8 +847,11 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     atm_ids_str = " ".join(map(str, pe_atm_ids))
     lmp.command("group resname_atoms id {}".format(atm_ids_str))
     lmp.command("compute pe_per_atom_solvate resname_atoms pe/atom")
-    lmp.command("compute pe_sovate_complete resname_atoms reduce sum c_pe_per_atom_solvate")
-    lmpcuts.thermargs.append("c_pe_sovate_complete")
+    lmp.command("compute pe_solvate_complete resname_atoms reduce sum c_pe_per_atom_solvate")
+
+    if "c_pe_solvate_complete" not in lmpcuts.thermargs:
+        lmpcuts.thermargs.append("c_pe_solvate_complete")
+
     lmpcuts.thermo(lmp, hb_group="resname_atoms")
     #pdb.set_trace()
     lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
@@ -892,12 +896,7 @@ def _test_anneal_equil(data):
 
 def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None):
     """
-    #TODO   super buggy, best would be to change the complete behavior;
-    #       e.g. concatenate all dcds to a new one using vmd or my internal tools
-    #       and find the final frame there
-
     #TODO check pressure, temperature equilibration?
-    #TODO print picture of rmsd w/ cluster coloring?
     """
     #all_rmsds = []
     all_pe = []
@@ -973,9 +972,105 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         else:
             aggregate_ok = False
 
-        aggregate_ok = comm.bcast(aggregate_ok)
+        aggregate_ok = comm.bcast(aggregate_ok, root=0)
 
         if aggregate_ok:
             break
 
     return (aggregate_ok, dcd_files, log_files)
+
+
+def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete"):
+    """
+    Find the frame with the lowest energy / value for use in the requenching procedure.
+
+    Parameters
+    ----------
+    lmplogs : tuple or list
+        lammps-log files with thermo information.
+
+    dcds : tuple or list
+        dcd files with coordinates which correspond the given data of the
+        log files (same number of frames is mandatory)
+
+    Returns
+    -------
+    total_min_dcd : str
+        name of dcd file with the lowest energy / value
+
+    total_min_idx : int
+        index of frame with the lowest energy / value
+
+    total_min_val : int or float
+        lowest value found over all lmplogs for thermo
+    """
+    total_min_val = 1e20
+    total_min_idx = None
+    total_min_dcd = ""
+
+    for lmplog, dcd in zip(lmplogs, dcds):
+        cur_log = agl.LmpLog()
+        cur_log.read_lmplog(lmplog)
+
+        # flatten list if more than one run was done
+        # neglect the first frame since it is redundant in the log file
+        cur_data = [i[thermo][1:] for i in cur_log.data]
+        cur_data = [item for i in cur_data for item in i]
+        #cur_data = [item for sublist in l for item in sublist]
+
+        # find lowest energy and according index
+        min_val = min(cur_data)
+        #pdb.set_trace()
+
+        # find lowest value, according index and dcd file
+        if min_val < total_min_val:
+            total_min_val = min_val
+            total_min_idx = cur_data.index(min_val)
+            total_min_dcd = dcd
+
+    return (total_min_dcd, total_min_idx, total_min_val)
+
+
+def write_requench_data(lmpdat_a, dcd_ab, index,
+                        lmpdat_b=None,
+                        output_lmpdat_a="output_name_a.lmpdat",
+                        output_lmpdat_b="output_name_b.lmpdat"):
+    """
+    Write a new data file with the coordinates from a dcd file given by the index.
+
+    Writes a new lammps data file, which has the same topology but different
+    coordinates than the lmpdat that is given.
+
+    Parameters
+    ----------
+    lmpdat_a : str
+        lammps data file with the topology e.g. for the solvate
+
+    lmpdat_b : None or str
+        lammps data file with the topology e.g. for the solvent
+
+    dcd_ab : str
+        dcd file with frames to read from the solvate-solvent system
+
+    index : int
+        index to extract the frame from
+
+    """
+    sys_lmpdat_a = aglmp.read_lmpdat(lmpdat_a)
+    sys_lmpdat_a_natoms = len(sys_lmpdat_a.atoms)
+
+    sys_dcd_ab = aglmp.LmpStuff()
+    sys_dcd_ab.import_dcd(dcd_ab)
+    sys_dcd_ab.read_frames(frame=index, to_frame=index + 1)
+
+    # write only relevant coordinates for system a
+    sys_lmpdat_a.ts_coords.append(sys_dcd_ab.ts_coords[-1][:sys_lmpdat_a_natoms])
+    sys_lmpdat_a.change_indices()
+    sys_lmpdat_a.write_lmpdat(output_lmpdat_a, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
+
+    # write only relevant coordinates for system b
+    if lmpdat_b is not None:
+        sys_lmpdat_b = aglmp.read_lmpdat(lmpdat_b)
+        sys_lmpdat_b.ts_coords.append(sys_dcd_ab.ts_coords[sys_lmpdat_a_natoms + 1:])
+        sys_lmpdat_b.change_indices()
+        sys_lmpdat_b.write_lmpdat(output_lmpdat_b, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
