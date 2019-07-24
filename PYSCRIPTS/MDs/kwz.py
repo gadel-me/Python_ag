@@ -217,7 +217,7 @@ if __name__ == "__main__":
         heat_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
         heat_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
         heat_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop,pstart=args.heat_pstart, pstop=args.heat_pstop,logsteps=args.heat_logsteps, runsteps=args.heat_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst,output_lmprst=heat_out,output_dcd=heat_dcd, output_lmplog=heat_log,gpu=args.gpu)
+        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop, pstart=args.heat_pstart, pstop=args.heat_pstop, logsteps=args.heat_logsteps, runsteps=args.heat_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst, output_lmprst=heat_out, output_dcd=heat_dcd, output_lmplog=heat_log, gpu=args.gpu)
 
         if args.lmps is None:
             lmpsettings_heat.input_lmprst = lmpsettings_quench.output_lmprst
@@ -276,15 +276,20 @@ if __name__ == "__main__":
                         if rank == 0:
                             agk.create_folder(sysprep_dir)
 
-                            if not os.path.isfile(requench_dcd):
-                                sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=None, frame_idx=-1)
+                            # check if a previous run with a dcd file from requenching exists
+                            if not os.path.isfile(pre_requench_dcd):
+                                sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=None, frame_idx_main=-1)
                             else:
-                                sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_add=lmpsettings_requench.output_dcd, frame_idx=-1)
+                                sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_main=pre_requench_dcd, dcd_add=None, frame_idx_main=-1)
 
                             if sysprep_success is False:
                                 #agk.rename(sysprep_dir, sysprep_dir + "_failed_{}".format(sysprep_attempt))
                                 agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
                                 sysprep_attempt += 1
+                        else:
+                            sysprep_success = None
+
+                        sysprep_success = comm.bcast(sysprep_success, 0)
 
                         if sysprep_success is False and sysprep_attempt > 20:
                             exit(100)
@@ -328,8 +333,10 @@ if __name__ == "__main__":
                         atm_idxs_solvate = range(solvate_sys_natoms)
                     else:
                         solvate_sys = None
+                        atm_idxs_solvate = None
 
                     solvate_sys = comm.bcast(solvate_sys, 0)
+                    atm_idxs_solvate = comm.bcast(atm_idxs_solvate, 0)
 
                     # check if solvent is needed
                     if args.lmps is not None:
@@ -388,7 +395,7 @@ if __name__ == "__main__":
 
                         # stop further calculations and start from the beginning
                         if not aggregate_ok:
-                            pdb.set_trace()
+                            #pdb.set_trace()
                             #agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
                             #agk.rename(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
                             #agk.rename(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
@@ -422,7 +429,7 @@ if __name__ == "__main__":
                         agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
                         agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
                         agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
-                        pdb.set_trace()
+                        #pdb.set_trace()
                         continue
 
             #======================================================================#
@@ -431,11 +438,14 @@ if __name__ == "__main__":
             if rank == 0:
                 agk.create_folder(requench_dir)
 
-                # write input for requenching if not done
+                # write input lmpdat with the best frame from the annealing
                 if os.path.isfile(lmpsettings_requench.input_lmpdat) is False:
+                    # gather all lmplog and dcd files
                     anneal_lmplog_files = glob.glob(r"{}/*[0-9]_anneal_[0-9]*.lmplog".format(anneal_dir))
                     anneal_dcds = glob.glob(r"{}/*[0-9]_anneal_[0-9]*.dcd".format(anneal_dir))
-                    best_dcd, best_idx, best_val = agk.find_best_frame(anneal_lmplog_files, anneal_dcds, thermo="c_pe_solvate_complete")
+                    # find frame which scores best (dcd and idx) and its value
+                    best_dcd, best_idx, best_val = agk.find_best_frame(anneal_lmplog_files, anneal_dcds, thermo="c_pe_solvate_complete", percentage_to_check=percentage_to_check)
+                    # write the data file for requenching
                     agk.write_requench_data(lmpsettings_sysprep.output_lmpdat, best_dcd, best_idx, output_lmpdat_a=lmpsettings_requench.input_lmpdat)
 
             requench_success = agk.requench(lmpsettings_requench)
@@ -449,5 +459,5 @@ if __name__ == "__main__":
                 agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
                 agk.rename(requench_dir, requench_dir.rstrip("/") + "_failed")
                 continue
-            else:
-                print("***Requenching-Info: Requenching done!")
+
+            print("***Requenching-Info: Requenching done!")

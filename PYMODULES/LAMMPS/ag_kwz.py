@@ -333,7 +333,7 @@ def _check_sys(md_sys, atm_idx_max):
         return True
 
 
-def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
+def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, frame_idx_main=-1, frame_idx_add=-1):
     """
     Prepare the system for the next docking step.
 
@@ -356,10 +356,16 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
         Name of the lammps data file which is added to the main molecular
         system
 
+    dcd_main : str (optional, default: None)
+        dcd file to load on top of lmpdat_main
+
     dcd_add : str (optional, default: None)
         dcd file to load on top of lmpdat_add
 
-    frame_idx : int
+    frame_idx_main : int
+        frame index of frame to add from dcd_main to lmpdat_main
+
+    frame_idx_add : int
         frame index of frame to add from dcd_add to lmpdat_add
 
     Returns
@@ -371,12 +377,12 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_add=None, frame_idx=-1):
 
     """
     # read and transpose the main sys to the origin
-    main_sys = aglmp.read_lmpdat(lmpdat_main)
+    main_sys = aglmp.read_lmpdat(lmpdat_main, dcd_main, frame_idx_main)
     main_sys.transpose_by_cog(-1, [0, 0, 0], copy=False)
     _natoms = len(main_sys.atoms)
 
     # read and transpose the add sys to the origin
-    add_sys = aglmp.read_lmpdat(lmpdat_add, dcd_add, frame_idx)
+    add_sys = aglmp.read_lmpdat(lmpdat_add, dcd_add, frame_idx_add)
     add_sys.transpose_by_cog(-1, [0, 0, 0], copy=False)
 
     # rotate add sys
@@ -960,7 +966,10 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             _append_data(all_pe, lmpcuts.output_lmplog)
             # check last N % of all frames
             num_frames_to_check = int(percentage_to_check / 100 * len(all_pe))
-            pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
+            #pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
+            # num_frames_to_check needs to be signed since we want to check the
+            # last X % of all frames
+            pe_normal = _test_anneal_equil(all_pe[-num_frames_to_check:])
 
             # check if aggregate is still fine after the md run
             aggregate_ok = False
@@ -980,7 +989,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
     return (aggregate_ok, dcd_files, log_files)
 
 
-def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete"):
+def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to_check=80):
     """
     Find the frame with the lowest energy / value for use in the requenching procedure.
 
@@ -1007,8 +1016,10 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete"):
     total_min_val = 1e20
     total_min_idx = None
     total_min_dcd = ""
+    total_data = []
 
-    for lmplog, dcd in zip(lmplogs, dcds):
+    # read the whole dataset, i.e. all lmplog files
+    for lmplog in lmplogs:
         cur_log = agl.LmpLog()
         cur_log.read_lmplog(lmplog)
 
@@ -1016,18 +1027,31 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete"):
         # neglect the first frame since it is redundant in the log file
         cur_data = [i[thermo][1:] for i in cur_log.data]
         cur_data = [item for i in cur_data for item in i]
-        #cur_data = [item for sublist in l for item in sublist]
+        total_data.append(cur_data)
 
-        # find lowest energy and according index
-        min_val = min(cur_data)
-        #pdb.set_trace()
+    del cur_data
 
-        # find lowest value, according index and dcd file
-        if min_val < total_min_val:
-            total_min_val = min_val
-            total_min_idx = cur_data.index(min_val)
-            total_min_dcd = dcd
+    # find minimum value in the last X % of the data
+    total_data_flattened = [item for i in total_data for item in i]
+    last_frames_to_check = int(percentage_to_check / 100 * len(total_data_flattened))
+    data_to_check = total_data_flattened[-last_frames_to_check:]
+    min_val = min(data_to_check)
 
+    for cur_data, dcd in zip(total_data, dcds):
+        if min_val in cur_data:
+            return (dcd, cur_data.index(min_val), min_val)
+
+    # find dcd file and index
+        ## find lowest energy and according index
+        #min_val = min(cur_data_to_check)
+        ##pdb.set_trace()
+#
+        ## find lowest value, according index and dcd file
+        #if min_val < total_min_val:
+        #    total_min_val = min_val
+        #    total_min_idx = cur_data.index(min_val)
+        #    total_min_dcd = dcd
+#
     return (total_min_dcd, total_min_idx, total_min_val)
 
 
