@@ -19,6 +19,7 @@ Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-te
 from __future__ import print_function, division
 import pdb
 import os
+import collections
 import pandas as pd
 import statsmodels.api as sm
 import scipy.stats
@@ -174,110 +175,186 @@ def test_normality(test, data, alpha=0.05, filename=None):
     return p_value > alpha
 
 
-def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3, filename="test.csv"):
-    #TODO: split skew, qq, etc. into separate functions
+def _write_data(data1, data2, output):
     """
-    Carry out the Kurtosis, Skewness test or a QQ-Plot.
+    Write the data into two columns of a csv file.
+
+    This is just a helper function for qq_test and probplot_test.
+    """
+    summary = collections.OrderedDict({"Experimental Quantiles": data1, "Theoretical Quantiles": data2})
+    table = pd.DataFrame(summary)
+    table.to_csv("{}.csv".format(output), index=False)
+    return table
+
+
+def _write_plot(data1, data2, output, slope, intercept, title):
+    """
+    Save the plot of data1 and data2.
+
+    This is just a helper function for qq_test and probplot_test.
+    """
+    qq_fig = plt.figure(figsize=(12, 8), facecolor='1.0')
+    plt.plot(data1, data2, "o")
+    plt.plot(data1, intercept + slope * data1, "r--", label="fitted line")
+    plt.title(title, size=24)
+    plt.xlabel("Theoretical quantiles", size=12)
+    plt.ylabel("Experimental quantiles", size=12)
+    plt.tick_params(labelsize=10)
+    plt.savefig("{}.png".format(output))
+    #plt.show()
+    plt.close(qq_fig)
+
+
+def qq_test(data, rsquare_thrsh=0.99, output=None, save_plot=False):
+    """
+    Carry out a Quantile-Quantile plot with the experimental data and the theoretical gaussian shaped data.
+
+    "Many standard statistical procedures require normally distributed data.
+    One way to assess if your data is normally distributed is quantile-quantile
+    plot or q-q plot. In this approach quantiles of a tested distribution are
+    plotted against quantiles of a known distribution as a scatter plot.
+    If distributions are similar the plot will be close to a straight line.
+    We will plot our data against a normal distribution to test if our data
+    is distributed normally." (1)
+    Returns the r^2 value from the linear regression. If r^2 > 'rsquare_thrsh' then
+    the data should be equal to a normal distribution.
+
+    Sources
+    -------
+    (1) https://medium.com/@rrfd/testing-for-normality-applications-with-python-6bf06ed646a9
+    (2) https://scientificpythonsnippets.com/index.php/2-uncategorised/6-q-q-plot-in-python-to-test-if-data-is-normally-distributed
+
+    Parameters
+    ----------
+    data : list
+        the data to check
+
+    rsquare_thrsh : float or int, default: 0.99
+        rsquare of the linear regression must be at least
+
+    output : str or None, optional
+        output name of the files that will be created
+
+    save_plot : bool, optional
+        Save a picture of the plot if True
+
+    Returns
+    -------
+    rsquare >= rsquare_thrsh : bool
+
+    """
+    sorted_data = sorted(data)
+    # created gaussian shaped data 'norm' from given data
+    norm = np.random.normal(0, 2, len(sorted_data))
+    # for Q-Q plot all data must be sorted
+    sorted_norm = np.sort(norm)
+    # trend line from linear regression
+    slope, intercept, rvalue, pvalue, stderr = scipy.stats.linregress(sorted_norm, sorted_data)
+    rsquare = rvalue**2
+
+    # write raw data to file
+    if output is not None:
+        _write_data(sorted_data, sorted_norm, output)
+
+    # save the plot as png file
+    if save_plot is True:
+        _write_plot(sorted_norm, sorted_data, output, slope, intercept, "Q-Q plot - " + r"$r^2$" + "={:> 2.4f}".format(rsquare))
+
+    return rsquare >= rsquare_thrsh
+
+
+def probability_plot(data, rsquare_thrsh=0.99, output=None, save_plot=False):
+    """
+    Carry out a probability plot (not Q-Q and not P-P) with the experimental data.
+
+    "probplot generates a probability plot, which should not be confused with
+    a Q-Q or a P-P plot. Statsmodels has more extensive functionality of this
+    type, see statsmodels.api.ProbPlot." (1)
+
+    Sources
+    -------
+    (1) https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.stats.probplot.html
+
+    Parameters
+    ----------
+    data : list
+        the data to check
+
+    rsquare_thrsh : float or int, default: 0.99
+        rsquare of the linear regression must be at least
+
+    output : str or None, optional
+        output name of the files that will be created
+
+    save_plot : bool, optional
+        Save a picture of the plot if True
+
+    Returns
+    -------
+    rsquare >= rsquare_thrsh : bool
+
+    """
+    (osm, osr), (slope, intercept, rvalue) = scipy.stats.probplot(data, dist="norm", fit=True)
+    rsquare = rvalue**2
+
+    # write raw data to file
+    if output is not None:
+        _write_data(osr, osm, output)
+
+    # save the plot as png file
+    if save_plot is True:
+        _write_plot(osm, osr, output, slope, intercept, r"Probability plot ($\r^2$={})".format(rsquare))
+
+    return rsquare >= rsquare_thrsh
+
+
+def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3):
+    """
+    Carry out the Kurtosis and Skewness test.
 
     Tests the shape of the gaussian curve. A value of zero means the curve
     has a total gaussian shape. Values beyond min and max indicate that
     the curve is quite far away from a symmetric gaussian shape.
 
-    Input:
-        > test      str;
-                    skewness/kurtosis/probplot
-        > min_val   float;
-                    minimum, skewness/kurtosis should not be smaller than this
-        > max_val   float;
-                    maximum, skewness/kurtosis should not be larger than this
+    Parameters
+    ----------
+    min_val : float
+        Minimum; skewness/kurtosis should not be smaller than this
+    max_val : float
+        Maximum; skewness/kurtosis should not be larger than this
 
-    Returns:
-        bool; True (skewness or kurtosis is between min and max) or False (is not)
+    Returns
+    --------
+    min_val <= value <= max_val
+        True (skewness or kurtosis is between min and max) or False (is not)
 
-    Raises:
-        Warning; less than 20 values given for kurtosis
-        NameError; wrong name for test
+    Raises
+    ------
+    Warning; less than 20 values given for kurtosis
+    NameError; wrong name for test
 
     Sources
     -------
-    (1) https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.probplot.html
-    (2) https://www.itl.nist.gov/div898/handbook/eda/section3/qqplot.htm
-    (3) http://www.statsmodels.org/devel/generated/statsmodels.graphics.gofplots.qqplot.html
-    (4) https://en.wikipedia.org/wiki/Kurtosis
-    (5) https://en.wikipedia.org/wiki/Skewness
-    (6) https://scientificpythonsnippets.com/index.php/2-uncategorised/6-q-q-plot-in-python-to-test-if-data-is-normally-distributed
-    (7) https://medium.com/@rrfd/testing-for-normality-applications-with-python-6bf06ed646a9
+    (1) https://en.wikipedia.org/wiki/Kurtosis
+    (2) https://en.wikipedia.org/wiki/Skewness
 
     """
-    result_str = "Probability Plot - Straight line\nslope: {}, intercept: {}, r^2: {}"
-    sorted_data = sorted(data)
+    # kurtosis only valid if sample is larger than 20
+    if test == "skewness":
+        value = scipy.stats.skew(data)
+    elif test == "kurtosis":
 
-    if test == "skewness" or test == "kurtosis":
-        # kurtosis only valid if sample is larger than 20
-        if test == "skewness":
-            value = scipy.stats.skew(data)
-        elif test == "kurtosis":
-
-            if len(data) > 20:
-                value = scipy.stats.kurtosis(data)
-            else:
-                raise Warning("Kurtosis needs at least 20 values!")
-
+        if len(data) > 20:
+            value = scipy.stats.kurtosis(data)
         else:
-            raise NameError("Test named '{}' not known!".format(test))
+            raise Warning("Kurtosis needs at least 20 values!")
 
-        result_str = "minimum: {1}; {0}: {2: .3f}; maximum: {3}".format(test, min_val, value,
-                                                                        max_val)
-        result = min_val <= value <= max_val
-    elif test == "probplot":
-        # probplot generates a probability plot, which should not be confused
-        # with a Q-Q or a P-P plot. Statsmodels has more extensive functionality
-        # of this type, see statsmodels.api.ProbPlot.
-        (sorted_norm, _), (slope, intercept, rvalue) = scipy.stats.probplot(sorted_data, dist="norm", fit=True)
-        rvalue_2 = rvalue**2
-        result_str = result_str.format(slope, intercept, r)
-        result = rvalue_2 > 0.99
-    elif test == "qq":
-        # create qq plot as in Source (6)
-        norm = np.random.normal(0, 2, len(sorted_data))
-        sorted_norm = np.sort(norm)
-        # trend line from linear regression
-        slope, intercept, rvalue, pvalue, stderr = scipy.stats.linregress(sorted_norm, sorted_data)
-        rvalue_2 = rvalue**2
-        result_str = result_str.format(slope, intercept, rvalue_2)
-        result = rvalue_2 > 0.99
     else:
         raise NameError("Test named '{}' not known!".format(test))
 
-    # print results to file or console
-    if filename is not None and (test == "probplot" or test == "qq"):
-        total_data = {
-            "Experimental quantiles": sorted_data,
-            "Theoretical quantiles": sorted_norm,
-            "Slope": slope,
-            "Intercept": intercept,
-            "R^2": rvalue_2
-        }
-
-        table = pd.DataFrame(data=total_data)
-        table.to_csv(filename, index=False)
-
-        # plot the data and save it as well
-        qq_fig = plt.figure(figsize=(12, 8), facecolor='1.0')
-        plt.plot(sorted_norm, sorted_data, "o")
-        pdb.set_trace()
-        plt.plot(sorted_norm, intercept + slope * sorted_norm, "r--", label="fitted line")
-        plt.title("Normal Q-Q plot " + result_str, size=28)
-        plt.xlabel("Theoretical quantiles", size=24)
-        plt.ylabel("Experimental quantiles", size=24)
-        plt.tick_params(labelsize=16)
-        plt.savefig("test2.png")
-        plt.show()
-
-    else:
-        print(result_str)
-
-    return result
+    result_str = "minimum: {1}; {0}: {2: .3f}; maximum: {3}".format(test, min_val, value, max_val)
+    print(result_str)
+    return min_val <= value <= max_val
 
 
 def chi_square_error(data1, data2):
@@ -308,13 +385,26 @@ def chi_square_error(data1, data2):
 
 
 def gnuplot_gaussfit(x_values, y_values, debug=False):
+    """
+    Fit a gaussian curve for the data given.
 
-    ### Gaussian function to fit with
+    Parameters
+    ----------
+    x_values : array_like
+        1-d array with data
+
+    y_values : array_like
+        1-d array with data
+    """
+    # Gaussian function to fit with
     def gauss(x, *p):
+        """
+        Equation of the gaussian function.
+        """
         A, mu, sigma = p
         return A / np.sqrt(2 * sigma**2 * np.pi) * np.exp(-(x - mu)**2 / (2.0 * sigma**2))
 
-    ### RMSE to evaluate goodness of fit
+    # RMSE to evaluate goodness of fit
     def rmse(predictions, targets):
         return np.sqrt(((predictions - targets) ** 2).mean())
 
@@ -322,11 +412,9 @@ def gnuplot_gaussfit(x_values, y_values, debug=False):
     xmin = min(x_values)  # maximum x value of data to plot
     p0 = [1., (xmax + xmin) / 2, (xmax - xmin) / 8]  # initial value to start fitting with
 
-    ### fitting procedure
+    # fitting procedure
     coeff, var_matrix = curve_fit(gauss, x_values, y_values, p0=p0, maxfev=1000000)
-
     hist_fit = gauss(x_values, *coeff)
-
     gauss_data = np.array((x_values, hist_fit))
     rmse_val = rmse(gauss_data[1], y_values)
 

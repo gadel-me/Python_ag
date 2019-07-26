@@ -870,7 +870,7 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmp.close()
 
 
-def _test_anneal_equil(data, filename=None):
+def _test_anneal_equil(data, output=None):
     """
     Check normality distribution of the underlying data.
 
@@ -886,7 +886,7 @@ def _test_anneal_equil(data, filename=None):
     bool
 
     """
-    qq_normal = ags.test_gauss_shape("qq", data)
+    qq_normal = ags.qq_test(data, output=output, save_plot=True)
     skew_normal = ags.test_gauss_shape("skewness", data)
 
     try:
@@ -896,12 +896,13 @@ def _test_anneal_equil(data, filename=None):
 
     # coefficient of variation
     coeff_var = scipy.stats.variation(data) * 100
-    # accept normal distribution if the coefficient of variation is below 0.5 %
 
+    # accept normal distribution if the coefficient of variation is below 0.5 %
+    # and if the skewness and kurtosis are within their thresholds
     return (qq_normal and (skew_normal or kurtosis_normal)) or coeff_var <= 0.5
 
 
-def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None):
+def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, output=None):
     """
     #TODO check pressure, temperature equilibration?
     """
@@ -970,7 +971,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             #pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
             # num_frames_to_check needs to be signed since we want to check the
             # last X % of all frames
-            pe_normal = _test_anneal_equil(all_pe[-num_frames_to_check:])
+            pe_normal = _test_anneal_equil(all_pe[-num_frames_to_check:], output=output)
 
             # check if aggregate is still fine after the md run
             aggregate_ok = False
