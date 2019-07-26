@@ -196,7 +196,7 @@ def _write_plot(data1, data2, output, slope, intercept, title):
     qq_fig = plt.figure(figsize=(12, 8), facecolor='1.0')
     plt.plot(data1, data2, "o")
     plt.plot(data1, intercept + slope * data1, "r--", label="fitted line")
-    plt.title(title, size=24)
+    plt.title(title, size=16)
     plt.xlabel("Theoretical quantiles", size=12)
     plt.ylabel("Experimental quantiles", size=12)
     plt.tick_params(labelsize=10)
