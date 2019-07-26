@@ -301,21 +301,20 @@ if __name__ == "__main__":
                     if os.path.isfile(lmpsettings_quench.output_lmprst) is False:
                         if rank == 0:
                             agk.create_folder(quench_dir)
+
                         quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
 
                         if quench_success is False:
-                            #fail_appendix = "failed_{}".format(quench_attempts)
-                            #agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + fail_appendix)
-                            #agk.rename(quench_dir, quench_dir.rstrip("/") + fail_appendix)
-
-                            agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                            agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                            if rank == 0:
+                                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
 
                             #del fail_appendix
                             quench_attempts += 1
                         else:
                             print("***Quenching-Info: Quenching done!")
 
+                        # after 20 failed attempts, end run
                         if quench_attempts > 20 and quench_success is False:
                             exit(101)
 
@@ -375,12 +374,18 @@ if __name__ == "__main__":
                         # a solvent atom
                         agk.md_simulation(lmpsettings_relax_solv, group="group solvate id > {}".format(solvate_sys_natoms), style="berendsen", ensemble="nvt", keyword=None)
 
-                    # heat the system up
-                    if args.lmps is not None:
-                        agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso")
-                    else:
-                        # no solvent given -> keep volume constant
-                        agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt")
+                    # ==========================================================
+                    # heat the system to the  desired temperature
+
+                    # carry out the complete run only if no 'output_lmprstt'
+                    # file exists yet (intermediate restart files are used
+                    # automatically by 'md_simulation' through LmpSim)
+                    if not os.path.isfile(lmpsettings_heat.output_lmprst):
+                        if args.lmps is not None:
+                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso")
+                        else:
+                            # no solvent given -> keep volume constant
+                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt")
 
                     # check if aggregate is still ok
                     if rank == 0:
@@ -395,13 +400,10 @@ if __name__ == "__main__":
 
                         # stop further calculations and start from the beginning
                         if not aggregate_ok:
-                            #pdb.set_trace()
-                            #agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "failed_{}".format(sysprep_attempt))
-                            #agk.rename(quench_dir, quench_dir.rstrip("/") + "failed_{}".format(quench_attempts))
-                            #agk.rename(anneal_dir, anneal_dir.rstrip("/") + "failed_{}".format(anneal_attempts))
-                            agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                            agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                            agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+                            if rank == 0:
+                                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                                agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
 
                     else:
                         aggregate_ok = False

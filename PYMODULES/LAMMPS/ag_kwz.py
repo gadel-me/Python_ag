@@ -176,6 +176,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    # pre-minimize system before running the actual simulation
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
         #lmp.command("min_modify line quadratic")
         lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
@@ -418,7 +419,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 # Quenching
 ################################################################################
 
-def quench(lmpcuts, lmpdat_main):
+def quench(lmpcuts, lmpdat_main, runs=20):
     """
     """
     natoms_main_sys = get_natms(lmpdat_main)
@@ -473,7 +474,7 @@ def quench(lmpcuts, lmpdat_main):
     quench_success = False
 
     # 20 attempts to dock the molecule
-    for _ in xrange(20):
+    for _ in xrange(runs):
         lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 10000").format(*cog))
 
         # end function if anything goes wrong
@@ -869,7 +870,7 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmp.close()
 
 
-def _test_anneal_equil(data):
+def _test_anneal_equil(data, filename=None):
     """
     Check normality distribution of the underlying data.
 
