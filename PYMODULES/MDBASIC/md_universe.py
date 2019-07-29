@@ -1694,7 +1694,7 @@ class Universe(object):
         cur_cog = self.get_cog(frame_id, *atm_idxs)
         # 'origin - sys_main_cog' since we want to move the system back
         M_trans_main = cgt.translation_matrix(destination - cur_cog)
-        self.mm_atm_coords(0, M_trans_main, copy, *atm_idxs)
+        self.mm_atm_coords(frame_id, M_trans_main, copy, *atm_idxs)
 
     def get_rmsds(self, ref_id, frame_ids, atm_idxs):
         """

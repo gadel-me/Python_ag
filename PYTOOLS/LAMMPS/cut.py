@@ -29,12 +29,26 @@ parser.add_argument("-frame",
                     default=0,
                     help="Frame to cut coordinates from")
 
+parser.add_argument("-shift_main",
+                    nargs=3,
+                    type=float,
+                    default=(0.0, 0.0, 0.0),
+                    metavar=("sx, sy, sz"),
+                    help="Shift lmpdat by vector sx sy sz. TBD"
+                    )
+
+parser.add_argument("-shift_main_by_cog",
+                    default=False,
+                    action="store_true",
+                    help="Shift lmpdats coordinates so that its center of mass corresponds P(0/0/0) (coordinates from dcd will be shifted as well)."
+                    )
+
 parser.add_argument("-shift",
                     nargs=3,
                     type=float,
                     default=(0.0, 0.0, 0.0),
                     metavar=("px, py, pz"),
-                    help="Cartesian coordinates of the positional-vector which shifts the box"
+                    help="Cartesian coordinates of the positional-vector which shifts the box."
                     )
 
 parser.add_argument("-box",
@@ -108,6 +122,9 @@ face_3 = agv.get_plane(box.crt_b, box.crt_c, vt_p=args.shift)  # yz
 face_4 = [-1*i for i in agv.get_plane(box.crt_a, box.crt_b, vt_p=agv.add_vts(box.crt_c, args.shift))]
 face_5 = [-1*i for i in agv.get_plane(box.crt_c, box.crt_a, vt_p=agv.add_vts(box.crt_b, args.shift))]
 face_6 = [-1*i for i in agv.get_plane(box.crt_b, box.crt_c, vt_p=agv.add_vts(box.crt_a, args.shift))]
+
+if args.shift_main_by_cog is True:
+    sys.transpose_by_cog(args.frame, np.array([0, 0, 0]))
 
 print("Cutting shape...")
 sys.cut_shape(-1, args.inverse, face_1, face_2, face_3, face_4, face_5, face_6)
