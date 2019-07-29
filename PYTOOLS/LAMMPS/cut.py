@@ -125,7 +125,7 @@ face_5 = [-1*i for i in agv.get_plane(box.crt_c, box.crt_a, vt_p=agv.add_vts(box
 face_6 = [-1*i for i in agv.get_plane(box.crt_b, box.crt_c, vt_p=agv.add_vts(box.crt_a, args.shift))]
 
 if args.shift_main_by_cog is True:
-    sys.transpose_by_cog(args.frame, np.array([0, 0, 0]))
+    sys.transpose_by_cog(args.frame, np.array([0, 0, 0]), copy=False)
 
 print("Cutting shape...")
 sys.cut_shape(-1, args.inverse, face_1, face_2, face_3, face_4, face_5, face_6)

@@ -1680,7 +1680,7 @@ class Universe(object):
                             atm_idx+mod for atm_idx in self.ts_lnk_cls[frame].linked_cells[idx_i][idx_j][idx_k]
                         ]
 
-    def transpose_by_cog(self, frame_id, destination, copy=True):
+    def transpose_by_cog(self, frame_id=0, destination=(0, 0, 0), copy=True):
         """
         Move the current center of geometry so it matches the origin
         at (0/0/0) (all atoms of the same molecule are moved as well).
@@ -1689,12 +1689,18 @@ class Universe(object):
             destination     numpy-array; (1,3)-array with coordinates to move
                             the origin to (inclusive all atoms)
         """
+        destination = np.array(destination)
         natoms = len(self.atoms)
         atm_idxs = range(natoms)
         cur_cog = self.get_cog(frame_id, *atm_idxs)
         # 'origin - sys_main_cog' since we want to move the system back
         M_trans_main = cgt.translation_matrix(destination - cur_cog)
-        self.mm_atm_coords(frame_id, M_trans_main, copy, *atm_idxs)
+
+        if copy is True:
+            shifted_sys = self.mm_atm_coords(frame_id, M_trans_main, copy, *atm_idxs)
+            return shifted_sys
+        else:
+            self.mm_atm_coords(frame_id, M_trans_main, copy, *atm_idxs)
 
     def get_rmsds(self, ref_id, frame_ids, atm_idxs):
         """
