@@ -140,9 +140,6 @@ else:
     if args.lmpbox:
         sys_box.read_lmpdat(args.lmpbox)
 
-    if args.dcdbox:
-
-
 # define box faces
 face_1 = agv.get_plane(box.crt_a, box.crt_b, vt_p=args.shift)  # xy
 face_2 = agv.get_plane(box.crt_c, box.crt_a, vt_p=args.shift)  # xz
@@ -151,6 +148,8 @@ face_3 = agv.get_plane(box.crt_b, box.crt_c, vt_p=args.shift)  # yz
 face_4 = [-1*i for i in agv.get_plane(box.crt_a, box.crt_b, vt_p=agv.add_vts(box.crt_c, args.shift))]
 face_5 = [-1*i for i in agv.get_plane(box.crt_c, box.crt_a, vt_p=agv.add_vts(box.crt_b, args.shift))]
 face_6 = [-1*i for i in agv.get_plane(box.crt_b, box.crt_c, vt_p=agv.add_vts(box.crt_a, args.shift))]
+
+pdb.set_trace()
 
 if args.shift_main_by_cog is True:
     sys.transpose_by_cog(args.frame, np.array([0, 0, 0]), copy=False)

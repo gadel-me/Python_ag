@@ -4,6 +4,7 @@ import pdb
 import argparse
 import numpy as np
 import Transformations as cgt
+import ag_vectalg as agv
 import md_box as mdb
 import ag_lammps
 
@@ -15,7 +16,7 @@ of it may be returned. Cell from lammps data file must be unwrapped.
 #===============================================================================
 # HELPER FUNCTIONS
 #===============================================================================
-def cutting(main_sys, cutting_box, inverse=True, frame_id=-1):
+def cutting(main_sys, cutting_box, inverse=True, frame_id=-1, shift=(0, 0, 0)):
     """
     Cut the shape of cutting_box from main_sys.
 
@@ -37,15 +38,19 @@ def cutting(main_sys, cutting_box, inverse=True, frame_id=-1):
     if cutting_box.boxtype == "lammps":
         cutting_box.box_lmp2cart()
 
+    shift = np.array(shift)
+
     # define box faces
     face_1 = agv.get_plane(cutting_box.crt_a, cutting_box.crt_b)  # xy
     face_2 = agv.get_plane(cutting_box.crt_c, cutting_box.crt_a)  # xz
     face_3 = agv.get_plane(cutting_box.crt_b, cutting_box.crt_c)  # yz
     # multiply with -1 because normal vector must show in the opposite direction
-    face_4 = [-1*i for i in agv.get_plane(cutting_box.crt_a, cutting_box.crt_b)]
-    face_5 = [-1*i for i in agv.get_plane(cutting_box.crt_c, cutting_box.crt_a)]
-    face_6 = [-1*i for i in agv.get_plane(cutting_box.crt_b, cutting_box.crt_c)]
+    face_4 = [-1 * i for i in agv.get_plane(cutting_box.crt_a, cutting_box.crt_b, vt_p=agv.add_vts(cutting_box.crt_c, shift))]
+    face_5 = [-1 * i for i in agv.get_plane(cutting_box.crt_c, cutting_box.crt_a, vt_p=agv.add_vts(cutting_box.crt_b, shift))]
+    face_6 = [-1 * i for i in agv.get_plane(cutting_box.crt_b, cutting_box.crt_c, vt_p=agv.add_vts(cutting_box.crt_a, shift))]
     main_sys.cut_shape(frame_id, inverse, face_1, face_2, face_3, face_4, face_5, face_6)
+    cutting_box.box_cart2lmp()
+
 
 if __name__ == "__main__":
     #===============================================================================
@@ -162,7 +167,6 @@ if __name__ == "__main__":
     # PREPARE BOX WHICH SOLELY DEFINES THE SHAPE
     #===============================================================================
     if args.box is not None:
-        import md_box as mdb
         import math
 
         if args.boxtype == "lammps":
@@ -176,20 +180,23 @@ if __name__ == "__main__":
     else:
         box = None
 
-
     #===============================================================================
     # CUT THE BOX
     #===============================================================================
     if sys_cutshape is not None:
-        box = sys_cutshape.ts_boxes[-1].box_lmp2cart()
+        box = sys_cutshape.ts_boxes[-1]
 
     # cut the shape
-    pdb.set_trace()
-    cutting(sys_cutfrom, box, args.inverse)
+    cutting(sys_cutfrom, box, args.inverse, -1)
 
     #===============================================================================
     # CUT THE BOX
     #===============================================================================
+    # assign new box vectors to the existing box
+    if args.inverse is True:
+        sys_cutfrom.ts_boxes[-1] = box
+
+    pdb.set_trace()
     sys_cutfrom.refresh()
     sys_cutfrom.change_indices(incr=1, mode="increase")
     print("Writing lammps data file...")
