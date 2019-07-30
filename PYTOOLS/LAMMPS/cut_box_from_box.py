@@ -63,7 +63,7 @@ if __name__ == "__main__":
     shft_help = "Translate the coordinates of the (replicated) system to cut from by this translational vector"
 
     parser.add_argument("lmpdat", metavar="*.lmpdat", help=lmpdat_help)
-    parser.add_argument("-dcd", metavar="*.lmpdat", help=dcd_help)
+    parser.add_argument("-dcd", metavar="*.dcd", help=dcd_help)
     parser.add_argument("-f", type=int, default=0, metavar="0", help=f_help)
     parser.add_argument("-rep", default=None, nargs=6, type=int, metavar=4, help=rep_help)
     parser.add_argument("-shft", default=None, nargs=3, type=float, metavar=(1.0, 2.3, 1.2), help=shft_help)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     cut_by_shape_help = "Cut the exact shape of the given system. If a lmpdat_cut is given, atomic radii will be considered while cutting."
 
     parser.add_argument("-lmpdat_cut", default=None, metavar="*.lmpdat", help=lmpdat_help)
-    parser.add_argument("-dcd_cut", default=None, metavar="*.lmpdat", help=dcd_help)
+    parser.add_argument("-dcd_cut", default=None, metavar="*.dcd", help=dcd_help)
     parser.add_argument("-f_cut", default=-1, type=int, metavar="0", help=f_help)
     parser.add_argument("-rep_cut", default=None, nargs=6, type=int, metavar=12, help=rep_help)
     parser.add_argument("-shft_cut", nargs=3, type=float, default=(0.0, 0.0, 0.0), metavar=("sx, sy, sz"), help=shft_help)
@@ -184,6 +184,7 @@ if __name__ == "__main__":
         box = sys_cutshape.ts_boxes[-1].box_lmp2cart()
 
     # cut the shape
+    pdb.set_trace()
     cutting(sys_cutfrom, box, args.inverse)
 
     #===============================================================================
