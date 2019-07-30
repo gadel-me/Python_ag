@@ -66,6 +66,25 @@ parser.add_argument("-boxtype",
                          "Lammps: xlo, xhi, ylo, yhi, zlo, zhi, xy, xz, yz"
                     )
 
+parser.add_argument("-lmpbox",
+                    default=False,
+                    metavar="*.lmpdat",
+                    help="lammps' data-file with box coordinates to cut."
+                    )
+
+parser.add_argument("-dcdbox",
+                    default=False,
+                    metavar="*.lmpdat",
+                    help="lammps' dcd-file with box coordinates to cut."
+                    )
+
+parser.add_argument("-dcdbox_frame",
+                    type=int,
+                    default=-1,
+                    metavar="*.lmpdat",
+                    help="frame of the dcd file to use box information from."
+                    )
+
 parser.add_argument("-inverse",
                     default=False,
                     action="store_true",
@@ -85,35 +104,44 @@ if args.dcd is not None:
 #sys_box = copy.deepcopy(sys.ts_boxes[-1])
 #sys_box.box_lmp2cart()
 
-if args.boxtype == "lammps":
-    box = mdb.Box(boxtype=args.boxtype,
-                  lmp_xlo=args.box[0],
-                  lmp_xhi=args.box[1],
-                  lmp_ylo=args.box[2],
-                  lmp_yhi=args.box[3],
-                  lmp_zlo=args.box[4],
-                  lmp_zhi=args.box[5],
-                  lmp_xy=args.box[6],
-                  lmp_xz=args.box[7],
-                  lmp_yz=args.box[8]
-                  )
-    box.box_lmp2cart()  # change box vectors to lattice
-elif args.boxtype == "lattice":
-    box = mdb.Box(boxtype=args.boxtype,
-                  ltc_a=args.box[0],
-                  ltc_b=args.box[1],
-                  ltc_c=args.box[2],
-                  ltc_alpha=math.radians(args.box[3]),
-                  ltc_beta=math.radians(args.box[4]),
-                  ltc_gamma=math.radians(args.box[5])
-                  )
-    box.box_lat2cart()
+if args.lmpbox is False or args.dcdbox is False:
+    if args.boxtype == "lammps":
+        box = mdb.Box(boxtype=args.boxtype,
+                      lmp_xlo=args.box[0],
+                      lmp_xhi=args.box[1],
+                      lmp_ylo=args.box[2],
+                      lmp_yhi=args.box[3],
+                      lmp_zlo=args.box[4],
+                      lmp_zhi=args.box[5],
+                      lmp_xy=args.box[6],
+                      lmp_xz=args.box[7],
+                      lmp_yz=args.box[8]
+                      )
+        box.box_lmp2cart()  # change box vectors to lattice
+    elif args.boxtype == "lattice":
+        box = mdb.Box(boxtype=args.boxtype,
+                      ltc_a=args.box[0],
+                      ltc_b=args.box[1],
+                      ltc_c=args.box[2],
+                      ltc_alpha=math.radians(args.box[3]),
+                      ltc_beta=math.radians(args.box[4]),
+                      ltc_gamma=math.radians(args.box[5])
+                      )
+        box.box_lat2cart()
+    else:
+        box = mdb.Box(boxtype=args.boxtype,
+                      crt_a=[args.box[0], args.box[1], args.box[2]],
+                      crt_b=[args.box[3], args.box[4], args.box[5]],
+                      crt_c=[args.box[6], args.box[7], args.box[8]]
+                      )
 else:
-    box = mdb.Box(boxtype=args.boxtype,
-                  crt_a=[args.box[0], args.box[1], args.box[2]],
-                  crt_b=[args.box[3], args.box[4], args.box[5]],
-                  crt_c=[args.box[6], args.box[7], args.box[8]]
-                  )
+    sys_box = agum.Unification()
+
+    if args.lmpbox:
+        sys_box.read_lmpdat(args.lmpbox)
+
+    if args.dcdbox:
+
 
 # define box faces
 face_1 = agv.get_plane(box.crt_a, box.crt_b, vt_p=args.shift)  # xy

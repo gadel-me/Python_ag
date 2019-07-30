@@ -1248,7 +1248,7 @@ class LmpStuff(mdu.Universe):
 # Shortcut functions for common procedures
 ################################################################################
 
-def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
+def read_lmpdat(lmpdat=None, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     """
     Read a lammps data file and optionally a dcd file on top.
 
@@ -1276,7 +1276,9 @@ def read_lmpdat(lmpdat, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     """
     # read output from quenching
     md_sys = LmpStuff()
-    md_sys.read_lmpdat(lmpdat)
+
+    if lmpdat is not None:
+        md_sys.read_lmpdat(lmpdat)
 
     if dcd is not None:
         md_sys.import_dcd(dcd)
@@ -1351,7 +1353,7 @@ def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, fr
     sys_ab.write_lmpdat(lmpdat_out, cgcmm=True)
 
 
-def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
+def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1, inverse=True):
     """
     Cut a smaller solvent box from a bigger one that will be used during the simulation.
 
@@ -1399,7 +1401,7 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1):
     plane_bc_a = [-1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)]
 
     # cut plane
-    md_sys.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
+    md_sys.cut_shape(-1, inverse, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
 
     # buffer for box lengths to prevent clashes using pbc
     cart_box.box_cart2lat()
