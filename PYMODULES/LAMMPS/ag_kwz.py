@@ -438,7 +438,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
     #lmp.command("boundary f f f")
 
     lmpcuts.load_system(lmp)
-    lmp.command("velocity all create {} 8455461 mom yes rot yes dist gaussian".format(lmpcuts.tstart))
+    lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp)
     lmpcuts.thermo(lmp)

@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     parser.add_argument("lmpdat", metavar="*.lmpdat", help=lmpdat_help)
     parser.add_argument("-dcd", metavar="*.dcd", help=dcd_help)
-    parser.add_argument("-f", type=int, default=0, metavar="0", help=f_help)
+    parser.add_argument("-f", type=int, default=-1, metavar="-1", help=f_help)
     parser.add_argument("-rep", default=None, nargs=6, type=int, metavar=4, help=rep_help)
     parser.add_argument("-shft", default=None, nargs=3, type=float, metavar=(1.0, 2.3, 1.2), help=shft_help)
 
@@ -134,7 +134,8 @@ if __name__ == "__main__":
     sys_cutfrom = ag_lammps.read_lmpdat(args.lmpdat, dcd=args.dcd, frame_idx_start=args.f, frame_idx_stop=args.f)
 
     # replicate cell if desired
-    if args.rep_cutshape is not None:
+    if args.rep is not None:
+        # read last frame since the frame selection was done with read_lmpdat already
         sys_cutfrom.replicate_cell(n_start=args.rep[0], n_stop=args.rep[1], direction="a", frame_id=-1, adjust_box=True)
         sys_cutfrom.replicate_cell(n_start=args.rep[2], n_stop=args.rep[3], direction="b", frame_id=-1, adjust_box=True)
         sys_cutfrom.replicate_cell(n_start=args.rep[4], n_stop=args.rep[5], direction="c", frame_id=-1, adjust_box=True)

@@ -127,11 +127,11 @@ class LmpSim(object):
         if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
             lmp.command("fix barostat {} press/berendsen {} {} {} 50".format(group, keyword, self.pstart, self.pstop))
 
-    def fix_hoover(self, lmp, group, ensemble, keyword):
+    def fix_hoover(self, lmp, group, ensemble, keyword=None):
         nvt_section = "fix integrator {} {} temp {} {} 0.5".format(group, ensemble, self.tstart, self.tstop)
-        npt_section = " {} {} {} 50".format(keyword, self.pstart, self.pstop)
 
-        if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
+        if (self.pstart is not None and self.pstop is not None) and ensemble == "npt" and keyword is not None:
+            npt_section = " {} {} {} 50".format(keyword, self.pstart, self.pstop)
             lmp.command(nvt_section + npt_section)
         elif ensemble == "nph":
             raise Warning("Not implemented yet!")
