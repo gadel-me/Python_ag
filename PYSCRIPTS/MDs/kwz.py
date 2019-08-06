@@ -99,9 +99,9 @@ if __name__ == "__main__":
     # relax cut solvent
     parser.add_argument("-relax_cut_tstart", type=int, default=200)
     parser.add_argument("-relax_cut_tstop", type=int, default=250)
-    parser.add_argument("-relax_cut_pstart", type=int, default=40)
+    parser.add_argument("-relax_cut_pstart", type=int, default=50)
     parser.add_argument("-relax_cut_pstop", type=int, default=10)
-    parser.add_argument("-relax_cut_steps", type=int, default=50000)
+    parser.add_argument("-relax_cut_steps", type=int, default=20000)
     parser.add_argument("-relax_cut_logsteps", type=int, default=1000)
 
     # create voids in relaxed solvent
@@ -346,7 +346,7 @@ if __name__ == "__main__":
 
                         # relax cut box
                         if not os.path.isdir(lmpsettings_relax_cut.output_lmprst):
-                            lmpsettings_relax_cut.runsteps = 20000
+                            #lmpsettings_relax_cut.runsteps = 20000  # debugging
                             # 20000 steps, 500 bar to 1 bar, 20 to 280 K, iso
                             agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="nvt", keyword="iso")
                             lmpsettings_relax_cut.tstart = lmpsettings_relax_cut.tstop

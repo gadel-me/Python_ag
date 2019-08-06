@@ -864,7 +864,8 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
-    lmp.command("reset_timestep 0")
+    # not sure if resetting the timestep is necessary
+    #lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()

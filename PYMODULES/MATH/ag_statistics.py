@@ -205,7 +205,7 @@ def _write_plot(data1, data2, output, slope, intercept, title):
     plt.close(qq_fig)
 
 
-def qq_test(data, rsquare_thrsh=0.99, output=None, save_plot=False):
+def qq_test(data, rsquare_thrsh=0.993, output=None, save_plot=False):
     """
     Carry out a Quantile-Quantile plot with the experimental data and the theoretical gaussian shaped data.
 
