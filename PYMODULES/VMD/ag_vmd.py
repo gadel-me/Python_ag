@@ -298,7 +298,7 @@ def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
                       vmd_material="Basic1Pantone", style="CPK 1.000000 0.300000 12.000000 12.000000"):
     """
     """
-    if molecule.exists(molid) == 0:
+    if not molecule.exists(molid):
 
         # load molecule in vmd
         if dcd is not None:
