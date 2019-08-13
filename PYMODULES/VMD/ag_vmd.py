@@ -261,7 +261,7 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
     #graphics.cone(molid, tuple(0.75 * end + start), tuple(end + start), radius=cone_radius, resolution=resolution)
 
 
-def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal"):
+def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal", frame_idx=0):
     """
     Render the image using renderer with resolution image_size.
     """
