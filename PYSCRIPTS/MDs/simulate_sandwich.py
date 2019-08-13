@@ -56,8 +56,11 @@ def relax_group(lmpcuts, ensemble, group="all", keyword=None):
         lmp.file(lmpcuts.pc_file)
 
     # define the atoms that may move during the simulation
-    lmp.command("group group_1 {}".format(group))
-    lmpcuts.fix_hoover(lmp, "group_1", ensemble, keyword)
+    if group == "all":
+        lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
+    else:
+        lmp.command("group group_1 {}".format(group))
+        lmpcuts.fix_hoover(lmp, "group_1", ensemble, keyword)
 
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
 
@@ -78,46 +81,6 @@ def relax_group(lmpcuts, ensemble, group="all", keyword=None):
 
     # close lammps
     lmp.close()
-
-
-#def get_atom_ids(lmpdat1, lmpdat2, lmpdat3=None):
-#    """
-#    Get the difference of all atoms in each lammps data file.
-#
-#    Parameters
-#    ----------
-#    lmpdat1 : str
-#        gives the atoms of the first data file
-#    lmpdat2 : str
-#        gives the difference between the atoms of lmpdat1 and lmpdat2
-#    lmpdat3 : str
-#        gives the difference between the atoms of lmpdat 1 + lmpdat2 and lmpdat3
-#
-#    Returns
-#    -------
-#    atom_ids : tuple of (str, str, str)
-#        atom ids of each system and the difference between each system
-#
-#    """
-#    sys1 = aglmp.read_lmpdat(lmpdat1)
-#    sys2 = aglmp.read_lmpdat(lmpdat2)
-#    sys3 = aglmp.read_lmpdat(lmpdat3)
-#
-#    # get all atom ids
-#    natoms_sys1 = len(sys1.atoms)
-#    natoms_sys2 = len(sys2.atoms)
-#    natoms_sys3 = len(sys3.atoms)
-#
-#    atom_ids_sys1 = range(1, natoms_sys1 + 1)
-#    atom_ids_sys2 = range(natoms_sys1, natoms_sys2 + 1)
-#    atom_ids_sys3 = range(natoms_sys1 + natoms_sys2, natoms_sys3 + 1)
-#
-#    # atom indices to str
-#    atom_ids_sys1 = " ".join(map(str, atom_ids_sys1))
-#    atom_ids_sys2 = " ".join(map(str, atom_ids_sys2))
-#    atom_ids_sys3 = " ".join(map(str, atom_ids_sys3))
-#
-#    return (atom_ids_sys1, atom_ids_sys2, atom_ids_sys3)
 
 
 if __name__ == "__main__":
@@ -169,10 +132,10 @@ if __name__ == "__main__":
         pc_file=args.pair_coeffs,
         settings_file=args.set,
         input_lmpdat=args.lmpdat,
-        inter_lmprst="relax_solvent_inter.lmprst",
-        output_lmprst="relax_solvent_out.lmprst",
-        output_dcd="relax_solvent.dcd",
-        output_lmplog="relax_solvent.lmplog")
+        inter_lmprst="CBZII_relax_solvent_inter.lmprst",
+        output_lmprst="CBZII_relax_solvent_out.lmprst",
+        output_dcd="CBZII_relax_solvent.dcd",
+        output_lmplog="CBZII_relax_solvent.lmplog")
 
     # relax thread
     lmpsetting_relax_thread = aglmpsim.LmpSim(
@@ -183,10 +146,10 @@ if __name__ == "__main__":
         pc_file=args.pair_coeffs,
         settings_file=args.set,
         input_lmprst=lmpsetting_relax_solvent.output_lmprst,
-        inter_lmprst="relax_thread_inter.lmprst",
-        output_lmprst="relax_thread_out.lmprst",
-        output_dcd="relax_thread.dcd",
-        output_lmplog="relax_thread.lmplog")
+        inter_lmprst="CBZII_relax_solvent_inter.lmprst",
+        output_lmprst="CBZII_relax_solvent_out.lmprst",
+        output_dcd="CBZII_relax_solvent.dcd",
+        output_lmplog="CBZII_relax_solvent.lmplog")
 
     # relax all
     lmpsetting_relax_all = aglmpsim.LmpSim(
@@ -199,10 +162,10 @@ if __name__ == "__main__":
         pc_file=args.pair_coeffs,
         settings_file=args.set,
         input_lmprst=lmpsetting_relax_thread.output_lmprst,
-        inter_lmprst="relax_all_inter.lmprst",
-        output_lmprst="relax_all_out.lmprst",
-        output_dcd="relax_all.dcd",
-        output_lmplog="relax_all.lmplog")
+        inter_lmprst="CBZII_relax_all_inter.lmprst",
+        output_lmprst="CBZII_relax_all_out.lmprst",
+        output_dcd="CBZII_relax_all.dcd",
+        output_lmplog="CBZII_relax_all.lmplog")
 
     # relax the solvent first
     if not os.path.isfile(lmpsetting_relax_solvent.output_lmprst):
@@ -214,4 +177,8 @@ if __name__ == "__main__":
 
     # relax the whole system
     if not os.path.isfile(lmpsetting_relax_all.output_lmprst):
+
+        if args.relax_thread is False:
+            lmpsetting_relax_all.input_lmprst = lmpsetting_relax_solvent.output_lmprst
+
         relax_group(lmpsetting_relax_all, "npt", group=args.all_group, keyword="tri")
