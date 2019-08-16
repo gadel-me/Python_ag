@@ -169,7 +169,7 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     return (cur_geometry, null_coeff_id)
 
 
-def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=True, pair_coeffs=None):
+def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=True, pair_coeffs=None, settings=None):
     """
     Scan a bond, angle or dihedral.
 
@@ -188,6 +188,10 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
 
     pair_coeffs : None or str
         file with all pair coefficients
+
+    settings : None or str
+        file with basic settings before loading the data file
+        when no file is given, standard values will be assumed
 
     Sources:    (https://lammps.sandia.gov/threads/msg17271.html)
                 https://lammps.sandia.gov/doc/fix_restrain.html
@@ -208,19 +212,22 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
 
     # split world communicator into n partitions and run lammps only on that specific one
     lmp = lammps(comm=split, cmdargs=["-screen", "lmp_out.txt"])
-
     lmp.command("log {}.lmplog".format(output))
-    lmp.command("units metal")
-    lmp.command("boundary p p p")
-    lmp.command("dimension 3")
-    lmp.command("atom_style full")
-    lmp.command("pair_style lj/cut/coul/cut 30.0")
-    lmp.command("bond_style harmonic")
-    lmp.command("angle_style harmonic")
-    lmp.command("dihedral_style charmm")
-    lmp.command("improper_style cvff")
-    lmp.command("special_bonds amber")
-    lmp.command("timestep 0.001")
+
+    if settings is not None:
+        lmp.file(settings)
+    else:
+        lmp.command("units metal")
+        lmp.command("boundary p p p")
+        lmp.command("dimension 3")
+        lmp.command("atom_style full")
+        lmp.command("pair_style lj/cut/coul/cut 30.0")
+        lmp.command("bond_style harmonic")
+        lmp.command("angle_style harmonic")
+        lmp.command("dihedral_style charmm")
+        lmp.command("improper_style cvff")
+        lmp.command("special_bonds amber")
+        lmp.command("timestep 0.001")
 
     # data and thermo
     lmp.command("read_data {}".format(lmpdat))
@@ -457,7 +464,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
                       temps=None, force_constants=None,
                       energy_file_out="defaultname",
                       energy_file_wo_entity="defaultname2",
-                      output_idx=0, pc_file=None):
+                      output_idx=0, pc_file=None, settings_file=None):
     """
     Calculate md energy.
 
@@ -559,7 +566,7 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
 
         #pdb.set_trace()
         # annealing with quenching and minimization using lammps
-        scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, force_constants, temps=temps, pair_coeffs=pc_file)
+        scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, force_constants, temps=temps, pair_coeffs=pc_file, settings=settings_file)
 
         # since minimized md-structure != minimized ab initio structure,
         # the real value of the geometry of interest must be derived from the
@@ -687,8 +694,12 @@ if __name__ == "__main__":
                             help="Name of energy files.")
 
         PARSER.add_argument("-pair_coeffs",
-                            default="DEFAULTNAME",
-                            help="Name of energy files.")
+                            default=None,
+                            help="Name of pair coeff file file.")
+
+        PARSER.add_argument("-settings",
+                            default=None,
+                            help="Name of settings file.")
 
         ARGS = PARSER.parse_args()
 
@@ -734,6 +745,7 @@ if __name__ == "__main__":
                               output_idx=gau_file_idx,
                               force_constants=ARGS.k,
                               pc_file=ARGS.pair_coeffs,
+                              settings_file=ARGS.settings,
                               temps=(600, 0.0))
 
     # wait for all ranks to finish

@@ -47,19 +47,26 @@ class LmpSim(object):
 
     def unfix_undump(self, pylmp, lmp):
         """
-        Remove all fixes and dumps.
+        Remove all fixes, dumps and groups.
         """
         lmp_fixes = []
         lmp_dumps = []
+        lmp_groups = []
 
         if RANK == 0:
             for fix in pylmp.fixes:
                 lmp_fixes.append(fix["name"])
+
             for dump in pylmp.dumps:
                 lmp_dumps.append(dump["name"])
 
+            for group in pylmp.groups:
+                if group["name"] != "all":
+                    lmp_groups.append(group["name"])
+
         lmp_fixes = COMM.bcast(lmp_fixes, 0)
         lmp_dumps = COMM.bcast(lmp_dumps, 0)
+        lmp_groups = COMM.bcast(lmp_groups, 0)
 
         for fix in lmp_fixes:
             if "gpu" in fix:
@@ -68,6 +75,9 @@ class LmpSim(object):
 
         for dump in lmp_dumps:
             lmp.command("undump {}".format(dump))
+
+        for group in lmp_groups:
+            lmp.command("group {} delete".format(group))
 
     def thermo(self, lmp, hb_group="all"):
         #TODO:  hb_group is not necessary since hbonds will only be calculated

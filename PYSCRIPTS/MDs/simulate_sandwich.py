@@ -146,10 +146,10 @@ if __name__ == "__main__":
         pc_file=args.pair_coeffs,
         settings_file=args.set,
         input_lmprst=lmpsetting_relax_solvent.output_lmprst,
-        inter_lmprst="CBZII_relax_solvent_inter.lmprst",
-        output_lmprst="CBZII_relax_solvent_out.lmprst",
-        output_dcd="CBZII_relax_solvent.dcd",
-        output_lmplog="CBZII_relax_solvent.lmplog")
+        inter_lmprst="CBZII_relax_thread_inter.lmprst",
+        output_lmprst="CBZII_relax_thread_out.lmprst",
+        output_dcd="CBZII_relax_thread.dcd",
+        output_lmplog="CBZII_relax_thread.lmplog")
 
     # relax all
     lmpsetting_relax_all = aglmpsim.LmpSim(
@@ -180,5 +180,7 @@ if __name__ == "__main__":
 
         if args.relax_thread is False:
             lmpsetting_relax_all.input_lmprst = lmpsetting_relax_solvent.output_lmprst
+        #else:
+        #    lmpsetting_relax_all.input_lmprst = lmpsetting_relax_thread.output_lmprst
 
         relax_group(lmpsetting_relax_all, "npt", group=args.all_group, keyword="tri")
