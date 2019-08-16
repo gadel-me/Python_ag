@@ -26,7 +26,7 @@ size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
 
-def relax_group(lmpcuts, ensemble, group="all", keyword=None):
+def relax_group(lmpcuts, ensemble, group="all", keyword=None, create_velocity=True):
     """
     Relax the group of atoms of the given system.
 
@@ -70,7 +70,9 @@ def relax_group(lmpcuts, ensemble, group="all", keyword=None):
         lmp.command("min_modify dmax 0.5")
         lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-    lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
+    if create_velocity is True:
+        lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
+
     lmp.command("run {}".format(lmpcuts.runsteps))
 
     # tidy up before closing
@@ -88,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("-lmpdat", default=None)
     #parser.add_argument("-lmpdat_CBZII_only", default=None, help="Data file with solely CBZ")
     parser.add_argument("-relax_thread", action="store_true", default=False)
+    parser.add_argument("-cv", action="store_true", default=True, help="Create an initial velocity (i.e. neglect existing one)")
 
     # relax solvent
     parser.add_argument("-solvent_temp_start", type=int, default=295)
@@ -169,11 +172,11 @@ if __name__ == "__main__":
 
     # relax the solvent first
     if not os.path.isfile(lmpsetting_relax_solvent.output_lmprst):
-        relax_group(lmpsetting_relax_solvent, "nvt", group=args.solvent_group)
+        relax_group(lmpsetting_relax_solvent, "nvt", group=args.solvent_group, create_velocity=args.cv)
 
     # relax the thread in an nvt environment second
-    if args.relax_thread is True and not os.path.isfile(lmpsetting_relax_all.output_lmprst):
-        relax_group(lmpsetting_relax_thread, "nvt", group=args.thread_group)
+    if args.relax_thread is True and not os.path.isfile(lmpsetting_relax_all.output_lmprst, create_velocity=args.cv):
+        relax_group(lmpsetting_relax_thread, "nvt", group=args.thread_group, create_velocity=args.cv)
 
     # relax the whole system
     if not os.path.isfile(lmpsetting_relax_all.output_lmprst):
@@ -183,4 +186,4 @@ if __name__ == "__main__":
         #else:
         #    lmpsetting_relax_all.input_lmprst = lmpsetting_relax_thread.output_lmprst
 
-        relax_group(lmpsetting_relax_all, "npt", group=args.all_group, keyword="tri")
+        relax_group(lmpsetting_relax_all, "npt", group=args.all_group, keyword="tri", create_velocity=args.cv)

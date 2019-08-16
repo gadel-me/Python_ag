@@ -60,7 +60,7 @@ parser.add_argument("-lst",
 group_dor2.add_argument("-linreg",
                         dest="linreg",
                         action="store_true",
-                        default=False,
+                        default=True,
                         help="plot the linear regression"
                         )
 
@@ -205,7 +205,7 @@ while keep_plotting in ["Yes", "Y", "yes", "y", ""]:
     xvals = data[args.xkey][args.fst:args.lst:every]
 
     # ask for y-key
-    if args.linreg is True:
+    if args.linreg is True and not args.histo:
         while wrong_ykey:
             args.ykey = pcsvh.ask4keyword("y-values", keys)
 

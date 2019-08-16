@@ -217,7 +217,7 @@ if __name__ == "__main__":
         heat_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
         heat_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
         heat_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop, pstart=args.heat_pstart, pstop=args.heat_pstop, logsteps=args.heat_logsteps, runsteps=args.heat_steps,pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst, output_lmprst=heat_out, output_dcd=heat_dcd, output_lmplog=heat_log, gpu=args.gpu)
+        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop, pstart=args.heat_pstart, pstop=args.heat_pstop, logsteps=args.heat_logsteps, runsteps=args.heat_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst, output_lmprst=heat_out, output_dcd=heat_dcd, output_lmplog=heat_log, gpu=args.gpu)
 
         if args.lmps is None:
             lmpsettings_heat.input_lmprst = lmpsettings_quench.output_lmprst
@@ -395,6 +395,8 @@ if __name__ == "__main__":
                         # not sure if remains of previous code
                         #aggregate_ok = solution_sys.check_aggregate(solvate_sys, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
 
+                        #TODO: unwrap system first (before checking the aggregation state)?
+
                         # check aggregation state of the last frame
                         aggregate_ok = solution_sys.check_aggregate(-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
 
@@ -428,9 +430,13 @@ if __name__ == "__main__":
                         anneal_attempts = 0
                         quench_attempts = 0
                         sysprep_attempt = 0
-                        agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                        agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                        agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+
+                        # rename folders of failed run
+                        if rank == 0:
+                            agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                            agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                            agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+
                         #pdb.set_trace()
                         continue
 

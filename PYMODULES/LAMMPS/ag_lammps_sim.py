@@ -77,7 +77,10 @@ class LmpSim(object):
             lmp.command("undump {}".format(dump))
 
         for group in lmp_groups:
-            lmp.command("group {} delete".format(group))
+            try:
+                lmp.command("group {} delete".format(group))
+            except:
+                print("***Warning: Group {} could not be deleted in lammps!".format(group))
 
     def thermo(self, lmp, hb_group="all"):
         #TODO:  hb_group is not necessary since hbonds will only be calculated

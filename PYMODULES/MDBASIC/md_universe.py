@@ -1892,7 +1892,7 @@ class Universe(object):
             if debug is True:
                 print("***Check Aggregate Info: Aggregate looks fine!")
 
-        print("***Error: Aggregation failed :(")
+        print("***Error: Aggregate of frame {} looks (partially) dissolved :(".format(frame_id))
         return aggregate_ok
 
 
