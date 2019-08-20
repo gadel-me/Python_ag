@@ -175,7 +175,7 @@ if __name__ == "__main__":
         relax_group(lmpsetting_relax_solvent, "nvt", group=args.solvent_group, create_velocity=args.cv)
 
     # relax the thread in an nvt environment second
-    if args.relax_thread is True and not os.path.isfile(lmpsetting_relax_all.output_lmprst, create_velocity=args.cv):
+    if args.relax_thread is True and not os.path.isfile(lmpsetting_relax_all.output_lmprst):
         relax_group(lmpsetting_relax_thread, "nvt", group=args.thread_group, create_velocity=args.cv)
 
     # relax the whole system
