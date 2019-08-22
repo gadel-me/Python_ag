@@ -627,8 +627,8 @@ class PwStuff(mdu.Universe):
                 pass
 
 
-def read_pw_out(pw_out):
+def read_pw_out(pw_out, read_crystal_sections=False):
     """Read a pw output file."""
     pw_sys = PwStuff()
-    pw_sys.read_pwout(pw_out)
+    pw_sys.read_pwout(pw_out, read_crystal_sections)
     return pw_sys
