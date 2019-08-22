@@ -272,3 +272,6 @@ class Box(object):
             print("Wrong unit ({})!".format(self.unit))
 
         self.unit = "angstrom"
+
+    def calc_volume(self):
+        return agc.box_lat_volume(self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta, self.ltc_gamma)
