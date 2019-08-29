@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 import math
 import md_stars_helper as mdsh
+import md_elements as mde
 
 __version__ = "2017-04-10"
 
@@ -143,6 +144,21 @@ class Atom(IterMixin):
             raise RuntimeError("'mix' has to be 'arithmetic' or 'geometric'!")
 
         return (sigma_ij, epsilon_ij)
+
+    def calc_weigh(self, overwrite=False):
+        """
+        Calculate the element mass from the elements name.
+        """
+        if not hasattr(self, "weigh"):
+            self.weigh = None
+
+        if self.weigh is None or overwrite is True:
+            try:
+                self.weigh = mde.element_mass[self.sitnam]
+            except KeyError:
+                # check if sitnam is the atomic number
+                atomic_number = int(self.sitnam)
+                self.weigh = mde.atomic_number_mass[atomic_number]
 
 
 class Bond(IterMixin):

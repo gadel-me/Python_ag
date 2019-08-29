@@ -41,6 +41,7 @@ class Box(object):
         """
         self.boxtype = boxtype
         self.unit = unit
+        self.volume = None
 
         if boxtype == "cartesian":
             self.crt_a = crt_a
@@ -274,4 +275,7 @@ class Box(object):
         self.unit = "angstrom"
 
     def calc_volume(self):
-        return agc.box_lat_volume(self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta, self.ltc_gamma)
+        """
+        Calculate the volume of the cell.
+        """
+        self.volume = agc.box_lat_volume(self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta, self.ltc_gamma)

@@ -1895,6 +1895,53 @@ class Universe(object):
         print("***Error: Aggregate of frame {} looks (partially) dissolved :(".format(frame_id))
         return aggregate_ok
 
+    def calculate_total_mass(self):
+        """
+        Summation of the total molar mass of the whole system.
+        """
+        atom_masses = []
+
+        for atom in self.atoms:
+
+            # saves us the function call
+            if not hasattr(atom, "weigh") or atom.weigh is None:
+                atom.calc_weigh()
+
+            atom_masses.append(atom.weigh)
+
+        total_molar_mass = sum(atom_masses)
+
+        # avogadro number
+        n_a = 6.022140857e+23
+        return total_molar_mass / n_a
+
+    def calculate_density(self, frame_id=-1):
+        """
+        Calculate the density of the current box.
+
+        Note that the density is returned as the division of the units
+        that are provided.
+        """
+        # calculate box volume first if necessary
+        if self.ts_boxes[frame_id].volume is None:
+
+            if self.ts_boxes[frame_id].boxtype != "lattice":
+                box = copy.deepcopy(self.ts_boxes[frame_id])
+
+                if self.ts_boxes[frame_id].boxtype == "cartesian":
+                    box.box_cart2lat()
+                else:
+                    box.box_lmp2lat()
+
+            volume = box.calc_volume()
+        else:
+            volume = self.ts_boxes[frame_id].volume
+
+        total_mass = self.calculate_total_mass()
+        density = total_mass / volume
+
+        return density
+
 
 ################################################################################
 # Shortcut functions for common procedures
