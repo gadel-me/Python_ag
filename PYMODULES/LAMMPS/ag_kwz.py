@@ -308,7 +308,10 @@ def _create_new_box(md_sys):
     """
     # add new orthogonal box
     md_sys.ts_boxes = []  # delete all previous unneeded boxes
-    box_diameter = md_sys.get_system_radius(-1) + 100
+    #box_diameter = md_sys.get_system_radius(-1) + 100
+    # diameter with an additional size of 20 should suffice since it
+    # is quite expensive for simulation runs with solvent
+    box_diameter = md_sys.get_system_radius(-1) + 20
     pi_2 = math.pi / 2
     new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
                       ltc_c=box_diameter, ltc_alpha=pi_2, ltc_beta=pi_2,
