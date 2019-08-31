@@ -69,7 +69,8 @@ if __name__ == "__main__":
     pair_coeffs_help = "lammps'  script with lj, dreiding, etc. parameters"
     solvent_pc_help = "lammps'  script with lj, dreiding, etc. parameters for the solvent"
     logsteps_help = "log thermodynamic-, steps- and restart-files every" + "'logsteps' steps"
-    gpu_help = "utilize lammps' GPU package."
+    gpu_help = "Utilize lammps' GPU package (solvent relaxation not included)."
+    solvent_gpu_help = "Use gpu for the solvent relaxation."
     cycles_help = "Number of aggregations."
     timeout_help = "allowed duration of simulation, for resubmitting purposes;  should be < 24h"
     pa_help = "The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles"
@@ -86,6 +87,7 @@ if __name__ == "__main__":
     parser.add_argument("-solvent_paircoeffs", default=None, metavar="*.lmpcfg", help=solvent_pc_help)
     parser.add_argument("-logsteps", type=int, default=1000, help=logsteps_help)
     parser.add_argument("-gpu", default=False, action="store_true", help=gpu_help)
+    parser.add_argument("-solvent_gpu", default=False, action="store_true", help=solvent_gpu_help)
     parser.add_argument("-cycles", type=int, default=5, help=cycles_help)
     parser.add_argument("-timeout", metavar="00:01:00", default="00:00:05", help=timeout_help)
     parser.add_argument("-pa", "-pattern_add", nargs="*", default=[0], type=int, help=pa_help)
@@ -145,6 +147,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #==============================================================================#
+    # Set things straight for solvent and vacuum
+    #==============================================================================#
+    # use the same settings as for vacuo runs if no solvent is given
+    if args.lmps is None:
+        args.settings_solvent = args.settings
+        args.solvent_paircoeffs = args.pair_coeffs
+        args.solvent_gpu = args.gpu
+
+    #==============================================================================#
     # Remaining cycles and molecule to add pattern
     #==============================================================================#
     remaining_cycles, requench_out = agk.get_remaining_cycles(args.cycles)
@@ -192,13 +203,13 @@ if __name__ == "__main__":
         cut_solv_out = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmprst"
         cut_solv_dcd = anneal_dir + "cut_solv_{}".format(curcycle) + ".dcd"
         cut_solv_log = anneal_dir + "cut_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_relax_cut = aglmpsim.LmpSim(tstart=args.relax_cut_tstart, tstop=args.relax_cut_tstop, pstart=args.relax_cut_pstart, pstop=args.relax_cut_pstop, logsteps=args.relax_cut_logsteps, runsteps=args.relax_cut_steps, pc_file=args.pair_coeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_lmpdat, inter_lmprst=cut_solv_rst, output_lmprst=cut_solv_out, output_dcd=cut_solv_dcd, output_lmplog=cut_solv_log, gpu=args.gpu)
+        lmpsettings_relax_cut = aglmpsim.LmpSim(tstart=args.relax_cut_tstart, tstop=args.relax_cut_tstop, pstart=args.relax_cut_pstart, pstop=args.relax_cut_pstop, logsteps=args.relax_cut_logsteps, runsteps=args.relax_cut_steps, pc_file=args.solvent_paircoeffs, settings_file=args.settings_solvent, input_lmpdat=cut_solv_lmpdat, inter_lmprst=cut_solv_rst, output_lmprst=cut_solv_out, output_dcd=cut_solv_dcd, output_lmplog=cut_solv_log, gpu=args.solvent_gpu)
 
         void_solv_rst = anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
         void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmprst"
         void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
         void_solv_log = anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_void = aglmpsim.LmpSim(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop,logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.pair_coeffs,settings_file=args.settings_solvent, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd,output_lmplog=void_solv_log, gpu=args.gpu)
+        lmpsettings_void = aglmpsim.LmpSim(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop,logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.solvent_paircoeffs,settings_file=args.settings_solvent, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd,output_lmplog=void_solv_log, gpu=args.solvent_gpu)
 
         if args.lmps is not None:
             solution_lmpdat = anneal_dir + "solution_{}".format(curcycle) + "_out.lmpdat"
