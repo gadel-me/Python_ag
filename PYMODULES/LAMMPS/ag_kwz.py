@@ -171,7 +171,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
     lmp.file(lmpcuts.settings_file)
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
-    lmpcuts.dump(lmp, unwrap=False)
+    lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
@@ -214,7 +214,7 @@ def nose_hoover_md(lmpcuts, group="all"):
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
+    lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
@@ -311,7 +311,7 @@ def _create_new_box(md_sys):
     #box_diameter = md_sys.get_system_radius(-1) + 100
     # diameter with an additional size of 20 should suffice since it
     # is quite expensive for simulation runs with solvent
-    box_diameter = md_sys.get_system_radius(-1) + 20
+    box_diameter = md_sys.get_system_radius(-1) + 30
     pi_2 = math.pi / 2
     new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
                       ltc_c=box_diameter, ltc_alpha=pi_2, ltc_beta=pi_2,
@@ -443,7 +443,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
     lmpcuts.load_system(lmp)
     lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
+    lmpcuts.dump(lmp, unwrap=True)
     lmpcuts.thermo(lmp)
 
     if lmpcuts.pc_file is not None:
@@ -731,7 +731,7 @@ def requench(lmpcuts, minstyle="cg"):
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
+    lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
@@ -845,7 +845,7 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmp.file(lmpcuts.settings_file)
     lmpcuts.load_system(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp)
+    lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
