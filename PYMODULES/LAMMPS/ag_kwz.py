@@ -184,10 +184,17 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
     # barostatting, thermostatting
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
 
+    # set the group
+    if group != "all":
+        lmp.command(group)
+        groupname = group.split()[1]
+    else:
+        groupname = "all"
+
     if style.lower() == "berendsen":
-        lmpcuts.fix_berendsen(lmp, group, ensemble, keyword)
+        lmpcuts.fix_berendsen(lmp, groupname, ensemble, keyword)
     elif style.lower() == "nose_hoover":
-        lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
+        lmpcuts.fix_hoover(lmp, groupname, ensemble, keyword)
     else:
         raise Warning("Style not (yet) implemented!")
 
@@ -422,7 +429,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 # Quenching
 ################################################################################
 
-def quench(lmpcuts, lmpdat_main, runs=20):
+def quench(lmpcuts, lmpdat_main, runs=5):
     """
     """
     natoms_main_sys = get_natms(lmpdat_main)
@@ -478,7 +485,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
 
     # 20 attempts to dock the molecule
     for _ in xrange(runs):
-        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 10000").format(*cog))
+        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 50000").format(*cog))
 
         # end function if anything goes wrong
         try:
@@ -647,7 +654,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     # load solution system (last frame only)
     solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd_solvent, frame_idx_start=-2, frame_idx_stop=-1)
     solution_sys = mdu.merge_systems([solvate_sys, solvent_sys])
-    pdb.set_trace()
+    #pdb.set_trace()
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms

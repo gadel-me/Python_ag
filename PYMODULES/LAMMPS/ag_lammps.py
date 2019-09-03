@@ -706,18 +706,31 @@ class LmpStuff(mdu.Universe):
                     lmpdat_out.write("{:> 12.6f} {:> 12.6f}  xlo xhi\n".format(
                         cbox.lmp_xlo, cbox.lmp_xhi)
                     )
+
                 if cbox.lmp_ylo is not None and cbox.lmp_yhi is not None:
                     lmpdat_out.write("{:> 12.6f} {:> 12.6f}  ylo yhi\n".format(
                         cbox.lmp_ylo, cbox.lmp_yhi)
                     )
+
                 if cbox.lmp_zlo is not None and cbox.lmp_zhi is not None:
                     lmpdat_out.write("{:> 12.6f} {:> 12.6f}  zlo zhi\n".format(
                         cbox.lmp_zlo, cbox.lmp_zhi)
                     )
-                if cbox.lmp_xy is not None and cbox.lmp_xz is not None and cbox.lmp_yz is not None:
+
+                # only write triclinic section, if there box vectors and if they
+                # are bigger than 1e-5; otherwise neglect them
+                # None is always smaller than any number
+                lmp_xy_eval = cbox.lmp_xy > 1e-5
+                lmp_xz_eval = cbox.lmp_xz > 1e-5
+                lmp_yz_eval = cbox.lmp_yz > 1e-5
+
+                if lmp_xy_eval and lmp_xz_eval and lmp_yz_eval:
                     lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
                         cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
                     )
+
+                del (lmp_xy_eval, lmp_xz_eval, lmp_yz_eval)
+
                 lmpdat_out.write("\n")
 
             # /// write atom types (masses) ///

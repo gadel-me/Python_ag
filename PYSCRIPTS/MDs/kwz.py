@@ -386,7 +386,7 @@ if __name__ == "__main__":
                         # relax solvent molecules in solution, since solvent is always appended
                         # every atom id greater than the last one of the solvate has to be
                         # a solvent atom
-                        agk.md_simulation(lmpsettings_relax_solv, group="group solvate id > {}".format(solvate_sys_natoms), style="berendsen", ensemble="nvt", keyword=None)
+                        agk.md_simulation(lmpsettings_relax_solv, group="group solvate id > {}".format(solvate_sys_natoms), style="berendsen", ensemble="nvt", keyword_min="iso")
 
                     # ==========================================================
                     # heat the system to the  desired temperature
@@ -396,7 +396,7 @@ if __name__ == "__main__":
                     # automatically by 'md_simulation' through LmpSim)
                     if not os.path.isfile(lmpsettings_heat.output_lmprst):
                         if args.lmps is not None:
-                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso", unwrap_dcd=True)
+                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword="iso", unwrap_dcd=True)
                         else:
                             # no solvent given -> keep volume constant
                             agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt", unwrap_dcd=True)

@@ -223,7 +223,7 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
 
 def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
                    cone_length=0.15, resolution=50, double_arrow=False,
-                   vmd_material="Basic1Pantone", drawcolor="blue"):
+                   vmd_material="Basic1Pantone", drawcolor="blue", lstyle="solid"):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -236,6 +236,9 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
         > end               np-array; (1,3)-tuple with ending coordinates
         > cylinder_radius   float; radius of the arrow base
         > cone_radius       float; radius of the cone
+
+    lstyle : str; solid | dashed
+        draw a solid (default) or dashed arrow
     """
     graphics.material(molid, vmd_material)
     graphics.color(molid, drawcolor)
@@ -250,15 +253,36 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
 
     # shorten vector so there is place for the cone at the ending point
     p_end = start + p_vector * (1 - cone_length)
-
-    graphics.cylinder(molid, tuple(p_start), tuple(p_end), radius=cylinder_radius, resolution=resolution)
     graphics.cone(molid, tuple(p_end), tuple(end), radius=cone_radius, resolution=resolution)
     graphics.cone(molid, tuple(p_start), tuple(start), radius=cone_radius, resolution=resolution)
 
-    # old stuff (working but why?)
-    #graphics.cylinder(molid, tuple(start), tuple(0.9 * end + start),
-    #                  radius=cylinder_radius, resolution=resolution)
-    #graphics.cone(molid, tuple(0.75 * end + start), tuple(end + start), radius=cone_radius, resolution=resolution)
+    if lstyle == "solid":
+        graphics.cylinder(molid, tuple(p_start), tuple(p_end), radius=cylinder_radius, resolution=resolution)
+    elif lstyle == "dashed":
+        # length of a single cylinder
+        len_cylinder = 0.08
+
+        # normed length of the vector between the cones
+        p_vector_len = np.linalg.norm(p_start - p_end)
+
+        # number of cylinders that fit between the cones with len_cylinder length
+        ncylinders = int(p_vector_len // len_cylinder)
+        p_vector_unit = (p_end - p_start) / p_vector_len
+
+        # define the intermediate vector
+        inter_end = [0, 0, 0]
+
+        # draw vectors ncylinders times
+        for i in xrange(ncylinders):
+            inter_end = p_start + p_vector_unit * len_cylinder
+
+            if i % 2 == 0:
+                graphics.cylinder(molid, tuple(p_start), tuple(inter_end), radius=cylinder_radius, resolution=resolution)
+                #pdb.set_trace()
+
+            p_start = inter_end
+    else:
+        pass
 
 
 def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal", frame_idx=0):
