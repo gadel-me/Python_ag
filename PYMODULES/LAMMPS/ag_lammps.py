@@ -1303,7 +1303,7 @@ def read_lmpdat(lmpdat=None, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     return md_sys
 
 
-def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None):
+def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None, box_from_b=False):
     """
     Write a lammps data file.
 
@@ -1339,6 +1339,9 @@ def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, fr
     pair_coeffs : str (optional)
         mixing type for pair coefficients (default: None): 'ii' or 'jj'
 
+    box_from_b : bool
+        take the box from system b (True) or from system a (False)
+
     """
     sys_a = read_lmpdat(lmpdat_a, dcd_a, frame_idx_a, frame_idx_a)
 
@@ -1350,6 +1353,11 @@ def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, fr
         sys_ab = sys_a
 
     sys_ab.change_indices(incr=1, mode="increase")
+
+    # box from system b
+    if box_from_b is True:
+        sys_ab.ts_boxes[-1] = sys_b.ts_boxes[-1]
+
     sys_ab.write_lmpdat(lmpdat_out, cgcmm=True)
 
 

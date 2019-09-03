@@ -74,6 +74,7 @@ if __name__ == "__main__":
     cycles_help = "Number of aggregations."
     timeout_help = "allowed duration of simulation, for resubmitting purposes;  should be < 24h"
     pa_help = "The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles"
+    solution_paircoeffs_help = "Mixed pair types for the solvent and the solvate"
 
     # general
     parser.add_argument("-lmpm", default=None, metavar="*.lmpdat", help=lmpm_help)
@@ -85,6 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("-settings_solvent", metavar="*.lmpcfg", help=settings_solvent_help)
     parser.add_argument("-pair_coeffs", default=None, metavar="*.lmpcfg", required=True, help=pair_coeffs_help)
     parser.add_argument("-solvent_paircoeffs", default=None, metavar="*.lmpcfg", help=solvent_pc_help)
+    parser.add_argument("-solution_paircoeffs", default=None, metavar="*.lmpcfg", help=solution_paircoeffs_help)
     parser.add_argument("-logsteps", type=int, default=1000, help=logsteps_help)
     parser.add_argument("-gpu", default=False, action="store_true", help=gpu_help)
     parser.add_argument("-solvent_gpu", default=False, action="store_true", help=solvent_gpu_help)
@@ -209,26 +211,27 @@ if __name__ == "__main__":
         void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmprst"
         void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
         void_solv_log = anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_void = aglmpsim.LmpSim(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop,logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.solvent_paircoeffs,settings_file=args.settings_solvent, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd,output_lmplog=void_solv_log, gpu=args.solvent_gpu)
+        lmpsettings_void = aglmpsim.LmpSim(tstart=args.void_tstart, tstop=args.void_tstop, pstart=args.void_pstart, pstop=args.void_pstop, logsteps=args.void_logsteps, runsteps=args.void_steps, pc_file=args.solvent_paircoeffs, settings_file=args.settings_solvent, input_lmpdat=lmpsettings_relax_cut.input_lmpdat, input_lmprst=lmpsettings_relax_cut.output_lmprst, inter_lmprst=void_solv_rst, output_lmprst=void_solv_out, output_dcd=void_solv_dcd, output_lmplog=void_solv_log, gpu=args.solvent_gpu)
 
         if args.lmps is not None:
             solution_lmpdat = anneal_dir + "solution_{}".format(curcycle) + "_out.lmpdat"
         else:
             solution_lmpdat = sysprep_out_lmpdat
+            args.solution_paircoeffs = args.pair_coeffs
 
         #relax_solv_in = anneal_dir + "relax_solv_{}".format(curcycle) + "_in.lmpdat"
         relax_solv_out = anneal_dir + "relax_solv_{}".format(curcycle) + "_out.lmprst"
         relax_solv_rst = anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
         relax_solv_dcd = anneal_dir + "relax_solv_{}".format(curcycle) + ".dcd"
         relax_solv_log = anneal_dir + "relax_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_relax_solv = aglmpsim.LmpSim(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop,logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.pair_coeffs, settings_file=args.set,input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst,output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log,gpu=args.gpu)
+        lmpsettings_relax_solv = aglmpsim.LmpSim(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop, logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.solution_paircoeffs, settings_file=args.set,input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst,output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log,gpu=args.gpu)
 
         # anneal -> equilibration/heating
         heat_out = anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"
         heat_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
         heat_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
         heat_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop, pstart=args.heat_pstart, pstop=args.heat_pstop, logsteps=args.heat_logsteps, runsteps=args.heat_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst, output_lmprst=heat_out, output_dcd=heat_dcd, output_lmplog=heat_log, gpu=args.gpu)
+        lmpsettings_heat = aglmpsim.LmpSim(tstart=args.heat_tstart, tstop=args.heat_tstop, pstart=args.heat_pstart, pstop=args.heat_pstop, logsteps=args.heat_logsteps, runsteps=args.heat_steps, pc_file=args.solution_paircoeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_relax_solv.output_lmprst, inter_lmprst=heat_rst, output_lmprst=heat_out, output_dcd=heat_dcd, output_lmplog=heat_log, gpu=args.gpu)
 
         if args.lmps is None:
             lmpsettings_heat.input_lmprst = lmpsettings_quench.output_lmprst
@@ -241,7 +244,7 @@ if __name__ == "__main__":
         anneal_rst = anneal_dir + "anneal_{}".format(curcycle) + "_tmp.lmprst"
         anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
         anneal_log = anneal_dir + "anneal_{}".format(curcycle) + ".lmplog"
-        lmpsettings_anneal = aglmpsim.LmpSim(tstart=args.anneal_tstart, tstop=args.anneal_tstop, pstart=args.anneal_pstart, pstop=args.anneal_pstop, logsteps=args.anneal_logsteps, runsteps=args.anneal_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst, output_lmprst=anneal_out, output_dcd=anneal_dcd, output_lmplog=anneal_log, gpu=args.gpu)
+        lmpsettings_anneal = aglmpsim.LmpSim(tstart=args.anneal_tstart, tstop=args.anneal_tstop, pstart=args.anneal_pstart, pstop=args.anneal_pstop, logsteps=args.anneal_logsteps, runsteps=args.anneal_steps, pc_file=args.solution_paircoeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, input_lmprst=lmpsettings_heat.output_lmprst, inter_lmprst=anneal_rst, output_lmprst=anneal_out, output_dcd=anneal_dcd, output_lmplog=anneal_log, gpu=args.gpu)
 
         # requench
         #tmp_solvate_anneal_out = requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
@@ -254,7 +257,7 @@ if __name__ == "__main__":
 
         # not sure if "lmpsettings_requench = lmpsettings_anneal" is just a typo
         #lmpsettings_requench = lmpsettings_anneal = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
-        lmpsettings_requench = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=requench_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
+        lmpsettings_requench = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.solution_paircoeffs, settings_file=args.set, input_lmpdat=requench_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
 
         # important files from previous run
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(PWD, curcycle - 1)
@@ -344,9 +347,11 @@ if __name__ == "__main__":
                     else:
                         solvate_sys = None
                         atm_idxs_solvate = None
+                        solvate_sys_natoms = None
 
                     solvate_sys = comm.bcast(solvate_sys, 0)
                     atm_idxs_solvate = comm.bcast(atm_idxs_solvate, 0)
+                    solvate_sys_natoms = comm.bcast(solvate_sys_natoms, 0)
 
                     # check if solvent is needed
                     if args.lmps is not None:
@@ -355,18 +360,16 @@ if __name__ == "__main__":
                         if rank == 0 and not os.path.isfile(cut_solv_lmpdat):
                             aglmp.cut_box(cut_solv_lmpdat, args.lmps, solvate_sys.ts_boxes[-1], args.lmps_dcd, frame_idx=-1)
 
-                        # relax cut box
-                        if not os.path.isdir(lmpsettings_relax_cut.output_lmprst):
-                            #lmpsettings_relax_cut.runsteps = 20000  # debugging
-                            # 20000 steps, 500 bar to 1 bar, 20 to 280 K, iso
-                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="nvt", keyword="iso")
+                        # relax cut out box (which has a buffer frame around it) in order to get rid of unnecessary cavities
+                        if not os.path.isfile(lmpsettings_relax_cut.output_lmprst):
+                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="nvt", keyword_min="iso", unwrap_dcd=False)
                             lmpsettings_relax_cut.tstart = lmpsettings_relax_cut.tstop
-                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="npt", keyword="iso")
+                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso", unwrap_dcd=False)
 
                         # create voids and write lammps data with solvate and solvent combined
                         if not os.path.isfile(lmpsettings_void.output_lmprst):
                             for _ in xrange(5):
-                                no_clashes = agk.create_voids(lmpsettings_void, lmpsettings_quench.input_lmpdat, lmpsettings_quench.output_dcd)
+                                no_clashes = agk.create_voids(lmpsettings_void, lmpsettings_quench.input_lmpdat, lmpsettings_quench.output_dcd, lmpsettings_relax_cut.output_dcd)
 
                                 if no_clashes is True:
                                     break
@@ -378,7 +381,7 @@ if __name__ == "__main__":
 
                         # combine solute and solvent
                         if rank == 0 and not os.path.isfile(solution_lmpdat):
-                            aglmp.write_lmpdat(solution_lmpdat, sysprep_out_lmpdat, lmpdat_b=lmpsettings_relax_cut.input_lmpdat, dcd_a=lmpsettings_quench.output_dcd, dcd_b=lmpsettings_void.output_dcd, pair_coeffs=args.pair_coeffs)
+                            aglmp.write_lmpdat(solution_lmpdat, lmpsettings_sysprep.output_lmpdat, lmpdat_b=lmpsettings_relax_cut.input_lmpdat, dcd_a=lmpsettings_quench.output_dcd, dcd_b=lmpsettings_void.output_dcd, box_from_b=True)
 
                         # relax solvent molecules in solution, since solvent is always appended
                         # every atom id greater than the last one of the solvate has to be
@@ -393,10 +396,10 @@ if __name__ == "__main__":
                     # automatically by 'md_simulation' through LmpSim)
                     if not os.path.isfile(lmpsettings_heat.output_lmprst):
                         if args.lmps is not None:
-                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso")
+                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso", unwrap_dcd=True)
                         else:
                             # no solvent given -> keep volume constant
-                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt")
+                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt", unwrap_dcd=True)
 
                     # check if aggregate is still ok
                     if rank == 0:

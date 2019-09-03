@@ -175,7 +175,7 @@ class LmpSim(object):
         lmp.command("minimize 1.0e-9 1.0e-12 100000 1000000")
 
         # tidy up
-        if keyword:
+        if keyword is not None:
             lmp.command("unfix box_relax")
 
     def use_gpu(self, lmp, neigh=True):

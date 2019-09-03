@@ -158,7 +158,7 @@ def write_to_log(string, filename="kwz_log"):
 ################################################################################
 
 
-def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None):
+def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=False):
     """
     """
     lmp = lammps()
@@ -171,7 +171,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
     lmp.file(lmpcuts.settings_file)
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
-    lmpcuts.dump(lmp, unwrap=True)
+    lmpcuts.dump(lmp, unwrap=unwrap_dcd)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
@@ -189,7 +189,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
     elif style.lower() == "nose_hoover":
         lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
     else:
-        raise Warning("Style (currently) unkown")
+        raise Warning("Style not (yet) implemented!")
 
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
@@ -640,13 +640,14 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     """
     """
     # solvate with molecule radii and cogs
-    solvate_sys = aglmp.read_lmpdat(lmpdat_solvate, dcd_solvate)
+    solvate_sys = aglmp.read_lmpdat(lmpdat_solvate, dcd_solvate, frame_idx_start=-2, frame_idx_stop=-1)
     radii_mol, cogs_mol = _molecules_radii(solvate_sys)
     indent_strs = _fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
 
     # load solution system (last frame only)
-    solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd_solvent)
+    solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd_solvent, frame_idx_start=-2, frame_idx_stop=-1)
     solution_sys = mdu.merge_systems([solvate_sys, solvent_sys])
+    pdb.set_trace()
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
