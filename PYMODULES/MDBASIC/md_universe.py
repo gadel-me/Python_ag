@@ -968,7 +968,7 @@ class Universe(object):
                      frame_id=-1,
                      min_dist=0.80,
                      exclude_same_molecule=True,
-                     excluded_atm_idxs=[],
+                     excluded_atm_idxs=None,
                      get_aggregates=False,
                      debug=False):
         """
@@ -991,6 +991,9 @@ class Universe(object):
             # not sure if that is the case - i think this works with wrapped cells
             print("***Info: Atom distance check only works with unwrapped cells! " +
                   "Unwrap cells if necessary.")
+
+        if excluded_atm_idxs is None:
+            excluded_atm_idxs = []
 
         # convert lists, tuples to set
         if not isinstance(excluded_atm_idxs, set):
@@ -1832,7 +1835,8 @@ class Universe(object):
 
         return atom_ids
 
-    def check_aggregate(self, frame_id=-1, atm_atm_dist=4, excluded_atm_idxs=[], unwrap=False, debug=False):
+    def check_aggregate(self, frame_id=-1, atm_atm_dist=4, excluded_atm_idxs=None,
+                        unwrap=False, debug=False):
         """
         Check if several molecules form an aggregate.
 
@@ -1874,6 +1878,30 @@ class Universe(object):
 
         self.create_linked_cells(frame_id, rcut_a=cube_side, rcut_b=cube_side, rcut_c=cube_side)
 
+        if excluded_atm_idxs is None:
+            excluded_atm_idxs = []
+            # no molecule is excluded
+            not_excluded_molecules = self.molecules
+        else:
+            # get all molecules that do not have any excluded atoms
+            not_excluded_molecules = []
+            exclude_molecule = False
+
+            for molecule in self.molecules:
+                # stop further searching if a single atom of the molecule is
+                # excluded
+                for atom in molecule:
+                    if atom in excluded_atm_idxs:
+                        exclude_molecule = True
+                        break
+
+                # only add the molecule if none of its atoms is excluded
+                if exclude_molecule is False:
+                    not_excluded_molecules.append(molecule)
+
+                # reset the exclusion for the next molecule
+                exclude_molecule = False
+
         # include same molecule or it gets missing in our aggregates set
         close_atoms, aggregates = self.chk_atm_dist(frame_id, min_dist=atm_atm_dist, exclude_same_molecule=False, get_aggregates=True, excluded_atm_idxs=excluded_atm_idxs, debug=False)
 
@@ -1886,7 +1914,7 @@ class Universe(object):
             print("***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms])))
 
         # aggregate is only o.k. if all molecules are part of it
-        if len(aggregates) == 1 and len(aggregates[0]) == len(self.molecules):
+        if len(aggregates) == 1 and len(aggregates[0]) == len(not_excluded_molecules):
             aggregate_ok = True
 
             if debug is True:
