@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument("-pair_coeffs", default=None, metavar="*.lmpcfg", required=True, help=pair_coeffs_help)
     parser.add_argument("-solvent_paircoeffs", default=None, metavar="*.lmpcfg", help=solvent_pc_help)
     parser.add_argument("-solution_paircoeffs", default=None, metavar="*.lmpcfg", help=solution_paircoeffs_help)
-    parser.add_argument("-logsteps", type=int, default=1000, help=logsteps_help)
+    #parser.add_argument("-logsteps", type=int, default=1000, help=logsteps_help)
     parser.add_argument("-gpu", default=False, action="store_true", help=gpu_help)
     parser.add_argument("-solvent_gpu", default=False, action="store_true", help=solvent_gpu_help)
     parser.add_argument("-cycles", type=int, default=5, help=cycles_help)
@@ -119,10 +119,10 @@ if __name__ == "__main__":
     # relax solvent in solution
     parser.add_argument("-relax_solv_tstart", type=int, default=250)
     #parser.add_argument("-relax_solv_style", type=str, default="berendsen")
-    parser.add_argument("-relax_solv_tstop", type=int, default=300)
+    parser.add_argument("-relax_solv_tstop", type=int, default=250)
     parser.add_argument("-relax_solv_pstart", type=int, default=10)
     parser.add_argument("-relax_solv_pstop", type=int, default=1)
-    parser.add_argument("-relax_solv_steps", type=int, default=2000)
+    parser.add_argument("-relax_solv_steps", type=int, default=10000)
     parser.add_argument("-relax_solv_logsteps", type=int, default=1000)
 
     # equilibrate solvate and solvent
@@ -224,7 +224,7 @@ if __name__ == "__main__":
         relax_solv_rst = anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
         relax_solv_dcd = anneal_dir + "relax_solv_{}".format(curcycle) + ".dcd"
         relax_solv_log = anneal_dir + "relax_solv_{}".format(curcycle) + ".lmplog"
-        lmpsettings_relax_solv = aglmpsim.LmpSim(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop, logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.solution_paircoeffs, settings_file=args.set,input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst,output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log,gpu=args.gpu)
+        lmpsettings_relax_solv = aglmpsim.LmpSim(tstart=args.relax_solv_tstart, tstop=args.relax_solv_tstop, pstart=args.relax_solv_pstart, pstop=args.relax_solv_pstop, logsteps=args.relax_solv_logsteps, runsteps=args.relax_solv_steps, pc_file=args.solution_paircoeffs, settings_file=args.set, input_lmpdat=solution_lmpdat, inter_lmprst=relax_solv_rst, output_lmprst=relax_solv_out, output_dcd=relax_solv_dcd, output_lmplog=relax_solv_log, gpu=args.gpu)
 
         # anneal -> equilibration/heating
         heat_out = anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"

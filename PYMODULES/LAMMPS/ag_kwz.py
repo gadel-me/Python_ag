@@ -199,7 +199,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
         raise Warning("Style not (yet) implemented!")
 
     lmp.command("run {}".format(lmpcuts.runsteps))
-    lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
+    #lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
     lmpcuts.unfix_undump(pylmp, lmp)
     #lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
