@@ -1061,19 +1061,43 @@ class Universe(object):
                     for i in [-1, 0, 1]:
                         cra_idx = cra + i
 
+                        # if neighbor cell index reached last cell,
+                        # the mirrored neighbor is the first cell
+                        # but the coordinates of the neibhbor need to be shifted
+                        shift_cell_ra_0 = False
+
+                        if cra_idx == ra:
+                            shift_cell_ra_0 = True
+                            cra_idx = 0
+
                         # 0 = same cell, 1 = next cell along b
                         for j in [-1, 0, 1]:
                             crb_idx = crb + j
+
+                            # if neighbor cell index reached last cell,
+                            # the mirrored neighbor is the first cell
+                            # but the coordinates of the neibhbor need to be shifted
+                            shift_cell_rb_0 = False
+
+                            if crb_idx == rb:
+                                shift_cell_rb_0 = True
+                                crb_idx = 0
 
                             # 0 = same cell, 1 = next cell along c
                             for k in [-1, 0, 1]:
                                 crc_idx = crc + k
 
-                                try:
-                                    # check coordinates of current cell vs coordinates of cur_neighbor_cell
-                                    cur_neighbor_cell = linked_cells.linked_cells[cra_idx][crb_idx][crc_idx]
-                                except IndexError:
-                                    continue
+                                # if neighbor cell index reached last cell,
+                                # the mirrored neighbor is the first cell
+                                # but the coordinates of the neibhbor need to be shifted
+                                shift_cell_rc_0 = False
+
+                                if crc_idx == rc:
+                                    shift_cell_rc_0 = True
+                                    crc_idx = 0
+
+                                # check coordinates of current cell vs coordinates of cur_neighbor_cell
+                                cur_neighbor_cell = linked_cells.linked_cells[cra_idx][crb_idx][crc_idx]
 
                                 if debug is True:
                                     print("Checking neighbor cell: ", cra_idx, crb_idx, crc_idx)
@@ -1094,14 +1118,27 @@ class Universe(object):
                                             if cidx_a in excluded_atm_idxs or cidx_b in excluded_atm_idxs:
                                                 continue
 
-                                        # shift atomic coordinates by one box-vector if beyond pbc
+                                        # comparing first with last, therefor we have to shift
+                                        # the coordinates of the last back towards the first cell
                                         if cra_idx == -1:
                                             tmp_coords_cidx_b[0] = linked_cells.atm_coords[cidx_b][0] - 1
+
                                         if crb_idx == -1:
                                             tmp_coords_cidx_b[1] = linked_cells.atm_coords[cidx_b][1] - 1
 
                                         if crc_idx == -1:
                                             tmp_coords_cidx_b[2] = linked_cells.atm_coords[cidx_b][2] - 1
+
+                                        # comparing last with first, therefor we have to shift
+                                        # the coordinates from the first to the end
+                                        if shift_cell_ra_0 is True:
+                                            tmp_coords_cidx_b[0] = linked_cells.atm_coords[cidx_b][0] + 1
+
+                                        if shift_cell_rb_0 is True:
+                                            tmp_coords_cidx_b[1] = linked_cells.atm_coords[cidx_b][1] + 1
+
+                                        if shift_cell_rc_0 is True:
+                                            tmp_coords_cidx_b[2] = linked_cells.atm_coords[cidx_b][2] + 1
 
                                         # get distance vector
                                         vt_a = linked_cells.atm_coords[cidx_a]
@@ -1132,7 +1169,7 @@ class Universe(object):
 
         if debug is True:
             end = time.time()
-            print("***Info: Distance search finished after: {} seconds.".format(end-start))
+            print("***Info: Distance search finished after: {} seconds.".format(end - start))
 
         # remove duplicates
         close_contacts = set(close_contacts)
@@ -1148,6 +1185,7 @@ class Universe(object):
             connections = to_graph(connected_groups)
             aggregates = connected_components(connections)
             aggregates = [i for i in aggregates]  # generator to list
+            #print(aggregates)
             return (close_contacts, aggregates)
 
         return close_contacts
@@ -1862,8 +1900,6 @@ class Universe(object):
             > aggregate_ok      boolean; True, if aggregate is still intact, False if
                                 a part of it drifted away
         """
-        aggregate_ok = False
-
         # lammps may internally have the coordinates wrapped -> unwrap cell when
         # necessary (e.g. coordinates were taken from restart)
         if unwrap is True:
@@ -1903,7 +1939,7 @@ class Universe(object):
                 exclude_molecule = False
 
         # include same molecule or it gets missing in our aggregates set
-        close_atoms, aggregates = self.chk_atm_dist(frame_id, min_dist=atm_atm_dist, exclude_same_molecule=False, get_aggregates=True, excluded_atm_idxs=excluded_atm_idxs, debug=False)
+        close_atoms, aggregates = self.chk_atm_dist(frame_id, min_dist=atm_atm_dist, exclude_same_molecule=True, get_aggregates=True, excluded_atm_idxs=excluded_atm_idxs, debug=False)
 
         if debug is True:
             debug_str = "***Check Aggregate Info: Number of cubes in direction"
@@ -1913,14 +1949,21 @@ class Universe(object):
             print("***Group IDs of all aggregates: {}".format(aggregates))
             print("***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms])))
 
+        print(len(aggregates))
+        print(len(aggregates[0]))
+        print(len(not_excluded_molecules))
+        #pdb.set_trace()
+
         # aggregate is only o.k. if all molecules are part of it
-        if len(aggregates) == 1 and len(aggregates[0]) == len(not_excluded_molecules):
+        if len(aggregates) == 1 and (len(aggregates[0]) == len(not_excluded_molecules)):
             aggregate_ok = True
 
             if debug is True:
                 print("***Check Aggregate Info: Aggregate looks fine!")
+        else:
+            print("***Error: Aggregate of frame {} looks (partially) dissolved :(".format(frame_id))
+            aggregate_ok = False
 
-        print("***Error: Aggregate of frame {} looks (partially) dissolved :(".format(frame_id))
         return aggregate_ok
 
     def calculate_total_mass(self):
