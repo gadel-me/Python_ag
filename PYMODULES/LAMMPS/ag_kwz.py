@@ -318,8 +318,8 @@ def _create_new_box(md_sys):
     #box_diameter = md_sys.get_system_radius(-1) + 100
     # diameter with an additional size of 20 should suffice since it
     # is quite expensive for simulation runs with solvent
-    #box_diameter = md_sys.get_system_radius(-1) + 30
-    box_diameter = md_sys.get_system_radius(-1) + 200  # very large box which will be altered later anyways
+    box_diameter = md_sys.get_system_radius(-1) + 30
+    #box_diameter = md_sys.get_system_radius(-1) + 200  # very large box which will be altered later anyways
     pi_2 = math.pi / 2
     new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
                       ltc_c=box_diameter, ltc_alpha=pi_2, ltc_beta=pi_2,
@@ -475,7 +475,7 @@ def quench(lmpcuts, lmpdat_main, runs=5):
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center
-        cog *= -1 * 0.1
+        cog *= -1 * 0.8
     else:
         cog = None
 
@@ -689,7 +689,8 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
-    lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
+    #lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
+    lmpcuts.fix_berendsen(lmp, group="all", ensemble="npt", keyword="iso")
     #lmp.command("unfix integrator")
     #lmp.command("fix integrator2 all nve/limit 0.2")
     _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)

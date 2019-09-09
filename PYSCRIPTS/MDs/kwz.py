@@ -110,10 +110,10 @@ if __name__ == "__main__":
 
     # create voids in relaxed solvent
     parser.add_argument("-void_tstart", type=int, default=250)
-    parser.add_argument("-void_tstop", type=int, default=300)
-    parser.add_argument("-void_pstart", type=int, default=10)
-    parser.add_argument("-void_pstop", type=int, default=1)
-    parser.add_argument("-void_steps", type=int, default=2000)
+    parser.add_argument("-void_tstop", type=int, default=250)
+    parser.add_argument("-void_pstart", type=int, default=300)
+    parser.add_argument("-void_pstop", type=int, default=300)
+    parser.add_argument("-void_steps", type=int, default=10000)
     parser.add_argument("-void_logsteps", type=int, default=1000)
 
     # relax solvent in solution
