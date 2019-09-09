@@ -828,10 +828,14 @@ class Universe(object):
         center = agm.get_cog(coords)
         return center
 
-    def def_boxes_by_coords(self):
+    def def_boxes_by_coords(self, addition=None, boxtype="lattice"):
         """
         If no box vectors are given, define (a) rectangular box(es) by
         given atomic coordinates.
+
+        addition : (1,3)-tuple of floats, optional
+            Optionally enlarge vector a by addition[0], b by addition[1] and
+            c by addition[2]
         """
         for cid, cframe in enumerate(self.ts_coords):
             # (re)define initial coordinates
@@ -858,9 +862,15 @@ class Universe(object):
                 if ccoord[2] > z_biggest:
                     z_biggest = ccoord[2]
 
-            ca = abs(x_smallest-x_biggest)
-            cb = abs(y_smallest-y_biggest)
-            cc = abs(z_smallest-z_biggest)
+            ca = abs(x_smallest - x_biggest)
+            cb = abs(y_smallest - y_biggest)
+            cc = abs(z_smallest - z_biggest)
+
+            if addition is not None:
+                ca += addition[0]
+                cb += addition[1]
+                cc += addition[2]
+
             cbox = mdb.Box(boxtype="lattice",
                            ltc_a=ca,
                            ltc_b=cb,
@@ -868,6 +878,13 @@ class Universe(object):
                            ltc_alpha=np.radians(90),
                            ltc_beta=np.radians(90),
                            ltc_gamma=np.radians(90))
+
+            if boxtype == "cartesian":
+                cbox.box_lat2cart()
+            elif boxtype == "lammps":
+                cbox.box_lat2lmp()
+            else:
+                pass
 
             # try to modify a current given box or append if none is given
             try:
@@ -1878,10 +1895,6 @@ class Universe(object):
         """
         Check if several molecules form an aggregate.
 
-        #TODO Buggy, does not recognize aggregates properly when they form a chain?
-        #TODO Check aggregate only for certain atom ids
-        #TODO number of molecules may only be the number of molecules with atom ids
-
         At the moment this works only for orthogonal cells (reason: sub-cell length)
         Check if the aggregate did not get dissolved in the process. This is achieved
         by calculating the center of geometry for each molecule and subsequent com-
@@ -1949,9 +1962,9 @@ class Universe(object):
             print("***Group IDs of all aggregates: {}".format(aggregates))
             print("***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms])))
 
-        print(len(aggregates))
-        print(len(aggregates[0]))
-        print(len(not_excluded_molecules))
+        #print(len(aggregates))
+        #print(len(aggregates[0]))
+        #print(len(not_excluded_molecules))
         #pdb.set_trace()
 
         # aggregate is only o.k. if all molecules are part of it
@@ -1964,6 +1977,7 @@ class Universe(object):
             print("***Error: Aggregate of frame {} looks (partially) dissolved :(".format(frame_id))
             aggregate_ok = False
 
+        #pdb.set_trace()
         return aggregate_ok
 
     def calculate_total_mass(self):

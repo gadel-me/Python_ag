@@ -187,7 +187,7 @@ def _write_data(data1, data2, output):
     return table
 
 
-def _write_plot(data1, data2, output, slope, intercept, title):
+def _write_qq_plot(data1, data2, output, slope, intercept, title):
     """
     Save the plot of data1 and data2.
 
@@ -201,7 +201,6 @@ def _write_plot(data1, data2, output, slope, intercept, title):
     plt.ylabel("Experimental quantiles", size=12)
     plt.tick_params(labelsize=10)
     plt.savefig("{}.png".format(output))
-    #plt.show()
     plt.close(qq_fig)
 
 
@@ -258,7 +257,7 @@ def qq_test(data, rsquare_thrsh=0.993, output=None, save_plot=False):
 
     # save the plot as png file
     if save_plot is True:
-        _write_plot(sorted_norm, sorted_data, output, slope, intercept, "Q-Q plot - " + r"$r^2$" + "={:> 2.4f}".format(rsquare))
+        _write_qq_plot(sorted_norm, sorted_data, output, slope, intercept, "Q-Q plot - " + r"$r^2$" + "={:> 2.4f}".format(rsquare))
 
     return rsquare >= rsquare_thrsh
 
@@ -303,7 +302,7 @@ def probability_plot(data, rsquare_thrsh=0.99, output=None, save_plot=False):
 
     # save the plot as png file
     if save_plot is True:
-        _write_plot(osm, osr, output, slope, intercept, r"Probability plot ($\r^2$={})".format(rsquare))
+        _write_qq_plot(osm, osr, output, slope, intercept, r"Probability plot ($\r^2$={})".format(rsquare))
 
     return rsquare >= rsquare_thrsh
 
@@ -424,3 +423,47 @@ def gnuplot_gaussfit(x_values, y_values, debug=False):
         print('Fitted standard deviation = {0}\n'.format(coeff[2]))
 
     return(gauss_data)
+
+
+def gnuplot_gaussfit_plot(data, xlabel=None, output=None):
+    """
+    Plot the data as histogram and try fitting a gaussian curve over it.
+
+    Parameters
+    ----------
+    data : list or numpy.ndarray
+        Input values as single array.
+    output : str
+        Name of the output-file(s)
+
+    """
+    fig = plt.figure(figsize=(12, 8), facecolor='1.0')
+    mu = np.mean(data)
+    median = np.median(data)
+    sigma = np.std(data)
+    coeff_var = abs((sigma / mu) * 100)
+    num_bins = np.sqrt(len(data))
+    num_bins = int(num_bins)
+
+    if num_bins > 200:
+        num_bins = 200  # cap number of bins to max. 200
+
+    # make bins of same width
+    data = sorted(data)
+    x_min = data[0]
+    x_max = data[-1]
+    x_range = np.linspace(x_min, x_max, num_bins)
+
+    # measured histogram
+    nhist, bins, _ = plt.hist(data, bins=x_range, density=True, histtype="step", align="mid")
+
+    # fitted gaussian curve
+    fitted_x, fitted_y = gnuplot_gaussfit(bins[1:], nhist)
+
+    plt.plot(fitted_x, fitted_y, linewidth=1.0, label="Fitted data")
+    plt.xlabel(xlabel, size=12)
+    plt.ylabel("Frequency", size=12)
+    plt.title(r"median={} $\mu$={:.3f} $\sigma$={:.3f} VarCoeff={:.3f} %".format(median, mu, sigma, coeff_var), size=16)
+    fig.tight_layout()
+    fig.legend(frameon=False)
+    plt.savefig("{}.png".format(output), dpi=300)

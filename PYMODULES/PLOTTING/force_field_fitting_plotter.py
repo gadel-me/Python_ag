@@ -246,7 +246,7 @@ def plot_multiple_histo(
         #axes[idx].axvline(x=median, linewidth=0.5, color="green", alpha=3.0, label="median")
 
         # coefficient of variation
-        coeff_var = (sigma / mu) * 100
+        #coeff_var = (sigma / mu) * 100
 
         # Set a title for current subplot
         #axes[idx].set_title("Form {} $\mu={:.3f}$ $\sigma={:.3f}$ $VarCoeff={:.3f}$ %".format(key, mu, sigma, coeff_var))

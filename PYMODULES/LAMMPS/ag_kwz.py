@@ -318,7 +318,8 @@ def _create_new_box(md_sys):
     #box_diameter = md_sys.get_system_radius(-1) + 100
     # diameter with an additional size of 20 should suffice since it
     # is quite expensive for simulation runs with solvent
-    box_diameter = md_sys.get_system_radius(-1) + 30
+    #box_diameter = md_sys.get_system_radius(-1) + 30
+    box_diameter = md_sys.get_system_radius(-1) + 200  # very large box which will be altered later anyways
     pi_2 = math.pi / 2
     new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
                       ltc_c=box_diameter, ltc_alpha=pi_2, ltc_beta=pi_2,
@@ -474,7 +475,7 @@ def quench(lmpcuts, lmpdat_main, runs=5):
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center
-        cog *= -1
+        cog *= -1 * 0.1
     else:
         cog = None
 
@@ -734,6 +735,8 @@ def requench(lmpcuts, minstyle="cg"):
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
+    lmp.command("log {} append".format(lmpcuts.output_lmplog))
+
     lmp.file(lmpcuts.settings_file)
     # read restart file from previous run
     lmpcuts.load_system(lmp)
@@ -751,6 +754,11 @@ def requench(lmpcuts, minstyle="cg"):
     lmp.command("clear")
     lmp.close()
 
+    # check if aggregate is intact after requenching
+    md_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+    aggregate_ok = md_sys.check_aggregate(frame_id=-1)
+    return aggregate_ok
+
 
 def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
     """
@@ -764,74 +772,74 @@ def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
     #cur_pes = cur_log.data[-1]["c_pe_solvate_complete"][fstart:]
 
     # potential energy of the whole system (solvent included if part of system)
-    cur_pes = cur_log.data[-1][thermo][fstart:]
-    data.extend(cur_pes)
+    cur_data = cur_log.data[-1][thermo][fstart:]
+    data.extend(cur_data)
 
 
-def vmd_rmsd_and_cluster(lmpdat_solution, lmpdat_solvate, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
-    """
-    Align solvate molecules and calculate the rmsd.
-
-    The first frame serves as the reference frame for the alignment and the rmsd
-    calculation. The vmd modules molecule and atomsel have to be loaded for
-    this function to work (and the coordinates had also to be read already).
-
-    Parameters
-    ----------
-    lmpdat_solution : str
-        name of lammps data file with topology to load
-    dcd_files : list of str
-        file names of the dcd files to load into vmd
-
-    Returns
-    -------
-    rmsds : list of floats
-        rmsd values for each aligned selection
-    cluster0 : list of ints
-        indices of frames from the most populated cluster
-
-    """
-    import vmd
-    import molecule
-    import atomsel
-
-    # get number of solvate atoms
-    natms_solvate = get_natms(lmpdat_solvate)
-
-    # get number of frames to check
-    percentage_to_check /= 100.0
-    # read topology and coordinates
-    molecule.load("lmpdat", lmpdat_solution)
-
-    for dcd_file in dcd_files:
-        molecule.read(0, "dcd", dcd_file, waitfor=-1)
-
-    # rmsd with alignment for the solvent atoms
-    rmsds = []
-    selection = "index {}".format(" ".join(map(str, atm_idxs)))
-    sel1 = atomsel.atomsel(selection, frame=0)
-
-    frame_first = int(1 - percentage_to_check * molecule.numframes(0))
-    frame_last = molecule.numframes(0)
-
-    for frame_idx in range(frame_first, frame_last):
-        sel2 = atomsel.atomsel(selection, frame=frame_idx)
-        matrix_algin = sel2.fit(sel1)
-        sel2.move(matrix_algin)
-        rmsd = sel2.rmsd(sel1)
-        rmsds.append(rmsd)
-
-    # clustering (currently only possible using the tcl interface?)
-    tcl_selection = 'set tcl_sel1 [atomselect {} "index 0 to {} frame {}"]'
-    tcl_sel1 = tcl_selection.format(0, natms_solvate - 1, 0)
-    vmd.evaltcl(tcl_sel1)
-    cluster = "measure cluster $tcl_sel1 num 5 distfunc rmsd cutoff 1.0 first {} last {} step 1 selupdate True"
-    clusters = vmd.evaltcl(cluster.format(frame_first, frame_last))
-    clusters = re.findall(r"\{([^[\}]*)\}", clusters)
-    cluster_0 = [int(i) for i in clusters[0].split()]
-    molecule.write(0, "xyz", xyz_out, beg=cluster_0, end=cluster_0, selection=sel1)
-    vmd.VMDexit("closing vmd")
-    return (rmsds, cluster_0)
+#def vmd_rmsd_and_cluster(lmpdat_solution, lmpdat_solvate, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
+#    """
+#    Align solvate molecules and calculate the rmsd.
+#
+#    The first frame serves as the reference frame for the alignment and the rmsd
+#    calculation. The vmd modules molecule and atomsel have to be loaded for
+#    this function to work (and the coordinates had also to be read already).
+#
+#    Parameters
+#    ----------
+#    lmpdat_solution : str
+#        name of lammps data file with topology to load
+#    dcd_files : list of str
+#        file names of the dcd files to load into vmd
+#
+#    Returns
+#    -------
+#    rmsds : list of floats
+#        rmsd values for each aligned selection
+#    cluster0 : list of ints
+#        indices of frames from the most populated cluster
+#
+#    """
+#    import vmd
+#    import molecule
+#    import atomsel
+#
+#    # get number of solvate atoms
+#    natms_solvate = get_natms(lmpdat_solvate)
+#
+#    # get number of frames to check
+#    percentage_to_check /= 100.0
+#    # read topology and coordinates
+#    molecule.load("lmpdat", lmpdat_solution)
+#
+#    for dcd_file in dcd_files:
+#        molecule.read(0, "dcd", dcd_file, waitfor=-1)
+#
+#    # rmsd with alignment for the solvent atoms
+#    rmsds = []
+#    selection = "index {}".format(" ".join(map(str, atm_idxs)))
+#    sel1 = atomsel.atomsel(selection, frame=0)
+#
+#    frame_first = int(1 - percentage_to_check * molecule.numframes(0))
+#    frame_last = molecule.numframes(0)
+#
+#    for frame_idx in range(frame_first, frame_last):
+#        sel2 = atomsel.atomsel(selection, frame=frame_idx)
+#        matrix_algin = sel2.fit(sel1)
+#        sel2.move(matrix_algin)
+#        rmsd = sel2.rmsd(sel1)
+#        rmsds.append(rmsd)
+#
+#    # clustering (currently only possible using the tcl interface?)
+#    tcl_selection = 'set tcl_sel1 [atomselect {} "index 0 to {} frame {}"]'
+#    tcl_sel1 = tcl_selection.format(0, natms_solvate - 1, 0)
+#    vmd.evaltcl(tcl_sel1)
+#    cluster = "measure cluster $tcl_sel1 num 5 distfunc rmsd cutoff 1.0 first {} last {} step 1 selupdate True"
+#    clusters = vmd.evaltcl(cluster.format(frame_first, frame_last))
+#    clusters = re.findall(r"\{([^[\}]*)\}", clusters)
+#    cluster_0 = [int(i) for i in clusters[0].split()]
+#    molecule.write(0, "xyz", xyz_out, beg=cluster_0, end=cluster_0, selection=sel1)
+#    vmd.VMDexit("closing vmd")
+#    return (rmsds, cluster_0)
 
 
 ################################################################################
@@ -877,28 +885,43 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmpcuts.unfix_undump(pylmp, lmp)
     # not sure if resetting the timestep is necessary
     #lmp.command("reset_timestep 0")
-    lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+
+    # write restart file only if equilibrated (so definitely not here!)
+    lmp.command("write_restart {}".format(lmpcuts.inter_lmprst))
     lmp.command("clear")
     lmp.close()
 
 
-def _test_anneal_equil(data, output=None):
+def _test_anneal_equil(data, output=None, xlabel=None):
     """
     Check normality distribution of the underlying data.
 
     If the qq-plot fails, the distribution is not normal, if the other tests
     fail, normality can still be accepted if the qq plot states so.
+    The plots of the data (histogram, QQ-plot) will be saved in order to quickly
+    check the distribution manually.
 
     Parameters
     ----------
     data : list of floats
+        Values to check (1-dimensional array).
+    output : str
+        Prefix of all output files.
+    xlabel : str
+        Name of the xlabel for the histogram plot.
 
     Returns
     -------
-    bool
+    equilibrated : bool
+        Result if the values show normal distribution. Normal distribution is
+        only accepted if the linear regression of the QQ-plot has a correlation-
+        coefficient larger than 0.993, the curve is not too skewed.
 
     """
-    qq_normal = ags.qq_test(data, output=output, save_plot=True)
+    # save the histogram plot
+    ags.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
+
+    qq_normal = ags.qq_test(data, output=output + "_qq_plot", save_plot=True)
     skew_normal = ags.test_gauss_shape("skewness", data)
 
     try:
@@ -906,27 +929,68 @@ def _test_anneal_equil(data, output=None):
     except Warning:
         kurtosis_normal = False
 
-    # coefficient of variation
-    coeff_var = scipy.stats.variation(data) * 100
-
-    # accept normal distribution if the coefficient of variation is below 0.5 %
-    # and if the skewness and kurtosis are within their thresholds
-    return (qq_normal and (skew_normal or kurtosis_normal)) or coeff_var <= 0.5
+    equilibrated = qq_normal and (skew_normal or kurtosis_normal)
+    return equilibrated
 
 
 def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, output=None):
     """
-    #TODO check pressure, temperature equilibration?
+    Carry out a productive run for the annealing step of the Kawska-Zahn approach.
+
+    Check regularly if the simulation is equilibrated (i.e. PotEng of the system
+    is normally distributed). If that criteria is fulfilled, stop and check if
+    the aggregate of the last frame is still intact (what is happening in between
+    is not of our concern and will be checked later when the best conformation
+    of the complex is chosen).
+
+    Parameters
+    ----------
+    lmpcuts : ag_lammps_sim.LmpSim
+        The simulation settings.
+    atm_idxs_solvate : list or tuple
+        Indices of the solvate atoms.
+    percentage_to_check : int or float, float will be converted to int
+        The percentage of all frames (starting from the last frame to the first)
+        to check the equilibration state from.
+    ensemble : str
+        The ensemble to run the simulation with
+    group : str, optional
+        The group of atoms that will be integrated. Uses lammps syntax for
+        grouping. The default value is 'all'
+    keyword : str, optional
+        The keyword for the box relaxation. Allowed keywords are the same as
+        in the lammps manual for barostatting: iso, aniso, tri. Default is 'None',
+        which means no barostatting is done (i.e. nvt).
+    output : str, optional
+        Prefix for all files which are written by the run.
+
+    Returns
+    -------
+    aggregate_ok : boolean
+        The status of the aggregate. 'True' if aggregate did not dissolve, during
+        the run, 'False' if it did.
+    dcd_files : list
+        A list of all DCD files that were written during the run. For each sub-
+        run, an int starting from '0' is prepended to the filename until the
+        whole simulation (formed by all sub-runs) shows convergence.
+    log_files : list
+        A list of all lammps log files that were written during the run. For each sub-
+        run, an int starting from '0' is prepended to the filename until the
+        whole simulation (formed by all sub-runs) shows convergence. Log-files
+        are always in accordance to the current DCD file.
+
     """
+    import time
+
     #all_rmsds = []
-    all_pe = []
+    all_data = []
     solvate_sys_natoms = len(atm_idxs_solvate)
     dcd_files = []
     log_files = []
 
-    for run_idx in xrange(5):
-        # rename current _anneal attempt
+    attempts = 10
 
+    for run_idx in xrange(attempts):
         # get just the base name of the files
         dcd_path, dcd_filename = os.path.split(lmpcuts.output_dcd)
         log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
@@ -950,45 +1014,73 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             dcd_files.append(lmpcuts.output_dcd)
             log_files.append(lmpcuts.output_lmplog)
 
-            # read potential energy of the solvate and all coordinates
+            # read potential energy of all coordinates
             if rank == 0:
 
-                # if this fails, then a lmplog was written but not simulation
+                # if this fails, then a lmplog was written but no simulation
                 # was carried out
                 try:
-                    _append_data(all_pe, lmpcuts.output_lmplog)
+                    _append_data(all_data, lmpcuts.output_lmplog)
                 except IndexError:
                     os.remove(lmpcuts.output_dcd)
                     os.remove(lmpcuts.output_lmplog)
                     dcd_files.pop(-1)
                     log_files.pop(-1)
 
-                #molecule.read(0, "dcd", lmpcuts.output_dcd, waitfor=-1)
-
+            # skip the rest as often as there is no new file
             continue
 
         else:
+            # carry out annealing run
             _anneal(lmpcuts, atm_idxs_solvate, ensemble, group, keyword)
             dcd_files.append(lmpcuts.output_dcd)
             log_files.append(lmpcuts.output_lmplog)
 
-        if rank == 0:
-            #TODO: save a picture of the qq-plot
+            # append data of last run
+            if rank == 0:
+                _append_data(all_data, lmpcuts.output_lmplog)
 
+        # test given data so far (test applies to each newly carried out run)
+        aggregate_ok = False
+
+        if rank == 0:
             # caveat:   each first frame of output_lmplog is omitted since
             #           it is not part of the dcd file
-            _append_data(all_pe, lmpcuts.output_lmplog)
             # check last N % of all frames
-            num_frames_to_check = int(percentage_to_check / 100 * len(all_pe))
-            #pe_normal = _test_anneal_equil(all_pe[num_frames_to_check:])
-            # num_frames_to_check needs to be signed since we want to check the
-            # last X % of all frames
-            pe_normal = _test_anneal_equil(all_pe[-num_frames_to_check:], output=output)
+            num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
 
-            # check if aggregate is still fine after the md run
-            aggregate_ok = False
+            # last X % of all frames (from end to start)
+            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], output=output)
 
-            if pe_normal is True:
+            # check if aggregate is still fine after the last run
+            if normally_dstributed is True:
+                solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+                solution_sys_atoms_idxs = range(len(solution_sys.atoms))
+                aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+
+        aggregate_ok = comm.bcast(aggregate_ok, root=0)
+
+        # if the aggregate is ok and equilibration was achieved among the total
+        # simulation time, then write the ouput restart file and stop further
+        # simulating
+        if aggregate_ok is True:
+            sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
+            break
+
+        # prevent the 'else' condition (from for loop above) to execute (happens
+        # when 'aggregate_ok' evaluates as 'False' for the very last attempt)
+        if run_idx == (attempts - 1):
+            break
+
+    # this only applies if all attempts already exist, but the
+    # 'lmpcuts.output_lmprst' file was never written (e.g. some runs were aborted)
+    else:
+        aggregate_ok = False
+        if rank == 0:
+            num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
+            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], output=output)
+
+            if normally_dstributed is True:
                 solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
                 solution_sys_atoms_idxs = range(len(solution_sys.atoms))
                 aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
@@ -997,8 +1089,10 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
 
-        if aggregate_ok:
-            break
+        if aggregate_ok is True:
+            sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
+
+    #pdb.set_trace()
 
     return (aggregate_ok, dcd_files, log_files)
 
@@ -1026,6 +1120,7 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to
 
     total_min_val : int or float
         lowest value found over all lmplogs for thermo
+
     """
     total_min_val = 1e20
     total_min_idx = None
@@ -1055,17 +1150,6 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to
         if min_val in cur_data:
             return (dcd, cur_data.index(min_val), min_val)
 
-    # find dcd file and index
-        ## find lowest energy and according index
-        #min_val = min(cur_data_to_check)
-        ##pdb.set_trace()
-#
-        ## find lowest value, according index and dcd file
-        #if min_val < total_min_val:
-        #    total_min_val = min_val
-        #    total_min_idx = cur_data.index(min_val)
-        #    total_min_dcd = dcd
-#
     return (total_min_dcd, total_min_idx, total_min_val)
 
 
