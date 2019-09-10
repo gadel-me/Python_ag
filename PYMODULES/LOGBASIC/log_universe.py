@@ -58,3 +58,35 @@ class LogUniverse(object):
             for ckey in cdata:
                 if ckey in ("Atoms", "Bonds", "Angles", "Step"):
                     cdata[ckey] = [int(i) for i in cdata[ckey]]
+
+    def measure(self, dataframe=-1, start=0, stop=-1, keyword="PotEng", name="mean"):
+        """[summary]
+
+        [description]
+
+        Parameters
+        ----------
+        dataframe : int, optional
+            [description] (the default is -1, which [default_description])
+        start : int, optional
+            [description] (the default is 0, which [default_description])
+        stop : int, optional
+            [description] (the default is -1, which [default_description])
+        keyword : {str}, optional
+            [description] (the default is "PotEng", which [default_description])
+        name : {str}, optional
+            [description] (the default is "mean", which [default_description])
+
+        Raises
+        ------
+        IOError
+            [description]
+        """
+        if name == "mean":
+            np.mean(self.data[dataframe][keyword][start:stop])
+        elif name == "median":
+            np.median(self.data[dataframe][keyword][start:stop])
+        elif name == "sigma":
+            np.std(self.data[dataframe][keyword][start:])
+        else:
+            raise IOError("Unknown name: {}".format(name))

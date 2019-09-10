@@ -23,6 +23,7 @@ import ag_lammps as aglmp
 import ag_lmplog as agl
 #import ag_vectalg as agv
 import ag_statistics as ags
+import ag_plotting as agplot
 #import vmd
 
 #==============================================================================#
@@ -49,7 +50,19 @@ def rename(src, dst):
 
 
 def get_natms(lmpdat):
-    """
+    """[summary]
+
+    [description]
+
+    Parameters
+    ----------
+    lmpdat : {[type]}
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
     """
     with open(lmpdat, "r") as f_in:
         line = f_in.readline()
@@ -158,7 +171,7 @@ def write_to_log(string, filename="kwz_log"):
 ################################################################################
 
 
-def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=False):
+def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=True):
     """
     """
     lmp = lammps()
@@ -684,7 +697,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmpcuts.dump(lmp, unwrap=False)
+    lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
@@ -920,7 +933,7 @@ def _test_anneal_equil(data, output=None, xlabel=None):
 
     """
     # save the histogram plot
-    ags.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
+    agplot.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
 
     qq_normal = ags.qq_test(data, output=output + "_qq_plot", save_plot=True)
     skew_normal = ags.test_gauss_shape("skewness", data)

@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 import os
+import numpy as np
 import re
 import glob
 import shutil as sl
@@ -363,9 +364,9 @@ if __name__ == "__main__":
 
                         # relax cut out box (which has a buffer frame around it) in order to get rid of unnecessary cavities
                         if not os.path.isfile(lmpsettings_relax_cut.output_lmprst):
-                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="nvt", keyword_min="iso", unwrap_dcd=False)
+                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="nvt", keyword_min="iso", unwrap_dcd=True)
                             lmpsettings_relax_cut.tstart = lmpsettings_relax_cut.tstop
-                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso", unwrap_dcd=False)
+                            agk.md_simulation(lmpsettings_relax_cut, group="all", style="berendsen", ensemble="npt", keyword_min="iso", keyword="iso", unwrap_dcd=True)
 
                         # create voids and write lammps data with solvate and solvent combined
                         if not os.path.isfile(lmpsettings_void.output_lmprst):
@@ -472,10 +473,10 @@ if __name__ == "__main__":
                 anneal_attempts = 0
                 quench_attempts = 0
                 sysprep_attempt = 0
-                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
-                agk.rename(requench_dir, requench_dir.rstrip("/") + "_failed")
+                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
+                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
+                agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
+                agk.rename(requench_dir, requench_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
                 continue
 
             print("***Requenching-Info: Requenching done!")
