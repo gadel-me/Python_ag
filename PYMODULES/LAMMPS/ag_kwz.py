@@ -472,7 +472,7 @@ def quench(lmpcuts, lmpdat_main, runs=5):
 
     # define the atoms that may move during the simulation
     lmp.command("group grp_add_sys id > {}".format(natoms_main_sys))
-    lmp.command("group grp_main_sys id <= {}".format(natoms_main_sys))
+    #lmp.command("group grp_main_sys id <= {}".format(natoms_main_sys))
     #lmp.command("fix freeze grp_main_sys setforce {0} {0} {0}".format(0.0))
 
     # pre-optimization
@@ -487,8 +487,8 @@ def quench(lmpcuts, lmpdat_main, runs=5):
         prep_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
-        # make vector show towards the center
-        cog *= -1 * 0.8
+        # make vector show towards the center (0/0/0)
+        cog *= -1 * 0.005
     else:
         cog = None
 
@@ -497,9 +497,10 @@ def quench(lmpcuts, lmpdat_main, runs=5):
     lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
     quench_success = False
 
-    # 20 attempts to dock the molecule
+    # runs attempts to dock the molecule
     for _ in xrange(runs):
-        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 50000").format(*cog))
+        # maybe define a region if atoms are outside that region
+        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 100000").format(*cog))
 
         # end function if anything goes wrong
         try:
@@ -513,27 +514,30 @@ def quench(lmpcuts, lmpdat_main, runs=5):
                 return quench_success
 
         # remove pushing force
-        lmp.command("unfix force")
+        #lmp.command("unfix force")
 
         # post-optimization
         lmp.command("min_style quickmin")
         lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-        # check aggregate
-        if rank == 0:
-            quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
-            quench_success = quench_sys.check_aggregate()
+        #lmp.command("min_style cg")
+        #lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-        quench_success = comm.bcast(quench_success, 0)
+    # check aggregate
+    if rank == 0:
+        quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
+        quench_success = quench_sys.check_aggregate()
 
-        if quench_success is True:
-            # write restart file
-            lmpcuts.unfix_undump(pylmp, lmp)
-            lmp.command("reset_timestep 0")
-            lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-            lmp.command("clear")
-            lmp.close()
-            break
+    quench_success = comm.bcast(quench_success, 0)
+
+    if quench_success is True:
+        # write restart file
+        lmpcuts.unfix_undump(pylmp, lmp)
+        lmp.command("reset_timestep 0")
+        lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+        lmp.command("clear")
+        lmp.close()
+        #break
 
     return quench_success
 
@@ -861,8 +865,24 @@ def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
 ################################################################################
 
 def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
-    """
-    Use nose-hoover baro- and thermostat for productive annealing run.
+    """Helper function for the annealing step of the kawska-zahn approach.
+
+    This function calls lammps to execute the simulation for the annealing
+    part of the kawska-zahn approach.
+
+    Parameters
+    ----------
+    lmpcuts : {[type]}
+        [description]
+    pe_atm_idxs : {list of int}
+        List of atom indices for the solvate atoms. Needed to compute the potential
+        energy of the solvate atoms only.
+    ensemble : {[type]}
+        [description]
+    group : {str}, optional
+        [description] (the default is "all", which [default_description])
+    keyword : {str}, optional
+        [description] (the default is "iso", which [default_description])
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -874,6 +894,10 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
 
     lmp.file(lmpcuts.settings_file)
     lmpcuts.load_system(lmp)
+
+    # reset the timestep in order to have a consistent number of steps in the
+    # log- and dcd-file (steps may differ after e.g. a minimization)
+    lmp.command("reset_timestep 0")
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
 
@@ -898,7 +922,7 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
     # not sure if resetting the timestep is necessary
-    #lmp.command("reset_timestep 0")
+    #
 
     # write restart file only if equilibrated (so definitely not here!)
     lmp.command("write_restart {}".format(lmpcuts.inter_lmprst))
@@ -1136,9 +1160,9 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to
         lowest value found over all lmplogs for thermo
 
     """
-    total_min_val = 1e20
-    total_min_idx = None
-    total_min_dcd = ""
+    #total_min_val = 1e20
+    #total_min_idx = None
+    #total_min_dcd = ""
     total_data = []
 
     # read the whole dataset, i.e. all lmplog files
@@ -1163,8 +1187,10 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to
     for cur_data, dcd in zip(total_data, dcds):
         if min_val in cur_data:
             return (dcd, cur_data.index(min_val), min_val)
+    else:
+        raise Exception("This should not have happened :/")
 
-    return (total_min_dcd, total_min_idx, total_min_val)
+    #return (total_min_dcd, total_min_idx, total_min_val)
 
 
 def write_requench_data(lmpdat_a, dcd_ab, index,

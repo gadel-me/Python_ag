@@ -464,6 +464,7 @@ if __name__ == "__main__":
                     anneal_dcds = glob.glob(r"{}/*[0-9]_anneal_[0-9]*.dcd".format(anneal_dir))
                     # find frame which scores best (dcd and idx) and its value
                     best_dcd, best_idx, best_val = agk.find_best_frame(anneal_lmplog_files, anneal_dcds, thermo="c_pe_solvate_complete", percentage_to_check=percentage_to_check)
+                    #pdb.set_trace()
                     # write the data file for requenching
                     agk.write_requench_data(lmpsettings_sysprep.output_lmpdat, best_dcd, best_idx, output_lmpdat_a=lmpsettings_requench.input_lmpdat)
 
