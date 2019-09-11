@@ -462,7 +462,7 @@ def quench(lmpcuts, lmpdat_main, runs=5):
     #lmp.command("boundary f f f")
 
     lmpcuts.load_system(lmp)
-    lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
+    #lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
     lmpcuts.thermo(lmp)
@@ -499,10 +499,35 @@ def quench(lmpcuts, lmpdat_main, runs=5):
 
     # runs attempts to dock the molecule
     for _ in xrange(runs):
-        # maybe define a region if atoms are outside that region
-        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 100000").format(*cog))
+        # minimize the whole system
+        lmp.command("min_style quickmin")
+        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-        # end function if anything goes wrong
+        lmp.command("min_style cg")
+        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+
+        # check aggregate, i.e. docking was a success
+        if rank == 0:
+            quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
+            quench_success = quench_sys.check_aggregate()
+
+        quench_success = comm.bcast(quench_success, 0)
+
+        # stop trying if it was
+        if quench_success is True:
+            # write restart file
+            lmpcuts.unfix_undump(pylmp, lmp)
+            lmp.command("reset_timestep 0")
+            lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+            lmp.command("clear")
+            lmp.close()
+            break
+
+        # give 'to-be-docked' molecules a little push if minimization was not
+        # sufficient
+        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 50000").format(*cog))
+
+        # end function if anything goes wrong during the run
         try:
             lmp.command("run {}".format(lmpcuts.runsteps))
         except:
@@ -514,30 +539,14 @@ def quench(lmpcuts, lmpdat_main, runs=5):
                 return quench_success
 
         # remove pushing force
-        #lmp.command("unfix force")
+        lmp.command("unfix force")
 
-        # post-optimization
-        lmp.command("min_style quickmin")
-        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
-
-        #lmp.command("min_style cg")
+        ## post-optimization
+        #lmp.command("min_style quickmin")
         #lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-    # check aggregate
-    if rank == 0:
-        quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
-        quench_success = quench_sys.check_aggregate()
-
-    quench_success = comm.bcast(quench_success, 0)
-
-    if quench_success is True:
-        # write restart file
-        lmpcuts.unfix_undump(pylmp, lmp)
-        lmp.command("reset_timestep 0")
-        lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-        lmp.command("clear")
-        lmp.close()
-        #break
+        ##lmp.command("min_style cg")
+        ##lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
     return quench_success
 
