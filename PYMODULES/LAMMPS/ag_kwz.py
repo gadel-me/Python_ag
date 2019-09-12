@@ -446,6 +446,44 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 def quench(lmpcuts, lmpdat_main, runs=20):
     """
     """
+    def _check_success():
+        """
+        Helper function to check the outcome of the calculation and closing
+        lammps.
+        """
+        if rank == 0:
+            quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
+            successed = quench_sys.check_aggregate()
+
+        successed = comm.bcast(successed, 0)
+
+        # stop trying if it was
+        if successed is True:
+            # write restart file
+            lmpcuts.unfix_undump(pylmp, lmp)
+            lmp.command("reset_timestep 0")
+            lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
+            lmp.command("clear")
+            lmp.close()
+
+        return successed
+
+    def _run(steps):
+        """
+        Helper function for running and catching an exception when anything
+        goes wrong.
+        """
+        try:
+            lmp.command("run {}".format(steps))
+        except:
+            # prevent deadlock by not nicely ending the whole program if more
+            # than one rank is used
+            if size > 1:
+                MPI.COMM_WORLD.Abort()
+            #else:
+            #    return quench_success
+            #    pass
+
     natoms_main_sys = get_natms(lmpdat_main)
 
     lmp = lammps()
@@ -499,7 +537,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
 
     # runs attempts to dock the molecule
     for _ in xrange(runs):
-        # minimize the whole system
+        # minimize and check if that is enough for docking
         lmp.command("min_style quickmin")
         lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
@@ -507,46 +545,37 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
         # check aggregate, i.e. docking was a success
-        if rank == 0:
-            quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
-            quench_success = quench_sys.check_aggregate()
+        quench_success = _check_success()
 
-        quench_success = comm.bcast(quench_success, 0)
-
-        # stop trying if it was
         if quench_success is True:
-            # write restart file
-            lmpcuts.unfix_undump(pylmp, lmp)
-            lmp.command("reset_timestep 0")
-            lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
-            lmp.command("clear")
-            lmp.close()
+            break
+
+        # perform a little molecular dynamics simulation with
+        # half of the lmpcuts.runsteps
+        _run(int(lmpcuts.steps * 0.5))
+
+        # check aggregate, i.e. docking was a success
+        quench_success = _check_success()
+
+        if quench_success is True:
             break
 
         # give 'to-be-docked' molecules a little push if minimization was not
-        # sufficient
-        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 50000").format(*cog_force))
-
-        # end function if anything goes wrong during the run
-        try:
-            lmp.command("run {}".format(lmpcuts.runsteps))
-        except:
-            # prevent deadlock by not nicely ending the whole program if more
-            # than one rank is used
-            if size > 1:
-                MPI.COMM_WORLD.Abort()
-            else:
-                return quench_success
+        # sufficient for aggregation
+        addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
+        addforce_cmd = addforce_cmd.format(c=cog_force)
+        lmp.command(addforce_cmd)
+        _run(2)
 
         # remove pushing force
-        lmp.command("unfix force")
+        lmp.command("unfix push")
 
-        ## post-optimization
-        #lmp.command("min_style quickmin")
-        #lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+        # run the 2nd half of the simulation with push 'grp_add_sys'
+        _run(int(lmpcuts.steps * 0.25))
 
-        ##lmp.command("min_style cg")
-        ##lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+        # stop to-be-docked molecules from moving
+        lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(0.0))
+        _run(int(lmpcuts.steps * 0.25))
 
     return quench_success
 

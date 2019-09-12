@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
 import os
-#import numpy as np
-#import math
-#import rmsd
-#from PIL import Image
+import re
+import pathlib
 
-#import Transformations as cgt
-#import ag_vectalg as agv
-#import own_vmdfunctions as ovmd
-#import ag_unify_md as agum
+import ag_vmd
 
 #import atomsel   # Replaces AtomSel and atomselection
 #import axes
@@ -30,44 +25,80 @@ import molrep
 #import Molecule
 import VMD
 
-"""
-Load all data- and dcd-files that show the aggregation of CBZ.
-"""
 
-# change the scene
-VMD.evaltcl("display shadows off")
-color_display = color.get_colormap("Display")
-color_display["Background"] = "white"
-color.set_colormap("Display", color_display)
-display.set(depthcue=0)
-licor_style = "Licorice 0.1 50 50"
+def get_finished_cycles(maindir):
+    """
+    """
+    fc = []
+    folders = ["{}/{}".format(maindir, i) for i in os.listdir(maindir) if os.path.isdir(i)]
+    # get last cycle from directory
+    for folder in folders:
+        # skip all folders where anything went wrong
+        if "fail" in folder:
+            continue
+        #print(folder)
+        cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
+        cycle = int(cycle)
+        # avoid duplicates
+        if cycle not in fc:
+            fc.append(cycle)
+    return fc
 
-# get all data files
-agg_maindir = "/home/gadelmeier/Unbackedup/kwz/test1/"
-agg_subdirs = sorted([os.path.abspath(i) for i in os.listdir(agg_maindir) if os.path.isdir(os.path.abspath(i)) is True])
-agg_cycles  = set(sorted([int(i[-1]) for i in agg_subdirs]))
 
-print(agg_maindir, agg_subdirs, agg_cycles, os.listdir(agg_maindir))
+def get_files(maindir, filepattern):
+    files = []
 
-for curcycle in agg_cycles:
-    # load each stage
-    for subdir in agg_subdirs:
-        if "sysprep_{}".format(curcycle) in subdir:
-            molecule.load("lammpsdata", subdir + "/" + "sysprep_out_{}.lmpdat".format(curcycle))
-            molrep.modrep(curcycle, 0, sel="all", style=licor_style, material="AOChalky")
-            break
+    for cfile in pathlib.Path(maindir.glob("**/{}".format(filepattern))):
+        files.append(cfile)
 
-    for subdir in agg_subdirs:
-        if "quench_{}".format(curcycle) in subdir:
-            molecule.read(curcycle, "dcd", subdir + "/" + "quenching_{}.dcd".format(curcycle), beg=0, end=-1, waitfor=-1)
-            break
+    str_filenames = []
 
-    for subdir in agg_subdirs:
-        if "anneal_{}".format(curcycle) in subdir:
-            molecule.read(curcycle, "dcd", subdir + "/" + "annealing_{}.dcd".format(curcycle), beg=0, end=-1, waitfor=-1)
-            break
+    for filename in files:
+        full_path = filename.resolve()
+        str_filename = full_path.as_posix()
+        str_filenames.append(str_filename)
 
-    for subdir in agg_subdirs:
-        if "requench_{}".format(curcycle) in subdir:
-            molecule.read(curcycle, "dcd", subdir + "/" + "requench_out_{}.dcd".format(curcycle), beg=0, end=-1, waitfor=-1)
-            break
+    return str_filenames
+
+
+if __name__ == "__main__":
+    MAINDIR = "."
+    ITERATIONS = [0]
+
+    SYSPREP_LMPDAT_RAW = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat"
+    QUENCH_DCD_RAW = "{0}/quench_{1}/quench_{1}.dcd"
+    EQUIL_ANNEAL_DCD_RAW = "{0}/anneal_{1}/equil_anneal_{1}.dcd"
+    PROD_ANNEAL_DCD_RAW = "[0-9]_anneal_{0}.dcd"
+    #REQUENCH_LMPDAT = "{0}/requench_{1}/requench_out_{1}.lmpdat"
+    REQUENCH_DCD_RAW = "{0}/requench_{1}/requench_{1}.dcd"
+
+    # find all iterations
+    if ITERATIONS is None:
+        FINISHED_CYCLES = get_finished_cycles(MAINDIR)
+    else:
+        FINISHED_CYCLES = ITERATIONS
+
+    for CURCYCLE in FINISHED_CYCLES:
+        # sysprep
+        SYSPREP_LMPDAT = SYSPREP_LMPDAT_RAW.format(MAINDIR, CURCYCLE)
+        ag_vmd.vmd_load_molecule(SYSPREP_LMPDAT, style="Lines 1.000", molid=CURCYCLE)
+
+        # quenching
+        QUENCH_DCD = QUENCH_DCD_RAW.format(MAINDIR, CURCYCLE)
+        molecule.read(CURCYCLE, "dcd", QUENCH_DCD, beg=0, end=-1, waitfor=-1)
+
+        # annealing - heating up
+        EQUIL_ANNEAL_DCD = EQUIL_ANNEAL_DCD_RAW.format(MAINDIR, CURCYCLE)
+        molecule.read(CURCYCLE, "dcd", EQUIL_ANNEAL_DCD, beg=0, end=-1, waitfor=-1)
+
+        # annealing - productive
+        ANNEAL_DIR = "{}/anneal_{}".format(MAINDIR, CURCYCLE)
+        PROD_ANNEAL_DCDS = get_files(
+            "{0}/anneal_{1}/".format(ANNEAL_DIR, CURCYCLE),
+            PROD_ANNEAL_DCD_RAW.format(CURCYCLE))
+        for CUR_DCD in PROD_ANNEAL_DCDS:
+            molecule.read(CURCYCLE, "dcd", CUR_DCD, beg=0, end=-1, waitfor=-1)
+
+        # requenching
+        REQUENCH_DCD = REQUENCH_DCD_RAW.format(MAINDIR, CURCYCLE)
+        molecule.read(CURCYCLE, "dcd", REQUENCH_DCD, beg=0, end=-1, waitfor=-1)
