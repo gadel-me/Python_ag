@@ -443,7 +443,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 # Quenching
 ################################################################################
 
-def quench(lmpcuts, lmpdat_main, runs=5):
+def quench(lmpcuts, lmpdat_main, runs=20):
     """
     """
     natoms_main_sys = get_natms(lmpdat_main)
@@ -488,11 +488,11 @@ def quench(lmpcuts, lmpdat_main, runs=5):
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
-        cog *= -1 * 0.005
+        cog_force = cog * -1 * 0.005
     else:
-        cog = None
+        cog_force = None
 
-    cog = comm.bcast(cog, 0)
+    cog_force = comm.bcast(cog_force, 0)
     # barostatting, thermostatting only for atoms that will be docked
     lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
     quench_success = False
@@ -525,7 +525,7 @@ def quench(lmpcuts, lmpdat_main, runs=5):
 
         # give 'to-be-docked' molecules a little push if minimization was not
         # sufficient
-        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 50000").format(*cog))
+        lmp.command(("fix force grp_add_sys addforce {0} {1} {2} every 50000").format(*cog_force))
 
         # end function if anything goes wrong during the run
         try:
