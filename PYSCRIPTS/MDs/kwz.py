@@ -294,8 +294,10 @@ if __name__ == "__main__":
                                 sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_main=pre_requench_dcd, dcd_add=None, frame_idx_main=-1)
 
                             if sysprep_success is False:
-                                #agk.rename(sysprep_dir, sysprep_dir + "_failed_{}".format(sysprep_attempt))
-                                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                                #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                                random_int = str(np.random.randint(10, 10000))
+                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
+                                del random_int
                                 sysprep_attempt += 1
                         else:
                             sysprep_success = None
@@ -317,8 +319,12 @@ if __name__ == "__main__":
 
                         if quench_success is False:
                             if rank == 0:
-                                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                                #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                                #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                                random_int = str(np.random.randint(10, 10000))
+                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
+                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
+                                del random_int
 
                             #del fail_appendix
                             quench_attempts += 1
@@ -378,7 +384,7 @@ if __name__ == "__main__":
 
                             else:
                                 print("Could not create large enough voids, void creation needs revision")
-                                agk.rename(lmpsettings_void.output_lmprst, lmpsettings_void.inter_lmprst)
+                                os.rename(lmpsettings_void.output_lmprst, lmpsettings_void.inter_lmprst)
                                 exit(102)
 
                         # combine solute and solvent
@@ -414,9 +420,15 @@ if __name__ == "__main__":
                         # stop further calculations and start from the beginning
                         if not aggregate_ok:
                             if rank == 0:
-                                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                                agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+                                #TODO: convert the following into a subroutine
+                                #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                                #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                                #os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+                                random_int = str(np.random.randint(10, 10000))
+                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
+                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
+                                os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
+                                del random_int
 
                     else:
                         aggregate_ok = False
@@ -428,6 +440,14 @@ if __name__ == "__main__":
                         anneal_attempts = 0
                         quench_attempts = 0
                         sysprep_attempt = 0
+
+                        if rank == 0:
+                            random_int = str(np.random.randint(10, 10000))
+                            os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
+                            os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
+                            os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
+                            del random_int
+
                         continue
 
                     # productive run
@@ -444,9 +464,14 @@ if __name__ == "__main__":
 
                         # rename folders of failed run
                         if rank == 0:
-                            agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                            agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                            agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+                            #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
+                            #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
+                            #os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
+                            random_int = str(np.random.randint(10, 10000))
+                            os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
+                            os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
+                            os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
+                            del random_int
 
                         #pdb.set_trace()
                         continue
@@ -474,10 +499,16 @@ if __name__ == "__main__":
                 anneal_attempts = 0
                 quench_attempts = 0
                 sysprep_attempt = 0
-                agk.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
-                agk.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
-                agk.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
-                agk.rename(requench_dir, requench_dir.rstrip("/") + "_failed_" + str(np.random.randint(10, 100)))
+
+                if rank == 0:
+                    random_int = str(np.random.randint(10, 10000))
+                    os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
+                    os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
+                    os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
+                    os.rename(requench_dir, requench_dir.rstrip("/") + "_failed_" + random_int)
+                    del random_int
+
+                del random_int
                 continue
 
             print("***Requenching-Info: Requenching done!")

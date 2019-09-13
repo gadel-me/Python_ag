@@ -173,6 +173,9 @@ def write_to_log(string, filename="kwz_log"):
 
 def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=True):
     """
+    TODO: This function should also return something when the simulation goes
+    wrong so we can restart the cycle (but danger of never ending due to same
+    error?)
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -211,10 +214,19 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
     else:
         raise Warning("Style not (yet) implemented!")
 
-    lmp.command("run {}".format(lmpcuts.runsteps))
+    lmp.command("reset_timestep 0")
+
+    try:
+        lmp.command("run {}".format(lmpcuts.runsteps))
+    except:
+        # prevent deadlock by not nicely ending the whole program if more
+        # than one rank is used
+        if size > 1:
+            MPI.COMM_WORLD.Abort()
+
+    #lmp.command("run {}".format(lmpcuts.runsteps))
     #lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
     lmpcuts.unfix_undump(pylmp, lmp)
-    #lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
@@ -243,9 +255,18 @@ def nose_hoover_md(lmpcuts, group="all"):
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
         lmpcuts.minimize(lmp, style="cg")
 
-    lmp.command("run {}".format(lmpcuts.runsteps))
-    lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("reset_timestep 0")
+
+    try:
+        lmp.command("run {}".format(lmpcuts.runsteps))
+    except:
+        # prevent deadlock by not nicely ending the whole program if more
+        # than one rank is used
+        if size > 1:
+            MPI.COMM_WORLD.Abort()
+
+    lmpcuts.unfix_undump(pylmp, lmp)
+    #lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
@@ -331,7 +352,7 @@ def _create_new_box(md_sys):
     #box_diameter = md_sys.get_system_radius(-1) + 100
     # diameter with an additional size of 20 should suffice since it
     # is quite expensive for simulation runs with solvent
-    box_diameter = md_sys.get_system_radius(-1) + 30
+    box_diameter = md_sys.get_system_radius(-1) + 50
     #box_diameter = md_sys.get_system_radius(-1) + 200  # very large box which will be altered later anyways
     pi_2 = math.pi / 2
     new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
@@ -552,7 +573,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
 
         # perform a little molecular dynamics simulation with
         # half of the lmpcuts.runsteps
-        _run(int(lmpcuts.steps * 0.5))
+        _run(int(lmpcuts.runsteps))
 
         # check aggregate, i.e. docking was a success
         quench_success = _check_success()
@@ -562,20 +583,24 @@ def quench(lmpcuts, lmpdat_main, runs=20):
 
         # give 'to-be-docked' molecules a little push if minimization was not
         # sufficient for aggregation
-        addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
-        addforce_cmd = addforce_cmd.format(c=cog_force)
-        lmp.command(addforce_cmd)
-        _run(2)
+        #addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
+        #addforce_cmd = addforce_cmd.format(c=cog_force)
+        #lmp.command(addforce_cmd)
+        import time
+        time.sleep(30)
+
+        lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(*cog))
+        _run(1)
 
         # remove pushing force
-        lmp.command("unfix push")
+        #lmp.command("unfix push")
 
         # run the 2nd half of the simulation with push 'grp_add_sys'
-        _run(int(lmpcuts.steps * 0.25))
+        _run(int(lmpcuts.runsteps * 0.25))
 
         # stop to-be-docked molecules from moving
         lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(0.0))
-        _run(int(lmpcuts.steps * 0.25))
+        _run(int(lmpcuts.runsteps * 0.25))
 
     return quench_success
 
@@ -803,9 +828,9 @@ def requench(lmpcuts, minstyle="cg"):
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    lmp.command("reset_timestep 0")
     lmpcuts.minimize(lmp, style=minstyle)
     lmpcuts.unfix_undump(pylmp, lmp)
-    lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
@@ -933,9 +958,6 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmp.file(lmpcuts.settings_file)
     lmpcuts.load_system(lmp)
 
-    # reset the timestep in order to have a consistent number of steps in the
-    # log- and dcd-file (steps may differ after e.g. a minimization)
-    lmp.command("reset_timestep 0")
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
 
@@ -957,6 +979,11 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     lmpcuts.thermo(lmp, hb_group="resname_atoms")
     #pdb.set_trace()
     lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
+
+    # reset the timestep in order to have a consistent number of steps in the
+    # log- and dcd-file (steps may differ after e.g. a minimization)
+    lmp.command("reset_timestep 0")
+
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.unfix_undump(pylmp, lmp)
     # not sure if resetting the timestep is necessary
