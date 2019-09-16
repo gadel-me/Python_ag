@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
+import pdb
 import os
 import re
 import pathlib
@@ -42,13 +43,15 @@ def get_finished_cycles(maindir):
         # avoid duplicates
         if cycle not in fc:
             fc.append(cycle)
+
     return fc
 
 
 def get_files(maindir, filepattern):
     files = []
+    #pdb.set_trace()
 
-    for cfile in pathlib.Path(maindir.glob("**/{}".format(filepattern))):
+    for cfile in pathlib.Path(maindir).glob("**/{}".format(filepattern)):
         files.append(cfile)
 
     str_filenames = []
@@ -63,7 +66,12 @@ def get_files(maindir, filepattern):
 
 if __name__ == "__main__":
     MAINDIR = "."
-    ITERATIONS = [0]
+    ITERATIONS = None
+
+    SELECTIONS = [
+        {"style": "Lines 1.0", "color": "Name", "selection": "type 'c'", "material": "Basic1Pantone"},
+        {"style": "Lines 2.0", "color": "Name", "selection": "name C15 or type hn or type o or name N2", "material": "Basic1Pantone"}
+    ]
 
     SYSPREP_LMPDAT_RAW = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat"
     QUENCH_DCD_RAW = "{0}/quench_{1}/quench_{1}.dcd"
@@ -82,6 +90,16 @@ if __name__ == "__main__":
         # sysprep
         SYSPREP_LMPDAT = SYSPREP_LMPDAT_RAW.format(MAINDIR, CURCYCLE)
         ag_vmd.vmd_load_molecule(SYSPREP_LMPDAT, style="Lines 1.000", molid=CURCYCLE)
+        molrep.set_visible(CURCYCLE, 0, False)
+
+        # add representations
+        for CSEL in SELECTIONS:
+            molrep.addrep(
+                CURCYCLE,
+                style=CSEL["style"],
+                color=CSEL["color"],
+                selection=CSEL["selection"],
+                material=CSEL["material"])
 
         # quenching
         QUENCH_DCD = QUENCH_DCD_RAW.format(MAINDIR, CURCYCLE)
@@ -102,3 +120,4 @@ if __name__ == "__main__":
         # requenching
         REQUENCH_DCD = REQUENCH_DCD_RAW.format(MAINDIR, CURCYCLE)
         molecule.read(CURCYCLE, "dcd", REQUENCH_DCD, beg=0, end=-1, waitfor=-1)
+        VMD.evaltcl("mol off {}".format(CURCYCLE))

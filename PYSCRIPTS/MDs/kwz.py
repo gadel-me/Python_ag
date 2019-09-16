@@ -131,7 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("-heat_tstop", type=int, default=300)
     parser.add_argument("-heat_pstart", type=int, default=50)
     parser.add_argument("-heat_pstop", type=int, default=1)
-    parser.add_argument("-heat_steps", type=int, default=50000)
+    parser.add_argument("-heat_steps", type=int, default=100000)
     parser.add_argument("-heat_logsteps", type=int, default=1000)
 
     # annealing
@@ -294,10 +294,9 @@ if __name__ == "__main__":
                                 sysprep_success = agk.sysprep(lmpsettings_sysprep.output_lmpdat, main_prep_lmpdat, args.lmpa[idx_lmpa], dcd_main=pre_requench_dcd, dcd_add=None, frame_idx_main=-1)
 
                             if sysprep_success is False:
-                                #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                                random_int = str(np.random.randint(10, 10000))
-                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
-                                del random_int
+                                timestamp = agk.generate_timestamp()
+                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                                del timestamp
                                 sysprep_attempt += 1
                         else:
                             sysprep_success = None
@@ -319,12 +318,10 @@ if __name__ == "__main__":
 
                         if quench_success is False:
                             if rank == 0:
-                                #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                                #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                                random_int = str(np.random.randint(10, 10000))
-                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
-                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
-                                del random_int
+                                timestamp = agk.generate_timestamp()
+                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
+                                del timestamp
 
                             #del fail_appendix
                             quench_attempts += 1
@@ -420,15 +417,11 @@ if __name__ == "__main__":
                         # stop further calculations and start from the beginning
                         if not aggregate_ok:
                             if rank == 0:
-                                #TODO: convert the following into a subroutine
-                                #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                                #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                                #os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
-                                random_int = str(np.random.randint(10, 10000))
-                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
-                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
-                                os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
-                                del random_int
+                                timestamp = agk.generate_timestamp()
+                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
+                                os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
+                                del timestamp
 
                     else:
                         aggregate_ok = False
@@ -442,11 +435,11 @@ if __name__ == "__main__":
                         sysprep_attempt = 0
 
                         if rank == 0:
-                            random_int = str(np.random.randint(10, 10000))
-                            os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
-                            os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
-                            os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
-                            del random_int
+                            timestamp = agk.generate_timestamp()
+                            os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                            os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
+                            os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
+                            del timestamp
 
                         continue
 
@@ -467,11 +460,11 @@ if __name__ == "__main__":
                             #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
                             #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
                             #os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
-                            random_int = str(np.random.randint(10, 10000))
-                            os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
-                            os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
-                            os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
-                            del random_int
+                            timestamp = agk.generate_timestamp()
+                            os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                            os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
+                            os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
+                            del timestamp
 
                         #pdb.set_trace()
                         continue
@@ -501,14 +494,14 @@ if __name__ == "__main__":
                 sysprep_attempt = 0
 
                 if rank == 0:
-                    random_int = str(np.random.randint(10, 10000))
-                    os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + random_int)
-                    os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + random_int)
-                    os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + random_int)
-                    os.rename(requench_dir, requench_dir.rstrip("/") + "_failed_" + random_int)
-                    del random_int
+                    timestamp = agk.generate_timestamp()
+                    os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                    os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
+                    os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
+                    os.rename(requench_dir, requench_dir.rstrip("/") + "_failed_" + timestamp)
+                    del timestamp
 
-                del random_int
+                del timestamp
                 continue
 
             print("***Requenching-Info: Requenching done!")

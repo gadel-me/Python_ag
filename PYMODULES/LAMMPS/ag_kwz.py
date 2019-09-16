@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 import pdb
+import datetime
 import os
 #import copy
 import shutil as sl
@@ -38,6 +39,16 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 #==============================================================================#
 # Helper functions
 #==============================================================================#
+def generate_timestamp():
+    """[summary]
+
+    [description]
+    """
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%Y%m%d%H%M%S")
+    return timestamp
+
+
 def rename(src, dst):
     """
     Force renaming by deleting a folder with the same name as dst.
@@ -547,7 +558,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
-        cog_force = cog * -1 * 0.005
+        cog_force = cog * -1E-4
     else:
         cog_force = None
 
@@ -583,17 +594,18 @@ def quench(lmpcuts, lmpdat_main, runs=20):
 
         # give 'to-be-docked' molecules a little push if minimization was not
         # sufficient for aggregation
-        #addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
-        #addforce_cmd = addforce_cmd.format(c=cog_force)
-        #lmp.command(addforce_cmd)
-        import time
-        time.sleep(30)
+        addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
+        addforce_cmd = addforce_cmd.format(c=cog_force)
+        lmp.command(addforce_cmd)
+        #import time
+        #time.sleep(30)
 
-        lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(*cog))
+        # set force does not work
+        #lmp.command("fix push grp_add_sys setforce {0} {0} {0}".format(*cog))
         _run(1)
 
         # remove pushing force
-        #lmp.command("unfix push")
+        lmp.command("unfix push")
 
         # run the 2nd half of the simulation with push 'grp_add_sys'
         _run(int(lmpcuts.runsteps * 0.25))
