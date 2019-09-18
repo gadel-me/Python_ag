@@ -1207,6 +1207,85 @@ class Universe(object):
 
         return close_contacts
 
+    def wrap_cell(self, frame_id=-1, same_molecule=True):
+        """Wrap coordinates from outside the box inside.
+
+        Coordinates that are outside the box will be wrapped back in.
+        Currently only available for lammps data files and cubic boxes!
+
+        Parameters
+        ----------
+        frame_id : {number}, optional
+            [description] (the default is -1, which [default_description])
+        """
+        def _shift_necessary(atm_idx):
+            """[summary]
+
+            [description]
+
+            Parameters
+            ----------
+            atm_idx : {[type]}
+                [description]
+
+            """
+            box = self.ts_boxes[frame_id]
+            cp_box = copy.copy(self.ts_boxes[frame_id])
+            cp_box.box_lmp2cart()
+            cp_box.crt_a = np.array(cp_box.crt_a)
+            cp_box.crt_b = np.array(cp_box.crt_b)
+            cp_box.crt_c = np.array(cp_box.crt_c)
+
+            # transpose about a
+            if self.ts_coords[frame_id][atm_idx][0] < box.lmp_xlo:
+                shift_a = cp_box.crt_a
+            elif self.ts_coords[frame_id][atm_idx][0] > box.lmp_xhi:
+                shift_a = cp_box.crt_a * -1
+            else:
+                shift_a = np.array([0, 0, 0])
+
+            # transpose about b
+            if self.ts_coords[frame_id][atm_idx][1] < box.lmp_ylo:
+                shift_b = cp_box.crt_b
+            elif self.ts_coords[frame_id][atm_idx][1] > box.lmp_yhi:
+                shift_b = cp_box.crt_b * -1
+            else:
+                shift_b = np.array([0, 0, 0])
+
+            # transpose about c
+            if self.ts_coords[frame_id][atm_idx][2] < box.lmp_zlo:
+                shift_c = cp_box.crt_c
+            elif self.ts_coords[frame_id][atm_idx][2] > box.lmp_zhi:
+                shift_c = cp_box.crt_c * -1
+            else:
+                shift_c = np.array([0, 0, 0])
+
+            self.ts_coords[frame_id][atm_idx] += shift_a
+            self.ts_coords[frame_id][atm_idx] += shift_b
+            self.ts_coords[frame_id][atm_idx] += shift_c
+
+        print("***Info: Wrapping coordinates outside the box back in")
+        if self.ts_boxes[frame_id].boxtype != "lammps":
+            raise ValueError("(Currently) lammps boxes only!")
+
+        # exclude atoms
+        excluded_atm_idxs = []
+
+        # move all negative coordinates to the positive quadrant
+        for idx in xrange(len(self.ts_coords[frame_id])):
+
+            if idx in excluded_atm_idxs:
+                continue
+
+            _shift_necessary(idx)
+
+            if same_molecule is True:
+                idxs_to_shift = self.same_molecule_as(idx)
+                excluded_atm_idxs.extend(idxs_to_shift)
+
+                for idx_shft in idxs_to_shift:
+                    _shift_necessary(idxs_to_shift)
+
     def unwrap_cell(self, frame_id=-1):
         """
         Unwrap the unit cell, i.e. move all atoms to the quadrant that is positive

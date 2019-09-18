@@ -131,7 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("-heat_tstop", type=int, default=300)
     parser.add_argument("-heat_pstart", type=int, default=50)
     parser.add_argument("-heat_pstop", type=int, default=1)
-    parser.add_argument("-heat_steps", type=int, default=100000)
+    parser.add_argument("-heat_steps", type=int, default=200000)
     parser.add_argument("-heat_logsteps", type=int, default=1000)
 
     # annealing
@@ -415,13 +415,13 @@ if __name__ == "__main__":
                         aggregate_ok = solution_sys.check_aggregate(-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
 
                         # stop further calculations and start from the beginning
-                        if not aggregate_ok:
-                            if rank == 0:
-                                timestamp = agk.generate_timestamp()
-                                os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
-                                os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
-                                os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
-                                del timestamp
+                        #if not aggregate_ok:
+                        #    if rank == 0:
+                        #        timestamp = agk.generate_timestamp()
+                        #        os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
+                        #        os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
+                        #        os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
+                        #        del timestamp
 
                     else:
                         aggregate_ok = False

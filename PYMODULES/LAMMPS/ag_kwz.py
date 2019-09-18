@@ -480,17 +480,18 @@ def quench(lmpcuts, lmpdat_main, runs=20):
     """
     def _check_success():
         """
-        Helper function to check the outcome of the calculation and closing
-        lammps.
+        Check aggregation state and close lammps instance properly.
         """
         if rank == 0:
             quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
-            successed = quench_sys.check_aggregate()
+            succeeded = quench_sys.check_aggregate()
+        else:
+            succeeded = False
 
-        successed = comm.bcast(successed, 0)
+        succeeded = comm.bcast(succeeded, 0)
 
         # stop trying if it was
-        if successed is True:
+        if succeeded is True:
             # write restart file
             lmpcuts.unfix_undump(pylmp, lmp)
             lmp.command("reset_timestep 0")
@@ -498,7 +499,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
             lmp.command("clear")
             lmp.close()
 
-        return successed
+        return succeeded
 
     def _run(steps):
         """
@@ -558,7 +559,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
-        cog_force = cog * -1E-4
+        cog_force = cog * -1
     else:
         cog_force = None
 
@@ -582,6 +583,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         if quench_success is True:
             break
 
+        del quench_success
         # perform a little molecular dynamics simulation with
         # half of the lmpcuts.runsteps
         _run(int(lmpcuts.runsteps))
@@ -592,6 +594,7 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         if quench_success is True:
             break
 
+        del quench_success
         # give 'to-be-docked' molecules a little push if minimization was not
         # sufficient for aggregation
         addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
@@ -608,10 +611,12 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         lmp.command("unfix push")
 
         # run the 2nd half of the simulation with push 'grp_add_sys'
-        _run(int(lmpcuts.runsteps * 0.25))
+        _run(int(lmpcuts.runsteps * 0.5))
 
         # stop to-be-docked molecules from moving
-        lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(0.0))
+        #lmp.command("velocity grp_add_sys set 0.0 0.0 0.0")
+        #lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(0.0))
+
         _run(int(lmpcuts.runsteps * 0.25))
 
     return quench_success
@@ -1292,7 +1297,7 @@ def write_requench_data(lmpdat_a, dcd_ab, index,
         dcd file with frames to read from the solvate-solvent system
 
     index : int
-        index to extract the frame from
+        index to extract the frame from (i.e. index of energetically best frame)
 
     """
     sys_lmpdat_a = aglmp.read_lmpdat(lmpdat_a)
@@ -1300,10 +1305,17 @@ def write_requench_data(lmpdat_a, dcd_ab, index,
 
     sys_dcd_ab = aglmp.LmpStuff()
     sys_dcd_ab.import_dcd(dcd_ab)
+
+    # read only the best frame which will be appended to the existing ones
     sys_dcd_ab.read_frames(frame=index, to_frame=index + 1)
 
     # write only relevant coordinates for system a
     sys_lmpdat_a.ts_coords.append(sys_dcd_ab.ts_coords[-1][:sys_lmpdat_a_natoms])
+
+    # wrap coordinates outside the box back inside (may happen when a molecule
+    # flies of and reconnects with the aggregate)
+    sys_lmpdat_a.wrap_cell(frame_id=-1, same_molecule=True)
+
     sys_lmpdat_a.change_indices()
     sys_lmpdat_a.write_lmpdat(output_lmpdat_a, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
 
