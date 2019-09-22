@@ -21,14 +21,10 @@ import pdb
 import os
 import collections
 import pandas as pd
-import statsmodels.api as sm
-import scipy.stats
-from scipy.optimize import curve_fit
 import numpy as np
-
+import matplotlib as mpl
 
 # use matplotlib w / w/o xserver
-import matplotlib as mpl
 
 try:
     os.environ["DISPLAY"]
@@ -36,6 +32,9 @@ except KeyError:
     mpl.use('Agg')
 
 import matplotlib.pyplot as plt
+#import statsmodels.api as sm
+import scipy.stats
+from scipy.optimize import curve_fit
 
 
 def _print_result(p_value, alpha, statistic, test_name, filename=None):
