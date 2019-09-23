@@ -146,7 +146,7 @@ if __name__ == "__main__":
     # requenching
     parser.add_argument("-requench_tstart", type=int, default=1)
     parser.add_argument("-requench_tstop", type=int, default=1)
-    parser.add_argument("-requench_steps", type=int, default=150000)
+    parser.add_argument("-requench_steps", type=int, default=25000)
     parser.add_argument("-requench_logsteps", type=int, default=500)
 
     args = parser.parse_args()
