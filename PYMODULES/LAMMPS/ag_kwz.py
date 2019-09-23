@@ -829,7 +829,21 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
 
 
 def requench(lmpcuts, minstyle="cg"):
-    """
+    """[summary]
+
+    [description]
+
+    Parameters
+    ----------
+    lmpcuts : {[type]}
+        [description]
+    minstyle : {str}, optional
+        [description] (the default is "cg", which [default_description])
+
+    Returns
+    -------
+    [type]
+        [description]
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -840,12 +854,14 @@ def requench(lmpcuts, minstyle="cg"):
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmp.command("fix integrator all nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
     lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
     lmp.command("reset_timestep 0")
+    lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.minimize(lmp, style=minstyle)
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))

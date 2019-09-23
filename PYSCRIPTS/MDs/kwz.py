@@ -96,8 +96,8 @@ if __name__ == "__main__":
     parser.add_argument("-pa", "-pattern_add", nargs="*", default=[0], type=int, help=pa_help)
 
     # quenching
-    parser.add_argument("-quench_temp_start", type=int, default=5)
-    parser.add_argument("-quench_temp_stop", type=int, default=5)
+    parser.add_argument("-quench_tstart", type=int, default=5)
+    parser.add_argument("-quench_tstop", type=int, default=5)
     parser.add_argument("-quench_steps", type=int, default=250000)
     parser.add_argument("-quench_logsteps", type=int, default=1000)
 
@@ -144,6 +144,8 @@ if __name__ == "__main__":
     parser.add_argument("-anneal_logsteps", type=int, default=500)
 
     # requenching
+    parser.add_argument("-requench_tstart", type=int, default=1)
+    parser.add_argument("-requench_tstop", type=int, default=1)
     parser.add_argument("-requench_steps", type=int, default=150000)
     parser.add_argument("-requench_logsteps", type=int, default=500)
 
@@ -198,7 +200,7 @@ if __name__ == "__main__":
         quench_rst = quench_dir + "quench_rst_{}.lmprst".format(curcycle)
         quench_dcd = quench_dir + "quench_{}.dcd".format(curcycle)
         quench_log = quench_dir + "quench_{}.lmplog".format(curcycle)
-        lmpsettings_quench = aglmpsim.LmpSim(tstart=args.quench_temp_start, tstop=args.quench_temp_stop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out_lmpdat, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
+        lmpsettings_quench = aglmpsim.LmpSim(tstart=args.quench_tstart, tstop=args.quench_tstop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out_lmpdat, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
 
         # anneal -> solvent
         cut_solv_lmpdat = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
@@ -254,7 +256,7 @@ if __name__ == "__main__":
         requench_rst = requench_dir + "requench_{}".format(curcycle) + "_tmp.lmprst"
         requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
         requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
-        lmpsettings_requench = aglmpsim.LmpSim(logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=requench_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
+        lmpsettings_requench = aglmpsim.LmpSim(tstart=args.requench_tstart, tstop=args.requench_tstop, logsteps=args.requench_logsteps, runsteps=args.requench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=requench_lmpdat, inter_lmprst=requench_rst, output_lmprst=requench_out, output_dcd=requench_dcd, output_lmplog=requench_log)
 
         # important files from previous run
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(PWD, curcycle - 1)
