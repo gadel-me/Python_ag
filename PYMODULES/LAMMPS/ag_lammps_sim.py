@@ -126,11 +126,11 @@ class LmpSim(object):
         if unwrap is True:
             lmp.command("dump_modify trajectory unwrap yes")
 
-    def fix_berendsen(self, lmp, group, ensemble, keyword):
+    def fix_berendsen(self, lmp, group, ensemble, keyword, integrator="nve"):
         """
         """
         # nve
-        lmp.command("fix integrator {} nve".format(group))
+        lmp.command("fix integrator {} {}".format(group, integrator))
 
         # nvt
         if (self.tstart is not None and self.tstop is not None) and (ensemble == "npt" or ensemble == "nvt"):

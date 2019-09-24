@@ -787,9 +787,9 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
         lmp.file(lmpcuts.pc_file)
 
     #lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
-    lmpcuts.fix_berendsen(lmp, group="all", ensemble="npt", keyword="iso")
+    lmpcuts.fix_berendsen(lmp, group="all", ensemble="npt", keyword="iso", integrator="nve/limit 0.2")
     #lmp.command("unfix integrator")
-    lmp.command("fix limit_speed all nve/limit 0.05")
+    #lmp.command("fix limit_movement all nve/limit 0.05")
     _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
 
     factor_start = 10
