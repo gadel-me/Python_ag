@@ -1211,7 +1211,7 @@ class Universe(object):
         """Wrap coordinates from outside the box inside.
 
         Coordinates that are outside the box will be wrapped back in.
-        Currently only available for lammps data files and cubic boxes!
+        Currently only available for lammps data files and orthogonal boxes!
 
         Parameters
         ----------
@@ -1238,10 +1238,13 @@ class Universe(object):
 
             # transpose about a
             if self.ts_coords[frame_id][atm_idx][0] < box.lmp_xlo:
+                # shift by vector a (atom is currently 'below')
                 shift_a = cp_box.crt_a
             elif self.ts_coords[frame_id][atm_idx][0] > box.lmp_xhi:
+                # shift by vector -a (atom is currently 'above')
                 shift_a = cp_box.crt_a * -1
             else:
+                # shift nothing, coordinate is inside the box
                 shift_a = np.array([0, 0, 0])
 
             # transpose about b
@@ -1279,12 +1282,16 @@ class Universe(object):
 
             _shift_necessary(idx)
 
+            # shift all atoms of the same molecule and add them to the
+            # atoms, that need not be shifted any further
             if same_molecule is True:
                 idxs_to_shift = self.same_molecule_as(idx)
                 excluded_atm_idxs.extend(idxs_to_shift)
 
                 for idx_shft in idxs_to_shift:
                     _shift_necessary(idxs_to_shift)
+
+        pdb.set_trace()
 
     def unwrap_cell(self, frame_id=-1):
         """

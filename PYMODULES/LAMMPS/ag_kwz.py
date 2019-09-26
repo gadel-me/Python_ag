@@ -1341,3 +1341,5 @@ def write_requench_data(lmpdat_a, dcd_ab, index,
         sys_lmpdat_b.ts_coords.append(sys_dcd_ab.ts_coords[sys_lmpdat_a_natoms + 1:])
         sys_lmpdat_b.change_indices()
         sys_lmpdat_b.write_lmpdat(output_lmpdat_b, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
+
+    pdb.set_trace()
