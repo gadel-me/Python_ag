@@ -1325,6 +1325,10 @@ def write_requench_data(lmpdat_a, dcd_ab, index,
     # read only the best frame which will be appended to the existing ones
     sys_dcd_ab.read_frames(frame=index, to_frame=index + 1)
 
+    # apply box from dcd, since we are dealing with coordinates considering
+    # that box (not doing this leads to errors during wrapping)
+    sys_lmpdat_a.ts_boxes = sys_dcd_ab.ts_boxes
+
     # write only relevant coordinates for system a
     sys_lmpdat_a.ts_coords.append(sys_dcd_ab.ts_coords[-1][:sys_lmpdat_a_natoms])
 
@@ -1341,5 +1345,3 @@ def write_requench_data(lmpdat_a, dcd_ab, index,
         sys_lmpdat_b.ts_coords.append(sys_dcd_ab.ts_coords[sys_lmpdat_a_natoms + 1:])
         sys_lmpdat_b.change_indices()
         sys_lmpdat_b.write_lmpdat(output_lmpdat_b, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
-
-    pdb.set_trace()

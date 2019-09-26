@@ -1291,7 +1291,6 @@ class Universe(object):
                 for idx_shft in idxs_to_shift:
                     _shift_necessary(idxs_to_shift)
 
-        pdb.set_trace()
 
     def unwrap_cell(self, frame_id=-1):
         """
