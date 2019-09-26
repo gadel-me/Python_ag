@@ -28,7 +28,7 @@ from networkx.algorithms.components.connected import connected_components
 #import rmsd
 import pdb
 
-__version__ = "2018-01-10"
+__version__ = "2019-09-26"
 
 #=================
 # Helper Functions

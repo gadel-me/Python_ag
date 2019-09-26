@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
                         # change box size according to the coordinates from
                         # quenching in order to save space
-                        solvate_sys.def_boxes_by_coords(addition=(15, 15, 15), boxtype="lammps")
+                        solvate_sys.def_boxes_by_coords(addition=(20, 20, 20), boxtype="lammps")
 
                     else:
                         solvate_sys = None
