@@ -1178,6 +1178,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
         # test given data so far (test applies to each newly carried out run)
         aggregate_ok = False
+        normally_dstributed = False
 
         if rank == 0:
             # caveat:   each first frame of output_lmplog is omitted since
@@ -1188,23 +1189,23 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             # last X % of all frames (from end to start)
             normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], output=output)
 
-            # check if aggregate is still fine after the last run
-            if normally_dstributed is True:
-                solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
-                solution_sys_atoms_idxs = range(len(solution_sys.atoms))
-                aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+            # check if aggregate is still fine after the last run (only if we have a normal distribution)
+            solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+            solution_sys_atoms_idxs = range(len(solution_sys.atoms))
+            aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+            del (num_frames_to_check, solution_sys, solution_sys_atoms_idxs)
 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
+        normally_dstributed = comm.bcast(normally_dstributed, root=0)
 
-        # if the aggregate is ok and equilibration was achieved among the total
-        # simulation time, then write the ouput restart file and stop further
-        # simulating
-        if aggregate_ok is True:
-            sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
+        # stop further measuring if the aggregate is not ok or if the aggregate
+        # is ok and the run is equilibrated (i.e. normal distribution of the
+        # potential energy of the whole system)
+        if aggregate_ok is False or (aggregate_ok is True and normally_dstributed is True):
             break
 
         # prevent the 'else' condition (from for loop above) to execute (happens
-        # when 'aggregate_ok' evaluates as 'False' for the very last attempt)
+        # if 'aggregate_ok' evaluates as 'False' for the very last attempt)
         if run_idx == (attempts - 1):
             break
 
