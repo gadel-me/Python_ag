@@ -1219,7 +1219,7 @@ class Universe(object):
             [description] (the default is -1, which [default_description])
         """
         def _shift_necessary(atm_idx):
-            """[summary]
+            """Needs to be overhauled!
 
             [description]
 
