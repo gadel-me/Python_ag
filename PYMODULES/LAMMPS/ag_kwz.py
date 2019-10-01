@@ -1098,7 +1098,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         in the lammps manual for barostatting: iso, aniso, tri. Default is 'None',
         which means no barostatting is done (i.e. nvt).
     output : str, optional
-        Prefix for all files which are written by the run.
+        Prefix for all files which were/are written by the run.
 
     Returns
     -------
@@ -1116,14 +1116,10 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         are always in accordance to the current DCD file.
 
     """
-    import time
-
-    #all_rmsds = []
     all_data = []
     solvate_sys_natoms = len(atm_idxs_solvate)
     dcd_files = []
     log_files = []
-
     attempts = 10
 
     for run_idx in xrange(attempts):
@@ -1131,7 +1127,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         dcd_path, dcd_filename = os.path.split(lmpcuts.output_dcd)
         log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
 
-        # prepend the index to the basename
+        # prepend the index to the base-name
         if dcd_filename[0].isdigit() is True:
             dcd_filename = "{}{}".format(run_idx, dcd_filename[1:])
         else:
@@ -1198,19 +1194,19 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
         normally_dstributed = comm.bcast(normally_dstributed, root=0)
 
-        # stop further measuring if the aggregate is not ok or if the aggregate
+        # stop further runs if the aggregate is not ok or if the aggregate
         # is ok and the run is equilibrated (i.e. normal distribution of the
         # potential energy of the whole system)
         if aggregate_ok is False or (aggregate_ok is True and normally_dstributed is True):
             break
 
-        # prevent the 'else' condition (from for loop above) to execute (happens
+        # the following prevents the 'else' condition (from for loop above) to execute (happens
         # if 'aggregate_ok' evaluates as 'False' for the very last attempt)
         if run_idx == (attempts - 1):
             break
 
     # this only applies if all attempts already exist, but the
-    # 'lmpcuts.output_lmprst' file was never written (e.g. some runs were aborted)
+    # 'lmpcuts.output_lmprst' file was never written (e.g. due to aborted runs)
     else:
         aggregate_ok = False
         if rank == 0:
@@ -1225,13 +1221,14 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             aggregate_ok = False
 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
+        normally_dstributed = comm.bcast(normally_dstributed, root=0)
 
-        if aggregate_ok is True:
+        if aggregate_ok is True and normally_dstributed is True:
             sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
 
     #pdb.set_trace()
 
-    return (aggregate_ok, dcd_files, log_files)
+    return (aggregate_ok and normally_dstributed, dcd_files, log_files)
 
 
 def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to_check=80):
