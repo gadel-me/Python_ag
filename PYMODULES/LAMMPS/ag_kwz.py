@@ -1191,8 +1191,8 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
             del (num_frames_to_check, solution_sys, solution_sys_atoms_idxs)
 
-        aggregate_ok = comm.bcast(aggregate_ok, root=0)
-        normally_dstributed = comm.bcast(normally_dstributed, root=0)
+        aggregate_ok = comm.bcast(aggregate_ok)
+        normally_dstributed = comm.bcast(normally_dstributed)
 
         # stop further runs if the aggregate is not ok or if the aggregate
         # is ok and the run is equilibrated (i.e. normal distribution of the
