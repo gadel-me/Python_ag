@@ -100,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument("-quench_tstop", type=int, default=5)
     parser.add_argument("-quench_steps", type=int, default=250000)
     parser.add_argument("-quench_logsteps", type=int, default=1000)
+    parser.add_argument("-quench_np", type=int, default=None, help="Number of cores for quenching subroutine")
 
     # relax cut solvent
     parser.add_argument("-relax_cut_tstart", type=int, default=200)
@@ -204,7 +205,7 @@ if __name__ == "__main__":
         quench_rst = quench_dir + "quench_rst_{}.lmprst".format(curcycle)
         quench_dcd = quench_dir + "quench_{}.dcd".format(curcycle)
         quench_log = quench_dir + "quench_{}.lmplog".format(curcycle)
-        lmpsettings_quench = aglmpsim.LmpSim(tstart=args.quench_tstart, tstop=args.quench_tstop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out_lmpdat, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu)
+        lmpsettings_quench = aglmpsim.LmpSim(tstart=args.quench_tstart, tstop=args.quench_tstop, logsteps=args.quench_logsteps, runsteps=args.quench_steps, pc_file=args.pair_coeffs, settings_file=args.set, input_lmpdat=sysprep_out_lmpdat, inter_lmprst=quench_rst, output_lmprst=quench_out, output_dcd=quench_dcd, output_lmplog=quench_log, gpu=args.gpu, ncores=args.quench_np)
 
         # anneal -> solvent
         cut_solv_lmpdat = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
@@ -324,7 +325,20 @@ if __name__ == "__main__":
                         if rank == 0:
                             agk.create_folder(quench_dir)
 
-                        quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat)
+                        if rank < lmpsettings_quench.ncores:
+                            quench_tasks_color = 0
+                        else:
+                            quench_tasks_color = 1
+
+                        quench_split = comm.Split(quench_tasks_color, key=0)
+
+                        if quench_tasks_color == 0:
+                            quench_success = agk.quench(lmpsettings_quench, main_prep_lmpdat, split=quench_split)
+                        else:
+                            quench_success = False
+
+                        comm.Barrier()
+                        quench_success = comm.bcast(quench_success, root=0)
 
                         if quench_success is False:
                             if rank == 0:

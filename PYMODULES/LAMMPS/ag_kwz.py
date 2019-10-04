@@ -475,9 +475,12 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 # Quenching
 ################################################################################
 
-def quench(lmpcuts, lmpdat_main, runs=20):
+def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
     """
+    # get a list of used cores
+    used_ranks = range(lmpcuts.ncores)[1:]
+
     def _check_success():
         """
         Check aggregation state and close lammps instance properly.
@@ -485,10 +488,16 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         if rank == 0:
             quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
             succeeded = quench_sys.check_aggregate()
-        else:
-            succeeded = False
 
-        succeeded = comm.bcast(succeeded, 0)
+            # send data to involved ranks only
+            for used_rank in used_ranks:
+                comm.send(succeeded, dest=used_rank)
+
+        else:
+            #succeeded = False
+            succeeded = comm.recv(source=0)
+
+        #succeeded = comm.bcast(succeeded, 0)
 
         # stop trying if it was
         if succeeded is True:
@@ -513,13 +522,10 @@ def quench(lmpcuts, lmpdat_main, runs=20):
             # than one rank is used
             if size > 1:
                 MPI.COMM_WORLD.Abort()
-            #else:
-            #    return quench_success
-            #    pass
 
     natoms_main_sys = get_natms(lmpdat_main)
 
-    lmp = lammps()
+    lmp = lammps(comm=split)
     pylmp = PyLammps(ptr=lmp)
     lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
@@ -527,11 +533,6 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
-
-    # change box type to not be periodic - does not work since future boxes
-    # will not be periodic as well
-    #lmp.command("boundary f f f")
-
     lmpcuts.load_system(lmp)
     #lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -560,10 +561,14 @@ def quench(lmpcuts, lmpdat_main, runs=20):
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
         cog_force = cog * -1
-    else:
-        cog_force = None
 
-    cog_force = comm.bcast(cog_force, 0)
+        for used_rank in used_ranks:
+            comm.send(cog_force, dest=used_rank)
+
+    else:
+        cog_force = comm.recv(source=0)
+
+    #cog_force = comm.bcast(cog_force, 0)
     # barostatting, thermostatting only for atoms that will be docked
     lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
     quench_success = False

@@ -13,8 +13,9 @@ RANK = COMM.Get_rank()  # process' id(s) within a communicator
 class LmpSim(object):
     """
     """
-    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, momentum_steps=100, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
+    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, momentum_steps=100, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False, ncores=None):
         """
+        ncores : list or tuple
         """
         self.thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
         self.tstart = tstart
@@ -35,6 +36,7 @@ class LmpSim(object):
         self.output_lmprst = output_lmprst
         self.output_name = output_name
         self.gpu = gpu
+        self.ncores = ncores
 
     def load_system(self, lmp):
         """Read a lammps restart or data file."""
@@ -47,14 +49,28 @@ class LmpSim(object):
         else:
             lmp.command("read_data {}".format(self.input_lmpdat))
 
-    def unfix_undump(self, pylmp, lmp):
-        """
-        Remove all fixes, dumps and groups.
+    def unfix_undump(self, pylmp, lmp, used_ranks=None):
+        """[summary]
+
+        [description]
+
+        Parameters
+        ----------
+        pylmp : {[type]}
+            [description]
+        lmp : {[type]}
+            [description]
+        used_ranks : {list of int}, optional
+            List of ranks that were used for the lammps calculation in order to
+            send the lists of fixes, dumps and groups only to those specific
+            ranks via 'comm.send()'
+            (the default is None, which broadcasts to all ranks)
         """
         lmp_fixes = []
         lmp_dumps = []
         lmp_groups = []
 
+        # getting fixes, dumps and groups only works with pylammps and on rank 0
         if RANK == 0:
             for fix in pylmp.fixes:
                 lmp_fixes.append(fix["name"])
@@ -66,9 +82,34 @@ class LmpSim(object):
                 if group["name"] != "all":
                     lmp_groups.append(group["name"])
 
-        lmp_fixes = COMM.bcast(lmp_fixes, 0)
-        lmp_dumps = COMM.bcast(lmp_dumps, 0)
-        lmp_groups = COMM.bcast(lmp_groups, 0)
+        # check whether to broadcast to all cores or only those involved in the
+        # lammps instance
+        if self.ncores is None:
+            lmp_fixes = COMM.bcast(lmp_fixes, 0)
+            lmp_dumps = COMM.bcast(lmp_dumps, 0)
+            lmp_groups = COMM.bcast(lmp_groups, 0)
+        else:
+            used_ranks = range(self.ncores)[1:]
+
+            if RANK == 0:
+                for used_rank in used_ranks:
+                    COMM.send(lmp_fixes, used_rank)
+            else:
+                lmp_fixes = COMM.recv(source=0)
+
+            if RANK == 0:
+                for used_rank in used_ranks:
+                    COMM.send(lmp_dumps, used_rank)
+            else:
+                lmp_dumps = COMM.recv(source=0)
+
+            if RANK == 0:
+                for used_rank in used_ranks:
+                    COMM.send(lmp_groups, used_rank)
+            else:
+                lmp_groups = COMM.recv(source=0)
+
+            del used_ranks
 
         for fix in lmp_fixes:
             if "gpu" in fix:
