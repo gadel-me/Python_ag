@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from mpi4py import MPI
 
 #==============================================================================#
@@ -12,7 +13,7 @@ RANK = COMM.Get_rank()  # process' id(s) within a communicator
 class LmpSim(object):
     """
     """
-    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
+    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, momentum_steps=100, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False):
         """
         """
         self.thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
@@ -22,6 +23,7 @@ class LmpSim(object):
         self.pstop = pstop
         self.logsteps = logsteps
         self.runsteps = runsteps
+        self.momentum_steps = momentum_steps
         self.pc_file = pc_file
         self.settings_file = settings_file
         self.input_lmpdat = input_lmpdat
@@ -135,6 +137,20 @@ class LmpSim(object):
         # nvt
         if (self.tstart is not None and self.tstop is not None) and (ensemble == "npt" or ensemble == "nvt"):
             lmp.command("fix thermostat {} temp/berendsen {} {} 0.5".format(group, self.tstart, self.tstop))
+
+        # npt
+        if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
+            lmp.command("fix barostat {} press/berendsen {} {} {} 50".format(group, keyword, self.pstart, self.pstop))
+
+    def fix_langevin(self, lmp, group, ensemble, keyword, integrator="nve"):
+        """
+        """
+        # nve
+        lmp.command("fix integrator {} {}".format(group, integrator))
+
+        # nvt
+        if (self.tstart is not None and self.tstop is not None) and (ensemble == "npt" or ensemble == "nvt"):
+            lmp.command("fix thermostat {} langevin {} {} 100 {}".format(group, self.tstart, self.tstop, np.random.randint(0, 10000000)))
 
         # npt
         if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":

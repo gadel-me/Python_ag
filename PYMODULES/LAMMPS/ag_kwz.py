@@ -209,7 +209,7 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
         lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
 
     # barostatting, thermostatting
-    lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+    lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(lmpcuts.momentum_steps))
 
     # set the group
     if group != "all":
@@ -222,6 +222,8 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
         lmpcuts.fix_berendsen(lmp, groupname, ensemble, keyword)
     elif style.lower() == "nose_hoover":
         lmpcuts.fix_hoover(lmp, groupname, ensemble, keyword)
+    elif style.lower() == "langevin":
+        lmpcuts.fix_langevin(lmp, groupname, ensemble, keyword)
     else:
         raise Warning("Style not (yet) implemented!")
 
@@ -1226,7 +1228,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         if aggregate_ok is True and normally_dstributed is True:
             sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
 
-    #pdb.set_trace()
+    pdb.set_trace()
 
     return (aggregate_ok and normally_dstributed, dcd_files, log_files)
 

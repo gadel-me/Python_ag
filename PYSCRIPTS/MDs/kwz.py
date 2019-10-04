@@ -415,22 +415,14 @@ if __name__ == "__main__":
 
                         # check aggregation state of the last frame
                         aggregate_ok = solution_sys.check_aggregate(-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
-
-                        # stop further calculations and start from the beginning
-                        #if not aggregate_ok:
-                        #    if rank == 0:
-                        #        timestamp = agk.generate_timestamp()
-                        #        os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
-                        #        os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
-                        #        os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
-                        #        del timestamp
+                        del (solution_sys, solution_sys_atoms_idxs)
 
                     else:
                         aggregate_ok = False
 
                     aggregate_ok = comm.bcast(aggregate_ok, 0)
 
-                    # reset all failed attempts and restart
+                    # start all over if heating phase failed
                     if not aggregate_ok:
                         anneal_attempts = 0
                         quench_attempts = 0
@@ -447,11 +439,11 @@ if __name__ == "__main__":
 
                     # productive run
                     if args.lmps is not None:
-                        anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "npt", keyword="iso", output=anneal_dir + "anneal_{}".format(curcycle))
+                        anneal_success, _, _ = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "npt", keyword="iso", output=anneal_dir + "anneal_{}".format(curcycle))
                     else:
-                        anneal_success, anneal_dcds, log_files = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt", output=anneal_dir + "anneal_{}".format(curcycle))
+                        anneal_success, _, _ = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt", output=anneal_dir + "anneal_{}".format(curcycle))
 
-                    # start all over if annealing failed
+                    # start all over if productive phase failed
                     if not anneal_success:
                         anneal_attempts = 0
                         quench_attempts = 0
@@ -459,16 +451,12 @@ if __name__ == "__main__":
 
                         # rename folders of failed run
                         if rank == 0:
-                            #os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed")
-                            #os.rename(quench_dir, quench_dir.rstrip("/") + "_failed")
-                            #os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed")
                             timestamp = agk.generate_timestamp()
                             os.rename(sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp)
                             os.rename(quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp)
                             os.rename(anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp)
                             del timestamp
 
-                        #pdb.set_trace()
                         continue
 
             #======================================================================#
@@ -484,12 +472,9 @@ if __name__ == "__main__":
                     anneal_dcds = glob.glob(r"{}/*[0-9]_anneal_[0-9]*.dcd".format(anneal_dir))
                     # find frame which scores best (dcd and idx) and its value
                     best_dcd, best_idx, best_val = agk.find_best_frame(anneal_lmplog_files, anneal_dcds, thermo="c_pe_solvate_complete", percentage_to_check=percentage_to_check)
-                    #pdb.set_trace()
-                    # write the data file for requenching
-                    if rank == 0:
-                        agk.write_to_log("{}, {}, {} (eV)".format(best_dcd, best_idx, best_val))
-
+                    agk.write_to_log("{}, {}, {} (eV)".format(best_dcd, best_idx, best_val))
                     agk.write_requench_data(lmpsettings_sysprep.output_lmpdat, best_dcd, best_idx, output_lmpdat_a=lmpsettings_requench.input_lmpdat)
+                    del (anneal_lmplog_files, anneal_dcds, best_dcd, best_idx, best_val)
 
             requench_success = agk.requench(lmpsettings_requench)
 
