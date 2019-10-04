@@ -172,6 +172,10 @@ if __name__ == "__main__":
     PWD = os.getcwd()
 
     for curcycle in remaining_cycles:
+        # block the tasks from further proceeding until all are finished
+        # e.g. needed when simulations fail and cleaning tasks are not done yet
+        comm.Barrier()
+
         # get index of the pattern args.pa according to the current cycle
         pattern_idx = curcycle % len(args.pa)
 
@@ -277,8 +281,6 @@ if __name__ == "__main__":
             main_prep_lmpdat = os.path.abspath(args.lmpm)
 
         while not os.path.isfile(lmpsettings_requench.output_lmprst):
-            # block the tasks from further proceeding until all are finished
-            # needed when simulations fail and cleaning tasks are not done yet
             comm.Barrier()
             anneal_attempts = 0
             while not os.path.isfile(lmpsettings_anneal.output_lmprst):
