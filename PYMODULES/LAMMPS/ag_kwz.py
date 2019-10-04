@@ -757,7 +757,6 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     # load solution system (last frame only)
     solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd_solvent, frame_idx_start=-2, frame_idx_stop=-1)
     solution_sys = mdu.merge_systems([solvate_sys, solvent_sys])
-    #pdb.set_trace()
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
@@ -803,8 +802,6 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     if close_atoms != []:
         # move solvent molecules away from close solvate atoms
         for _ in xrange(5):
-            #print(close_atoms)
-            #pdb.set_trace()
             indent_strs = _fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
             _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
             close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
@@ -886,9 +883,6 @@ def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
     """
     cur_log = agl.LmpLog()
     cur_log.read_lmplog(lmplog)
-    #pdb.set_trace()
-    # omit the first frame since it is not written to the dcd file?
-    #cur_pes = cur_log.data[-1]["c_pe_solvate_complete"][fstart:]
 
     # potential energy of the whole system (solvent included if part of system)
     cur_data = cur_log.data[-1][thermo][fstart:]
@@ -1015,7 +1009,6 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
         lmpcuts.thermargs.append("c_pe_solvate_complete")
 
     lmpcuts.thermo(lmp, hb_group="resname_atoms")
-    #pdb.set_trace()
     lmpcuts.fix_hoover(lmp, group, ensemble, keyword)
 
     # reset the timestep in order to have a consistent number of steps in the
@@ -1229,8 +1222,6 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
         if aggregate_ok is True and normally_dstributed is True:
             sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
-
-    pdb.set_trace()
 
     return (aggregate_ok and normally_dstributed, dcd_files, log_files)
 
