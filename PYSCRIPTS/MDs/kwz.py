@@ -277,12 +277,18 @@ if __name__ == "__main__":
             main_prep_lmpdat = os.path.abspath(args.lmpm)
 
         while not os.path.isfile(lmpsettings_requench.output_lmprst):
+            # block the tasks from further proceeding until all are finished
+            # needed when simulations fail and cleaning tasks are not done yet
+            comm.Barrier()
             anneal_attempts = 0
             while not os.path.isfile(lmpsettings_anneal.output_lmprst):
+                comm.Barrier()
                 quench_attempts = 0
                 while not os.path.isfile(lmpsettings_quench.output_lmprst):
+                    comm.Barrier()
                     sysprep_attempt = 0
                     while not os.path.isfile(lmpsettings_sysprep.output_lmpdat):
+                        comm.Barrier()
                         #==================================================================#
                         # 1. System Preparation
                         #==================================================================#
@@ -408,7 +414,9 @@ if __name__ == "__main__":
                             # no solvent given -> keep volume constant
                             # use langevin thermostat to prevent docked atoms from separating from the aggregate
                             # user maybe has to change langevin settings where necessary
-                            agk.md_simulation(lmpsettings_heat, group="all", style="langevin", ensemble="nvt", unwrap_dcd=True)
+                            #agk.md_simulation(lmpsettings_heat, group="all", style="langevin", ensemble="nvt", unwrap_dcd=True)
+                            # testing only!
+                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt", unwrap_dcd=True)
 
                     # check if aggregate is still ok
                     if rank == 0:
