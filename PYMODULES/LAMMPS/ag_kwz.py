@@ -184,9 +184,7 @@ def write_to_log(string, filename="kwz_log"):
 
 def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=True):
     """
-    TODO: This function should also return something when the simulation goes
-    wrong so we can restart the cycle (but danger of never ending due to same
-    error?)
+    Perform an md simulation.
     """
     lmp = lammps()
     pylmp = PyLammps(ptr=lmp)
@@ -1071,7 +1069,7 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     return equilibrated
 
 
-def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, output=None):
+def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, attempts=20, output=None):
     """
     Carry out a productive run for the annealing step of the Kawska-Zahn approach.
 
@@ -1122,7 +1120,6 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
     solvate_sys_natoms = len(atm_idxs_solvate)
     dcd_files = []
     log_files = []
-    attempts = 10
 
     for run_idx in xrange(attempts):
         # get just the base name of the files

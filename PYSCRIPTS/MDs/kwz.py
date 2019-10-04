@@ -406,7 +406,9 @@ if __name__ == "__main__":
                             agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="npt", keyword="iso", unwrap_dcd=True)
                         else:
                             # no solvent given -> keep volume constant
-                            agk.md_simulation(lmpsettings_heat, group="all", style="berendsen", ensemble="nvt", unwrap_dcd=True)
+                            # use langevin thermostat to prevent docked atoms from separating from the aggregate
+                            # user maybe has to change langevin settings where necessary
+                            agk.md_simulation(lmpsettings_heat, group="all", style="langevin", ensemble="nvt", unwrap_dcd=True)
 
                     # check if aggregate is still ok
                     if rank == 0:
