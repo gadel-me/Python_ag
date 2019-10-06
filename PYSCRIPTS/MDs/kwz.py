@@ -465,9 +465,9 @@ if __name__ == "__main__":
 
                     # productive run
                     if args.lmps is not None:
-                        anneal_success, _, _ = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "npt", keyword="iso", output=anneal_dir + "anneal_{}".format(curcycle))
+                        anneal_success = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "npt", keyword="iso", output=anneal_dir + "anneal_{}".format(curcycle))
                     else:
-                        anneal_success, _, _ = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt", output=anneal_dir + "anneal_{}".format(curcycle))
+                        anneal_success = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt", output=anneal_dir + "anneal_{}".format(curcycle))
 
                     # start all over if productive phase failed
                     if not anneal_success:

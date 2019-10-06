@@ -1139,22 +1139,11 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             dcd_filename = str(run_idx) + "_" + dcd_filename
 
         if run_idx_pattern.match(log_filename) is not None:
-            # split dcd-file by '_'
             split_log_filename = log_filename.split("_")
             log_filename = "{}_{}_{}".format(run_idx, split_log_filename[1], split_log_filename[2])
             del split_log_filename
         else:
-            log_filename = str(run_idx) + "_" + dcd_filename
-
-        #if dcd_filename[0].isdigit() is True:
-        #    dcd_filename = "{}{}".format(run_idx, dcd_filename[1:])
-        #else:
-        #    dcd_filename = str(run_idx) + "_" + dcd_filename
-
-        #if log_filename[0].isdigit() is True:
-        #    log_filename = "{}{}".format(run_idx, log_filename[1:])
-        #else:
-        #    log_filename = str(run_idx) + "_" + log_filename
+            log_filename = str(run_idx) + "_" + log_filename
 
         lmpcuts.output_dcd = "{}/{}".format(dcd_path, dcd_filename)
         lmpcuts.output_lmplog = "{}/{}".format(log_path, log_filename)
@@ -1227,6 +1216,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
     # 'lmpcuts.output_lmprst' file was never written (e.g. due to aborted runs)
     else:
         aggregate_ok = False
+
         if rank == 0:
             num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
             normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], output=output)
@@ -1236,6 +1226,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
                 solution_sys_atoms_idxs = range(len(solution_sys.atoms))
                 aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
         else:
+            normally_dstributed = False
             aggregate_ok = False
 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
@@ -1244,7 +1235,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         if aggregate_ok is True and normally_dstributed is True:
             sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
 
-    return (aggregate_ok and normally_dstributed, dcd_files, log_files)
+    return (aggregate_ok and normally_dstributed)
 
 
 def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to_check=80):
