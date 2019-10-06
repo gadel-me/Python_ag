@@ -1049,13 +1049,13 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     equilibrated : bool
         Result if the values show normal distribution. Normal distribution is
         only accepted if the linear regression of the QQ-plot has a correlation-
-        coefficient larger than 0.993, the curve is not too skewed.
+        coefficient larger than 0.995, the curve is not too skewed.
 
     """
     # save the histogram plot
     agplot.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
 
-    qq_normal = ags.qq_test(data, output=output + "_qq_plot", save_plot=True)
+    qq_normal = ags.qq_test(data, rsquare_thrsh=0.995, output=output + "_qq_plot", save_plot=True)
     skew_normal = ags.test_gauss_shape("skewness", data)
 
     try:
@@ -1067,7 +1067,7 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     return equilibrated
 
 
-def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, attempts=20, output=None):
+def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, attempts=100, output=None):
     """
     Carry out a productive run for the annealing step of the Kawska-Zahn approach.
 
