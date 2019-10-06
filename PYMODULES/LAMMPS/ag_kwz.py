@@ -1124,7 +1124,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         dcd_path, dcd_filename = os.path.split(lmpcuts.output_dcd)
         log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
 
-        # prepend the index to the base-name
+        # prepend 'run_idx' to the base-name if the filename starts with a digit
         if dcd_filename[0].isdigit() is True:
             dcd_filename = "{}{}".format(run_idx, dcd_filename[1:])
         else:
