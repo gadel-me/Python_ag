@@ -1119,21 +1119,42 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
     dcd_files = []
     log_files = []
 
+    # renaming the current found files independently of their original name automatically
+    # sorts them in the right order
     for run_idx in xrange(attempts):
         # get just the base name of the files
         dcd_path, dcd_filename = os.path.split(lmpcuts.output_dcd)
         log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
 
-        # prepend 'run_idx' to the base-name if the filename starts with a digit
-        if dcd_filename[0].isdigit() is True:
-            dcd_filename = "{}{}".format(run_idx, dcd_filename[1:])
+        # create a filename having 'run_idx' and check if this file already exists
+        run_idx_pattern = re.compile(r'^[0-9]+')
+
+        # check if filename starts with an integer
+        if run_idx_pattern.match(dcd_filename) is not None:
+            # split dcd-file by '_'
+            split_dcd_filename = dcd_filename.split("_")
+            dcd_filename = "{}_{}_{}".format(run_idx, split_dcd_filename[1], split_dcd_filename[2])
+            del split_dcd_filename
         else:
             dcd_filename = str(run_idx) + "_" + dcd_filename
 
-        if log_filename[0].isdigit() is True:
-            log_filename = "{}{}".format(run_idx, log_filename[1:])
+        if run_idx_pattern.match(log_filename) is not None:
+            # split dcd-file by '_'
+            split_log_filename = log_filename.split("_")
+            log_filename = "{}_{}_{}".format(run_idx, split_log_filename[1], split_log_filename[2])
+            del split_log_filename
         else:
-            log_filename = str(run_idx) + "_" + log_filename
+            log_filename = str(run_idx) + "_" + dcd_filename
+
+        #if dcd_filename[0].isdigit() is True:
+        #    dcd_filename = "{}{}".format(run_idx, dcd_filename[1:])
+        #else:
+        #    dcd_filename = str(run_idx) + "_" + dcd_filename
+
+        #if log_filename[0].isdigit() is True:
+        #    log_filename = "{}{}".format(run_idx, log_filename[1:])
+        #else:
+        #    log_filename = str(run_idx) + "_" + log_filename
 
         lmpcuts.output_dcd = "{}/{}".format(dcd_path, dcd_filename)
         lmpcuts.output_lmplog = "{}/{}".format(log_path, log_filename)
