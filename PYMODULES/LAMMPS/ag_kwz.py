@@ -1235,7 +1235,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         if aggregate_ok is True and normally_dstributed is True:
             sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
 
-    return (aggregate_ok and normally_dstributed)
+    return aggregate_ok and normally_dstributed
 
 
 def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to_check=80):
