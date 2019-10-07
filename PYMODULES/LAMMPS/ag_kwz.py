@@ -478,11 +478,13 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
     """
-    # get a list of used cores
-    if lmpcuts.ncores is not None:
-        used_ranks = range(lmpcuts.ncores)[1:]
-    else:
-        used_ranks = []
+    try:
+        other_ranks = range(lmpcuts.ncores)[1:]
+    except ValueError:
+        other_ranks = []
+
+    print(other_ranks)
+    exit()
 
     def _check_success():
         """
@@ -493,14 +495,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
             succeeded = quench_sys.check_aggregate()
 
             # send data to involved ranks only
-            if lmpcuts.ncores is not None:
-                for used_rank in used_ranks:
-                    comm.send(succeeded, dest=used_rank)
+            for other_rank in other_ranks:
+                comm.send(succeeded, dest=other_rank)
 
         else:
-            #succeeded = False
-            if lmpcuts.ncores is not None:
-                succeeded = comm.recv(source=0)
+            succeeded = comm.recv(source=0)
 
         #succeeded = comm.bcast(succeeded, 0)
 
@@ -567,13 +566,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         # make vector show towards the center (0/0/0)
         cog_force = cog * -1
 
-        if lmpcuts.ncores is not None:
-            for used_rank in used_ranks:
-                comm.send(cog_force, dest=used_rank)
+        for other_rank in other_ranks:
+            comm.send(cog_force, dest=other_rank)
 
     else:
-        if lmpcuts.ncores is not None:
-            cog_force = comm.recv(source=0)
+        cog_force = comm.recv(source=0)
 
     #cog_force = comm.bcast(cog_force, 0)
     # barostatting, thermostatting only for atoms that will be docked

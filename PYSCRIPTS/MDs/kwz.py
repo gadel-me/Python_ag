@@ -100,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument("-quench_tstop", type=int, default=5)
     parser.add_argument("-quench_steps", type=int, default=250000)
     parser.add_argument("-quench_logsteps", type=int, default=1000)
-    parser.add_argument("-quench_np", type=int, default=None, help="Number of cores for quenching subroutine")
+    parser.add_argument("-quench_np", type=int, default=size, help="Number of cores for quenching subroutine")
 
     # relax cut solvent
     parser.add_argument("-relax_cut_tstart", type=int, default=200)
@@ -328,7 +328,7 @@ if __name__ == "__main__":
                         if rank == 0:
                             agk.create_folder(quench_dir)
 
-                        if lmpsettings_quench.ncores is None or (rank < lmpsettings_quench.ncores):
+                        if rank < lmpsettings_quench.ncores:
                             quench_tasks_color = 0
                         else:
                             quench_tasks_color = 1
@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
                         comm.Barrier()
                         quench_success = comm.bcast(quench_success, root=0)
-                        pdb.set_trace()
+                        #pdb.set_trace()
 
                         if quench_success is False:
                             if rank == 0:
