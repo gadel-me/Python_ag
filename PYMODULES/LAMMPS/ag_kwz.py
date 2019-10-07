@@ -1055,7 +1055,7 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     # save the histogram plot
     agplot.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
 
-    qq_normal = ags.qq_test(data, rsquare_thrsh=0.995, output=output + "_qq_plot", save_plot=True)
+    qq_normal = ags.qq_test(data, rsquare_thrsh=0.999, output=output + "_qq_plot", save_plot=True)
     skew_normal = ags.test_gauss_shape("skewness", data)
 
     try:
@@ -1063,7 +1063,9 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     except Warning:
         kurtosis_normal = False
 
-    equilibrated = qq_normal and (skew_normal or kurtosis_normal)
+    # does not work properly with many
+    #equilibrated = qq_normal and (skew_normal or kurtosis_normal)
+    equilibrated = qq_normal
     return equilibrated
 
 
