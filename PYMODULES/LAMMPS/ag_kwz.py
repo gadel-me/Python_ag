@@ -478,13 +478,11 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
 def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
     """
+    # check how many cores are used, leave the list empty if it is only one
     try:
         other_ranks = range(lmpcuts.ncores)[1:]
     except ValueError:
         other_ranks = []
-
-    print(other_ranks)
-    exit()
 
     def _check_success():
         """
@@ -494,13 +492,14 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
             quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
             succeeded = quench_sys.check_aggregate()
 
-            # send data to involved ranks only
+            # send data to the other ranks
             for other_rank in other_ranks:
                 comm.send(succeeded, dest=other_rank)
 
         else:
             succeeded = comm.recv(source=0)
 
+        #print(succeeded)
         #succeeded = comm.bcast(succeeded, 0)
 
         # stop trying if it was
@@ -1069,7 +1068,7 @@ def _test_anneal_equil(data, output=None, xlabel=None):
 
     # does not work properly with many
     equilibrated = qq_normal and (skew_normal or kurtosis_normal)
-    print("QQ-Normal: {}, Kurtosis: {}, Skwe: {}".format(qq_normal, kurtosis_normal, skew_normal))
+    print("QQ-Normal: {}, Kurtosis: {}, Skew: {}".format(qq_normal, kurtosis_normal, skew_normal))
 
     return equilibrated
 
@@ -1194,7 +1193,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
 
             # last X % of all frames (from end to start)
-            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], output=output)
+            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], xlabel="Potential Energy / eV", output=output)
 
             # check if aggregate is still fine after the last run (only if we have a normal distribution)
             solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
@@ -1214,10 +1213,9 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         if (aggregate_ok is True and normally_dstributed is True) or aggregate_ok is False:
             break
 
-        # the following prevents the 'else' condition (from for loop above) to execute (happens
-        # if 'aggregate_ok' evaluates as 'False' for the very last attempt)
-        if run_idx == (attempts - 1):
-            break
+        # the following prevents the 'else' condition (from for loop above) to execute
+        #if run_idx == (attempts - 1):
+        #    break
 
     # this only applies if all attempts already exist, but the
     # 'lmpcuts.output_lmprst' file was never written (e.g. due to aborted runs)
@@ -1226,7 +1224,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
         if rank == 0:
             num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
-            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], output=output)
+            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], xlabel="Potential Energy / eV", output=output)
 
             if normally_dstributed is True:
                 solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
