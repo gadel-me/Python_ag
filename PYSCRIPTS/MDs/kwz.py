@@ -50,7 +50,7 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 # Helper functions and variables
 #==============================================================================#
 if __name__ == "__main__":
-    percentage_to_check = 80
+    percentage_to_check = 90
     #==============================================================================#
     # Argument Parsing
     #==============================================================================#
@@ -142,15 +142,18 @@ if __name__ == "__main__":
     parser.add_argument("-anneal_pstop", type=int, default=1)
     parser.add_argument("-anneal_steps", type=int, default=2000000)
     parser.add_argument("-anneal_steps_plus", type=int, default=500000)
-    parser.add_argument("-anneal_logsteps", type=int, default=500)
+    parser.add_argument("-anneal_logsteps", type=int, default=1000)
 
     # requenching
     parser.add_argument("-requench_tstart", type=int, default=1)
     parser.add_argument("-requench_tstop", type=int, default=1)
     parser.add_argument("-requench_steps", type=int, default=1000)
-    parser.add_argument("-requench_logsteps", type=int, default=500)
+    parser.add_argument("-requench_logsteps", type=int, default=1000)
 
     args = parser.parse_args()
+
+    if args.quench_np > size:
+        raise Exception("More ranks selected than available")
 
     #==============================================================================#
     # Set things straight for solvent and vacuum
@@ -325,7 +328,7 @@ if __name__ == "__main__":
                         if rank == 0:
                             agk.create_folder(quench_dir)
 
-                        if rank < lmpsettings_quench.ncores:
+                        if lmpsettings_quench.ncores is None or (rank < lmpsettings_quench.ncores):
                             quench_tasks_color = 0
                         else:
                             quench_tasks_color = 1
@@ -339,6 +342,7 @@ if __name__ == "__main__":
 
                         comm.Barrier()
                         quench_success = comm.bcast(quench_success, root=0)
+                        pdb.set_trace()
 
                         if quench_success is False:
                             if rank == 0:
@@ -470,7 +474,7 @@ if __name__ == "__main__":
                         anneal_success = agk.anneal_productive(lmpsettings_anneal, atm_idxs_solvate, percentage_to_check, "nvt", output=anneal_dir + "anneal_{}".format(curcycle))
 
                     # start all over if productive phase failed
-                    if not anneal_success:
+                    if anneal_success is False:
                         anneal_attempts = 0
                         quench_attempts = 0
                         sysprep_attempt = 0

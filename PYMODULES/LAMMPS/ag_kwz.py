@@ -479,7 +479,10 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
     """
     # get a list of used cores
-    used_ranks = range(lmpcuts.ncores)[1:]
+    if lmpcuts.ncores is not None:
+        used_ranks = range(lmpcuts.ncores)[1:]
+    else:
+        used_ranks = []
 
     def _check_success():
         """
@@ -490,12 +493,14 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
             succeeded = quench_sys.check_aggregate()
 
             # send data to involved ranks only
-            for used_rank in used_ranks:
-                comm.send(succeeded, dest=used_rank)
+            if lmpcuts.ncores is not None:
+                for used_rank in used_ranks:
+                    comm.send(succeeded, dest=used_rank)
 
         else:
             #succeeded = False
-            succeeded = comm.recv(source=0)
+            if lmpcuts.ncores is not None:
+                succeeded = comm.recv(source=0)
 
         #succeeded = comm.bcast(succeeded, 0)
 
@@ -562,11 +567,13 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         # make vector show towards the center (0/0/0)
         cog_force = cog * -1
 
-        for used_rank in used_ranks:
-            comm.send(cog_force, dest=used_rank)
+        if lmpcuts.ncores is not None:
+            for used_rank in used_ranks:
+                comm.send(cog_force, dest=used_rank)
 
     else:
-        cog_force = comm.recv(source=0)
+        if lmpcuts.ncores is not None:
+            cog_force = comm.recv(source=0)
 
     #cog_force = comm.bcast(cog_force, 0)
     # barostatting, thermostatting only for atoms that will be docked
@@ -1049,13 +1056,13 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     equilibrated : bool
         Result if the values show normal distribution. Normal distribution is
         only accepted if the linear regression of the QQ-plot has a correlation-
-        coefficient larger than 0.995, the curve is not too skewed.
+        coefficient larger than 0.998, the curve is not too skewed.
 
     """
     # save the histogram plot
     agplot.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
 
-    qq_normal = ags.qq_test(data, rsquare_thrsh=0.999, output=output + "_qq_plot", save_plot=True)
+    qq_normal = ags.qq_test(data, rsquare_thrsh=0.998, output=output + "_qq_plot", save_plot=True)
     skew_normal = ags.test_gauss_shape("skewness", data)
 
     try:
@@ -1064,12 +1071,13 @@ def _test_anneal_equil(data, output=None, xlabel=None):
         kurtosis_normal = False
 
     # does not work properly with many
-    #equilibrated = qq_normal and (skew_normal or kurtosis_normal)
-    equilibrated = qq_normal
+    equilibrated = qq_normal and (skew_normal or kurtosis_normal)
+    print("QQ-Normal: {}, Kurtosis: {}, Skwe: {}".format(qq_normal, kurtosis_normal, skew_normal))
+
     return equilibrated
 
 
-def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, attempts=100, output=None):
+def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, attempts=500, output=None):
     """
     Carry out a productive run for the annealing step of the Kawska-Zahn approach.
 
@@ -1182,9 +1190,6 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
                 _append_data(all_data, lmpcuts.output_lmplog)
 
         # test given data so far (test applies to each newly carried out run)
-        aggregate_ok = False
-        normally_dstributed = False
-
         if rank == 0:
             # caveat:   each first frame of output_lmplog is omitted since
             #           it is not part of the dcd file
@@ -1199,6 +1204,9 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             solution_sys_atoms_idxs = range(len(solution_sys.atoms))
             aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
             del (num_frames_to_check, solution_sys, solution_sys_atoms_idxs)
+        else:
+            aggregate_ok = False
+            normally_dstributed = False
 
         aggregate_ok = comm.bcast(aggregate_ok)
         normally_dstributed = comm.bcast(normally_dstributed)
@@ -1206,7 +1214,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         # stop further runs if the aggregate is not ok or if the aggregate
         # is ok and the run is equilibrated (i.e. normal distribution of the
         # potential energy of the whole system)
-        if aggregate_ok is False or (aggregate_ok is True and normally_dstributed is True):
+        if (aggregate_ok is True and normally_dstributed is True) or aggregate_ok is False:
             break
 
         # the following prevents the 'else' condition (from for loop above) to execute (happens
@@ -1234,8 +1242,12 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
         normally_dstributed = comm.bcast(normally_dstributed, root=0)
 
-        if aggregate_ok is True and normally_dstributed is True:
-            sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
+        #if aggregate_ok is True and normally_dstributed is True:
+        #    sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
+
+    # if everything worked, name intermediate restart file as final output file
+    if aggregate_ok is True and normally_dstributed is True:
+        sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
 
     return aggregate_ok and normally_dstributed
 

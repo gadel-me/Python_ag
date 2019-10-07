@@ -76,7 +76,7 @@ if __name__ == "__main__":
     SYSPREP_LMPDAT_RAW = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat"
     QUENCH_DCD_RAW = "{0}/quench_{1}/quench_{1}.dcd"
     EQUIL_ANNEAL_DCD_RAW = "{0}/anneal_{1}/equil_anneal_{1}.dcd"
-    PROD_ANNEAL_DCD_RAW = "[0-9]_anneal_{0}.dcd"
+    PROD_ANNEAL_DCD_RAW = r"[0-9]+_anneal_{0}.dcd"
     #REQUENCH_LMPDAT = "{0}/requench_{1}/requench_out_{1}.lmpdat"
     REQUENCH_DCD_RAW = "{0}/requench_{1}/requench_{1}.dcd"
 
@@ -114,8 +114,12 @@ if __name__ == "__main__":
         PROD_ANNEAL_DCDS = get_files(
             "{0}/anneal_{1}/".format(ANNEAL_DIR, CURCYCLE),
             PROD_ANNEAL_DCD_RAW.format(CURCYCLE))
+
         for CUR_DCD in PROD_ANNEAL_DCDS:
+            print(CUR_DCD)
             molecule.read(CURCYCLE, "dcd", CUR_DCD, beg=0, end=-1, waitfor=-1)
+
+        pdb.set_trace()
 
         # requenching
         REQUENCH_DCD = REQUENCH_DCD_RAW.format(MAINDIR, CURCYCLE)

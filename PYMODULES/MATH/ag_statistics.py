@@ -258,6 +258,7 @@ def qq_test(data, rsquare_thrsh=0.993, output=None, save_plot=False):
     if save_plot is True:
         _write_qq_plot(sorted_norm, sorted_data, output, slope, intercept, "Q-Q plot - " + r"$r^2$" + "={:> 2.4f}".format(rsquare))
 
+    #pdb.set_trace()
     return rsquare >= rsquare_thrsh
 
 
