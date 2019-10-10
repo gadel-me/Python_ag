@@ -724,7 +724,7 @@ class LmpStuff(mdu.Universe):
                 lmp_xz_eval = cbox.lmp_xz > 1e-5
                 lmp_yz_eval = cbox.lmp_yz > 1e-5
 
-                if lmp_xy_eval and lmp_xz_eval and lmp_yz_eval:
+                if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
                     lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
                         cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
                     )
