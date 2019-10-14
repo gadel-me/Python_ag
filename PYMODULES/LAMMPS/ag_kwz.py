@@ -202,8 +202,9 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
         lmp.file(lmpcuts.pc_file)
 
     # distribute the available cores if we have lots of vacuum in our box
-    lmp.command("comm_style tiled")
-    lmp.command("balance 1.0 rcb")
+    # communication overhead? slower than before!
+    #lmp.command("comm_style tiled")
+    #lmp.command("balance 1.0 rcb")
 
     # pre-minimize system before running the actual simulation
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
@@ -543,8 +544,8 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     lmpcuts.load_system(lmp)
 
     # distribute the available cores if we have lots of vacuum in our box
-    lmp.command("comm_style tiled")
-    lmp.command("balance 1.0 rcb")
+    #lmp.command("comm_style tiled")
+    #lmp.command("balance 1.0 rcb")
 
     #lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -1009,8 +1010,8 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
         lmp.file(lmpcuts.pc_file)
 
     # distribute the available cores if we have lots of vacuum in our box
-    lmp.command("comm_style tiled")
-    lmp.command("balance 1.0 rcb")
+    #lmp.command("comm_style tiled")
+    #lmp.command("balance 1.0 rcb")
 
     # compute potential energy of the solvate (pair, bond, ...)
     # in order to compute the pe of the solvent, the solvent atom-ids must be
