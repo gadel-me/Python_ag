@@ -13,7 +13,7 @@ RANK = COMM.Get_rank()  # process' id(s) within a communicator
 class LmpSim(object):
     """
     """
-    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, momentum_steps=100, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False, ncores=None):
+    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, momentum_steps=100, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False, ncores=None, dielectric=None):
         """
         ncores : list or tuple
         """
@@ -37,6 +37,7 @@ class LmpSim(object):
         self.output_name = output_name
         self.gpu = gpu
         self.ncores = ncores
+        self.dielectric = dielectric
 
     def load_system(self, lmp):
         """Read a lammps restart or data file."""

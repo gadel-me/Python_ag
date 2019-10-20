@@ -194,6 +194,11 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
         lmpcuts.use_gpu(lmp, neigh=True)
 
     lmp.file(lmpcuts.settings_file)
+
+    # change dielectric
+    if lmpcuts.dielectric is not None:
+        lmp.command("dielectric {}".format(lmpcuts.dielectric))
+
     lmpcuts.load_system(lmp)
 
     lmpcuts.thermo(lmp)
@@ -259,6 +264,11 @@ def nose_hoover_md(lmpcuts, group="all"):
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
+
+    # change dielectric
+    if lmpcuts.dielectric is not None:
+        lmp.command("dielectric {}".format(lmpcuts.dielectric))
+
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -541,6 +551,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
+
+    # change dielectric
+    if lmpcuts.dielectric is not None:
+        lmp.command("dielectric {}".format(lmpcuts.dielectric))
+
     lmpcuts.load_system(lmp)
 
     #lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
@@ -795,6 +810,11 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
         lmpcuts.use_gpu(lmp)
 
     lmp.file(lmpcuts.settings_file)
+
+    # change dielectric
+    if lmpcuts.dielectric is not None:
+        lmp.command("dielectric {}".format(lmpcuts.dielectric))
+
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
@@ -865,6 +885,11 @@ def requench(lmpcuts, minstyle="cg"):
     lmp.command("log {} append".format(lmpcuts.output_lmplog))
 
     lmp.file(lmpcuts.settings_file)
+
+    # change dielectric
+    if lmpcuts.dielectric is not None:
+        lmp.command("dielectric {}".format(lmpcuts.dielectric))
+
     # read restart file from previous run
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
@@ -1001,6 +1026,11 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
         lmpcuts.use_gpu(lmp, neigh=False)
 
     lmp.file(lmpcuts.settings_file)
+
+    # change dielectric
+    if lmpcuts.dielectric is not None:
+        lmp.command("dielectric {}".format(lmpcuts.dielectric))
+
     lmpcuts.load_system(lmp)
 
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
