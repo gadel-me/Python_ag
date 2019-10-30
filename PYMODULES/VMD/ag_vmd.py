@@ -174,7 +174,7 @@ def draw_torsion(molid, frame, atomids, canvas=False, resolution=50, radius=0.5,
     vmd_draw_angle(molid, frame, atm_coords=[cp1, center_pt, cp2], canvas=False, resolution=resolution, radius=radius, drawcolor="blue")
 
 
-def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0)):
+def vmd_label(molid, key, selection="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0), idx_offset=None):
     """
     Labels atoms by index, charge, etc.
 
@@ -183,20 +183,27 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
            > key         str; attribute to label atom by
            > textsize    float; size of label font
            > offset      (1,3)-list; offset to shift the label by
-           > atoms       str or set; "all" or set with atom-ids to label
+           > selection   str; selected atoms
+           > num_offset  int; offset to add to atomic index
     """
 
-    # select molecule
-    selected_atoms = atomsel.atomsel("all", molid)
+    # select atoms to label
+    selected_atoms = atomsel.atomsel(selection, molid)
+
+    # complete selection of all atoms in order to label just the ones needed
+    complete_selection = atomsel.atomsel("all", molid)
+    atom_idxs = selected_atoms.get("index")
+    print(len(atom_idxs))
 
     # get its coordinates
-    xs = selected_atoms.get("x")
-    ys = selected_atoms.get("y")
-    zs = selected_atoms.get("z")
-    values = selected_atoms.get(key)
+    xs = complete_selection.get("x")
+    ys = complete_selection.get("y")
+    zs = complete_selection.get("z")
+    values = complete_selection.get(key)
 
     if key == "index":
-        values = [i + 1 for i in values]
+        if idx_offset is not None:
+            values = [i + idx_offset for i in values]
 
     if key == "charge":
         total_charge = sum(values)
@@ -206,10 +213,7 @@ def vmd_label(molid, key, atoms="all", label_color="white", textsize=1.0, offset
     # set a label color
     graphics.color(molid, label_color)
 
-    if atoms == "all":
-        atoms = range(len(selected_atoms))
-
-    for atom_idx in atoms:
+    for atom_idx in atom_idxs:
         label_pos = (xs[atom_idx] + offset[0], ys[atom_idx] + offset[1], zs[atom_idx] + offset[2])
 
         if key == "index":
