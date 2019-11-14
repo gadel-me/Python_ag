@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import re
 import numpy as np
 import scipy.constants
@@ -485,7 +485,7 @@ class GauStuff(mdu.Universe):
                 if "Standard orientation" in line:
                     cframe = []
                     # skip the following 4 lines
-                    for _ in xrange(5):
+                    for _ in range(5):
                         line = opened_gau_log.readline()
 
                     while not line.startswith(" ----------------------------"):
@@ -525,7 +525,7 @@ class GauStuff(mdu.Universe):
                     #self.gaussian_other_info("optimized_parameters")
 
                     # skip the next 5 lines
-                    for _ in xrange(6):
+                    for _ in range(6):
                         line = opened_gau_log.readline()
 
                     while not line.startswith(" ----------------------------"):
@@ -544,7 +544,7 @@ class GauStuff(mdu.Universe):
                 # get scanned coordinates (if mod redundant is used)
                 elif "Initial Parameters" in line:
                     # skip the next 4 lines
-                    for _ in xrange(5):
+                    for _ in range(5):
                         line = opened_gau_log.readline()
 
                     while not line.startswith(" ----------------------------"):

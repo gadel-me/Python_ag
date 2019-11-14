@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -43,8 +43,8 @@ class Paramfit(object):
 
                 if "FINAL PARAMETERS" in line:
                     # skip the following two lines
-                    f_in.next()
-                    f_in.next()
+                    next(f_in)
+                    next(f_in)
                     force_const_K = float(f_in.next().split()[2])
                     print("***Paramfit-Info: Found value of K: ", force_const_K)
                     break
@@ -94,7 +94,7 @@ class Paramfit(object):
         initial_amber_k = []
 
         with open(energy_dat) as energy_dat_in:
-            energy_dat_in.next()
+            next(energy_dat_in)
             energy_dat_in.next().split()
             for line in energy_dat_in:
                 line = line.split()

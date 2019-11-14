@@ -68,7 +68,7 @@ color_names = ("blue",
                "orange2",
                "orange3")
 
-pantone_rgb = dict(zip(color_names, rgb_colors))
+pantone_rgb = dict(list(zip(color_names, rgb_colors)))
 
 pantone_colors_hex = {
     'blue': '#3597D8',    # Process Blue

@@ -136,7 +136,7 @@ class ResultGetter(ag_fileio.FileHandler):
         dimer_sys = agum.Unification()
         dimer_sys.import_dcd(dcd)
         dimer_sys.read_frames()
-        nframes = xrange(len(dimer_sys.ts_coords))
+        nframes = range(len(dimer_sys.ts_coords))
 
         for frame_id in nframes:
             distance = self._get_distance(dimer_sys, idxs1, idxs2, frame_id)

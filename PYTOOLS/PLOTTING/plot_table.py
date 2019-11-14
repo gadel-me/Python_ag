@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import os
 import re
 import argparse
@@ -69,7 +69,7 @@ def get_values(filename, filetype):
 
     keys = ("a", "b", "c", "alpha", "beta", "gamma", "temp", "volume", "density", "energy")
     values = (box_a, box_b, box_c, alpha, beta, gamma, temp, volume, density, energy)
-    return OrderedDict(zip(keys, values))
+    return OrderedDict(list(zip(keys, values)))
 
 
 def norm_values(keys_and_values, nmols, abc=(1, 1, 1)):
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         else:
             RESULTS = norm_by_polymorph(ARGS.polymorph, get_values(ARGS.cif, "cif"))
 
-        SERIES = pd.Series(RESULTS, index=RESULTS.keys())
+        SERIES = pd.Series(RESULTS, index=list(RESULTS.keys()))
         LIST_OF_SERIES.append(SERIES)
         print(SERIES)
 
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         else:
             RESULTS = norm_by_polymorph(ARGS.polymorph, get_values(ARGS.pw, "pwout"))
 
-        SERIES = pd.Series(RESULTS, index=RESULTS.keys())
+        SERIES = pd.Series(RESULTS, index=list(RESULTS.keys()))
         LIST_OF_SERIES.append(SERIES)
         print(SERIES)
 
@@ -166,7 +166,7 @@ if __name__ == '__main__':
             else:
                 RESULTS = norm_by_polymorph(ARGS.polymorph, get_values(lmplog, "lmplog"), supercell=True)
 
-                SERIES = pd.Series(RESULTS, index=RESULTS.keys())
+                SERIES = pd.Series(RESULTS, index=list(RESULTS.keys()))
 
             print(SERIES)
             LIST_OF_SERIES.append(SERIES)

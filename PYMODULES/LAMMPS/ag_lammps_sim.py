@@ -90,7 +90,7 @@ class LmpSim(object):
             lmp_dumps = COMM.bcast(lmp_dumps, 0)
             lmp_groups = COMM.bcast(lmp_groups, 0)
         else:
-            used_ranks = range(self.ncores)[1:]
+            used_ranks = list(range(self.ncores))[1:]
 
             if RANK == 0:
                 for used_rank in used_ranks:
@@ -124,7 +124,7 @@ class LmpSim(object):
             try:
                 lmp.command("group {} delete".format(group))
             except:
-                print("***Warning: Group {} could not be deleted in lammps!".format(group))
+                print(("***Warning: Group {} could not be deleted in lammps!".format(group)))
 
     def thermo(self, lmp, hb_group="all"):
         #TODO:  hb_group is not necessary since hbonds will only be calculated

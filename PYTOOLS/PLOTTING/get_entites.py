@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import pdb
 import argparse
 import numpy as np
@@ -13,7 +13,7 @@ def chunks(l, n):
 
     Sources : https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
     """
-    return [l[i:i + n] for i in xrange(0, len(l), n)]
+    return [l[i:i + n] for i in range(0, len(l), n)]
 
 
 def get_entity(crds, idxs, molecule_offset):

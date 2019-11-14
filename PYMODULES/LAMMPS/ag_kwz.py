@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import pdb
 import datetime
 import os
@@ -141,7 +141,7 @@ def get_remaining_cycles(total_cycles):
 
     pwd = os.getcwd()
     current_cycle, next_cycle, last_requench_file = get_next_cycle()
-    total_cycles = range(total_cycles)
+    total_cycles = list(range(total_cycles))
     idx_next_cycle = total_cycles.index(next_cycle)
     remain_cycles = total_cycles[idx_next_cycle:]
     return (remain_cycles, last_requench_file)
@@ -355,7 +355,7 @@ def _rotate_sys(md_sys):
     Rotate system arbitrarily.
     """
     m_arb_xyz = _rot_matrix()
-    sys_add_all_atms = range(len(md_sys.atoms))
+    sys_add_all_atms = list(range(len(md_sys.atoms)))
     md_sys.mm_atm_coords(-1, m_arb_xyz, False, *sys_add_all_atms)
 
 
@@ -366,7 +366,7 @@ def _shift_sys(md_sys, radius, radius_buffer=1):
     radius += radius_buffer
     rn_pos = agm.points_on_sphere(npoints=1, ndim=3, radius=radius)[0]
     mx_trans = cgt.translation_matrix(rn_pos)
-    sys_add_all_atms = range(len(md_sys.atoms))
+    sys_add_all_atms = list(range(len(md_sys.atoms)))
     md_sys.mm_atm_coords(-1, mx_trans, False, *sys_add_all_atms)
 
 
@@ -495,7 +495,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
     # check how many cores are used, leave the list empty if it is only one
     try:
-        other_ranks = range(lmpcuts.ncores)[1:]
+        other_ranks = list(range(lmpcuts.ncores))[1:]
     except ValueError:
         other_ranks = []
 
@@ -602,7 +602,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     quench_success = False
 
     # runs attempts to dock the molecule
-    for _ in xrange(runs):
+    for _ in range(runs):
         # minimize and check if that is enough for docking
         lmp.command("min_style quickmin")
         lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
@@ -681,7 +681,7 @@ def _fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
     fix_str = "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out"
     all_indent_fixes = []
 
-    for scaling_factor in xrange(scale_start, scale_stop):
+    for scaling_factor in range(scale_start, scale_stop):
         indent_fixes = []
         # set fixes for void_indent
         for idx, (radius, cog) in enumerate(zip(radii, cogs)):
@@ -834,7 +834,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
 
     if close_atoms != []:
         # move solvent molecules away from close solvate atoms
-        for _ in xrange(5):
+        for _ in range(5):
             indent_strs = _fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
             _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
             close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
@@ -1171,7 +1171,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
     # renaming the current found files independently of their original name automatically
     # sorts them in the right order
-    for run_idx in xrange(attempts):
+    for run_idx in range(attempts):
         # get just the base name of the files
         dcd_path, dcd_filename = os.path.split(lmpcuts.output_dcd)
         log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
@@ -1241,7 +1241,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
             # check if aggregate is still fine after the last run (only if we have a normal distribution)
             solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
-            solution_sys_atoms_idxs = range(len(solution_sys.atoms))
+            solution_sys_atoms_idxs = list(range(len(solution_sys.atoms)))
             aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
             del (num_frames_to_check, solution_sys, solution_sys_atoms_idxs)
         else:
@@ -1272,7 +1272,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
             if normally_dstributed is True:
                 solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
-                solution_sys_atoms_idxs = range(len(solution_sys.atoms))
+                solution_sys_atoms_idxs = list(range(len(solution_sys.atoms)))
                 aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
         else:
             normally_dstributed = False

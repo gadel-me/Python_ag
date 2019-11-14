@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.stats as stats
@@ -17,7 +17,7 @@ def ask4frame(first_last, num_frames):
     first_last      str; "first" or "last"
     """
     print("Choose the {} frame of thermodynamic data (frames available: 0 to {})".format(first_last, num_frames))
-    return raw_input("> ")
+    return input("> ")
 
 
 def ask4keyword(xory, keywords):
@@ -26,7 +26,7 @@ def ask4keyword(xory, keywords):
     xory    str; "x-values" or "y-values"s
     """
     print("Choose one thermo-keyword for the {} (keywords available: {}".format(xory, ", ".join(sorted(keywords))))
-    return raw_input("> ")
+    return input("> ")
 
 
 def plot_qq(data, key):

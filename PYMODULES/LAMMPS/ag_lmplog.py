@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import collections
 import pdb
 import log_universe as logu
@@ -35,7 +35,7 @@ class LmpLog(logu.LogUniverse):
 
                         # prepare current container
                         cdata = collections.OrderedDict(
-                            zip(keys, [[] for i in xrange(len(keys))])
+                            list(zip(keys, [[] for i in range(len(keys))]))
                         )
 
                         # read further lines until end of run is reached

@@ -19,7 +19,7 @@ yet.
 """
 
 
-from __future__ import print_function, division
+
 import os
 import copy
 import shutil as sl
@@ -78,7 +78,7 @@ def create_folder(folder):
     Create folder or skip creation if it already exists
     """
     try:
-        os.mkdir(folder, 0755)
+        os.mkdir(folder, 0o755)
     except OSError:
         print("***Info: Folder {} already exists!".format(folder))
 
@@ -181,7 +181,7 @@ def check_energy_convergence(logfiles,
     # gather all values from all logfiles given
     log_data = agul.LogUnification()
     log_data.read_lmplog(*logfiles)
-    data = [value for data_index in xrange(len(log_data.data)) for value in
+    data = [value for data_index in range(len(log_data.data)) for value in
             log_data.data[data_index][keyword]]
     num_values = len(data)
     percentage /= 100  # percentage to per cent
@@ -640,7 +640,7 @@ if rank == 0:
 
     del (finished_cycles)
 
-    total_cycles = range(args.cycles)
+    total_cycles = list(range(args.cycles))
     idx_next_cycle = total_cycles.index(next_cycle)
     del (total_cycles)
 
@@ -773,7 +773,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                     write_to_log("\tInput-File Add: {}\n".format(add_prep_sys))
 
                     # add new molecule to the main system
-                    for _ in xrange(100):
+                    for _ in range(100):
                         # process main system
                         main_sys = process_data(main_prep_sys)
 
@@ -799,7 +799,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         M_arb_xyz = np.matmul(M_arb_xy, M_arb_rot_z)  # ABC
                         # rotate the system
                         sys_add_natoms = len(add_sys.atoms)
-                        sys_add_all_atms = range(sys_add_natoms)
+                        sys_add_all_atms = list(range(sys_add_natoms))
                         add_sys.mm_atm_coords(0, M_arb_xyz, False, *sys_add_all_atms)
                         del (M_arb_rot_x, M_arb_rot_y, M_arb_rot_z, M_arb_xy, M_arb_xyz)
 
@@ -1162,14 +1162,14 @@ for curcycle, idx_lmpa in remaining_cycles:
                     void_steps = args.void_solvent_steps
                     # create magnifying voids (reduces risk of entrapped solvent molecules)
                     molecules_names_void_fix = ["void_indent_molecule_{}".format(index_void_fix) for
-                                                index_void_fix in xrange(num_solvate_molecules)]
+                                                index_void_fix in range(num_solvate_molecules)]
                     del (index_void_fix, num_solvate_molecules)
 
                     #=============================================#
                     # initial spheres around all solvate molecules
                     #=============================================#
 
-                    for molecule_sphere_run in xrange(1, 12):
+                    for molecule_sphere_run in range(1, 12):
 
                         # set fixes for void_indent
                         for molecule_void_fix_name, molecule_void_sphere, molecule_void_cog in zip(molecules_names_void_fix,
@@ -1208,7 +1208,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                     atoms_fixes_void  = []
 
                     # 50 attempts to make stuff grow large enough
-                    for _ in xrange(50):
+                    for _ in range(50):
 
                         #================================================#
                         # interatomic distances (solvate - solvent) check
@@ -1304,7 +1304,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                         # grow spheres (i.e. create additional fixes if necessary, keep old ones, so some MD-runs)
                         if len(current_close_atoms_solvate) > 0:
-                            for atom_sphere_run in xrange(1, 12):
+                            for atom_sphere_run in range(1, 12):
                                 for atom_void_fix_name, atom_void_sphere, atom_void_coords in zip(atoms_fixes_void,
                                                                                                   atoms_radii_void,
                                                                                                   atoms_coords_void):
@@ -1732,7 +1732,7 @@ for curcycle, idx_lmpa in remaining_cycles:
             if next_anneal_run == total_anneal_runs:
                 next_anneal_run -= 1  # redo last aborted run
 
-            for anneal_run in xrange(next_anneal_run, total_anneal_runs):
+            for anneal_run in range(next_anneal_run, total_anneal_runs):
                 # dcd stuff
                 anneal_dcd = anneal_dir + "{}_anneal_{}".format(anneal_run, curcycle) + ".dcd"
                 anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps, anneal_dcd))

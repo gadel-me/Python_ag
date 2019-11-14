@@ -6,7 +6,7 @@ TODO JUPYTER NOTEBOOK AND EXECUTED THERE
 TODO THIS PREVENTS CONFUSION AND MAKES EVERYTHING EASIER TO UNDERSTAND
 """
 
-from __future__ import print_function, division
+
 import numpy as np
 import pandas as pd
 import pdb
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     # JOURNAL OF PHARMACEUTICAL SCIENCES, vol. 92, no. 11, 2003, p. 12.
     #cif_energies = (6.1, 5.72, 6.41, 5.95, 0.0)
 
-    for polymorph, (ucell_file, energy) in cif_ucell_files.iteritems():
+    for polymorph, (ucell_file, energy) in cif_ucell_files.items():
         cur_polymorph = Polymorph(30)
         cur_polymorph.read_file(ucell_file, "cif")
         cur_polymorph.get_volume_p_molecule()
@@ -200,7 +200,7 @@ if __name__ == '__main__':
 
     abinitio_polymorphs = {}
 
-    for polymorph, cfile in pw_ucell_files.iteritems():
+    for polymorph, cfile in pw_ucell_files.items():
         cur_polymorph = Polymorph(30)
         cur_polymorph.read_file(cfile, "pwout")
         cur_polymorph.get_volume_p_molecule()
@@ -347,7 +347,7 @@ if __name__ == '__main__':
     display(table_exp)
     display(table_abi)
 
-    for key, iteration in frames["ff"].iteritems():
+    for key, iteration in frames["ff"].items():
         ctable = pd.concat(iteration, axis=1)
         #print(ctable)
         display(ctable)

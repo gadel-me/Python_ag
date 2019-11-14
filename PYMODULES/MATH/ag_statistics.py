@@ -16,7 +16,7 @@ Source: https://machinelearningmastery.com/a-gentle-introduction-to-normality-te
         http://desktop.arcgis.com/en/arcmap/latest/extensions/geostatistical-analyst/normal-qq-plot-and-general-qq-plot.htm
 """
 
-from __future__ import print_function, division
+
 import pdb
 import os
 import collections

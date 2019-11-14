@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from __future__ import print_function
-from __future__ import division
+
+
 import numpy as np
 import argparse
 import os
@@ -113,7 +113,7 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
 
     restrain_string = "fix REST all restrain "
 
-    for index, (key, value) in enumerate(indices_and_values.iteritems()):
+    for index, (key, value) in enumerate(indices_and_values.items()):
         #pdb.set_trace()
         k_start = force_constants[index][hold]
         k_stop = force_constants[index][1]
@@ -147,7 +147,7 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     """
     lmp_sys = aglmp.read_lmpdat(lmpdat)
     num_geom_types = None
-    key = indices_and_values.keys()[key_index]
+    key = list(indices_and_values.keys())[key_index]
     cur_geometry = get_geometry_by_key(key)
     null_coeff = None
 
@@ -302,7 +302,7 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
 
     # omit energy contribution of the scanned entity by setting its value to 0.0
     if omit_entity is True:
-        lmp.command("group entity_atoms id {}".format(indices_and_values.keys()[0]))
+        lmp.command("group entity_atoms id {}".format(list(indices_and_values.keys())[0]))
         lmp.command("set group entity_atoms {} {}".format(igeom, icoeff_id))
 
         try:
@@ -387,7 +387,7 @@ def get_pe_value(lmplog, entry_idx=-1, energy_idx=-1):
 def get_entity(dictionary):
     """
     """
-    key_length = len(dictionary.keys()[0])
+    key_length = len(list(dictionary.keys())[0])
 
     if key_length == 2:
         return "Bond [Angstrom]"
@@ -537,11 +537,11 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
     total_scan_entities, tasks = get_entities(gau_log, geometries)
 
     # shift entity value by 180 degrees for dihedrals
-    for geom_ids, idx in zip(total_geom_ids, xrange(len(total_scan_entities))):
+    for geom_ids, idx in zip(total_geom_ids, range(len(total_scan_entities))):
         if len(geom_ids) == 4:
             total_scan_entities[idx] = [round(ti + 180, 6) for ti in total_scan_entities[idx]]
 
-    for task_id in xrange(tasks):
+    for task_id in range(tasks):
         # each rank does its task and skips tasks assigned by other ranks (this
         # makes it possible to do restrain md runs in parallel)
         if (task_id % size != rank) or (rank > tasks):
@@ -616,7 +616,7 @@ def norm_energy(energy_file_in, energy_file_out):
         val -= min_value
         normed_values.append(val)
 
-    keys_and_values = dict(zip(keys, normed_values))
+    keys_and_values = dict(list(zip(keys, normed_values)))
     keys_and_values = OrderedDict(sorted(keys_and_values.items()))
 
     if not os.path.isfile(energy_file_out):
@@ -625,7 +625,7 @@ def norm_energy(energy_file_in, energy_file_out):
     #with open(energy_file_out, "a") as opened_energy_file:
     with open(energy_file_out, "a") as opened_energy_file:
 
-        for key, value in keys_and_values.iteritems():
+        for key, value in keys_and_values.items():
             opened_energy_file.write("{:> 20.8f} {:> 20.8f}\n".format(key, value))
 
 

@@ -5,8 +5,8 @@ Since some functions come quite in handy, reusing them is just reasonable. This
 is what this module tries to achieve.
 """
 
-from __future__ import print_function
-from __future__ import division
+
+
 from collections import OrderedDict
 
 #==============================================================================#
@@ -76,14 +76,14 @@ def norm_energy(energy_file_in, energy_file_out):
         val -= min_value
         normed_values.append(val)
 
-    keys_and_values = dict(zip(keys, normed_values))
+    keys_and_values = dict(list(zip(keys, normed_values)))
     keys_and_values = OrderedDict(sorted(keys_and_values.items()))
 
     write_energies(energy_file_out)
 
     with open(energy_file_out, "a") as opened_energy_file:
 
-        for key, value in keys_and_values.iteritems():
+        for key, value in keys_and_values.items():
             opened_energy_file.write("{:> 20.8f} {:> 20.8f}\n".format(key, value))
 
 

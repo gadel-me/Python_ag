@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,7 +28,7 @@ quantum = []
 initial_amber_k = []
 
 with open(args.energy_dat) as energy_dat_in:
-    energy_dat_in.next()
+    next(energy_dat_in)
     column_headers = energy_dat_in.next().split()
     for line in energy_dat_in:
         line = line.split()

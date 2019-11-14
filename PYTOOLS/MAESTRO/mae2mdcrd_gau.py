@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import argparse
 import ag_unify_md as agum
 
@@ -74,7 +74,7 @@ mae = agum.Unification()
 mae.read_mae(args.mae)
 
 # frame-ids
-frame_ids = range(len(mae.ts_coords))
+frame_ids = list(range(len(mae.ts_coords)))
 
 # write amber trajectory for paramfit
 mae.write_mdcrd(args.out+".mdcrd", frame_ids)

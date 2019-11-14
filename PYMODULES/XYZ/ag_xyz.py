@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import pdb
 import numpy as np
 #import copy
@@ -34,7 +34,7 @@ class XYZ(mdu.Universe):
             for line in xyz_in:
                 print(line)
                 num_atms = int(line.split()[0])  # line with number of atoms (mandatory)
-                comment_line = xyz_in.next()  # comment line (may be empty)
+                comment_line = next(xyz_in)  # comment line (may be empty)
 
                 # read box information if there is any
                 if "Boxtype" in comment_line:
@@ -80,7 +80,7 @@ class XYZ(mdu.Universe):
                 cframe = []
 
                 # parse coordinates section
-                for iid in xrange(num_atms):
+                for iid in range(num_atms):
                     catm = xyz_in.next().split()
                     csitnam = catm[0]
                     ccoords = np.array([float(i) for i in catm[1:5]])

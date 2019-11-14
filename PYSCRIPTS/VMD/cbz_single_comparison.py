@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import os
 import numpy as np
 import math
@@ -87,7 +87,7 @@ trans.rotate("z", 180)
 trans.rotate("x", -35)
 
 # zoom out
-for _ in xrange(8):
+for _ in range(8):
     trans.scale(0.833)
 
 # rendering

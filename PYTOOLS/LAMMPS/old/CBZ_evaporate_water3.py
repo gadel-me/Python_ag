@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 from mpi4py import MPI
 from lammps import lammps
 import os
@@ -138,7 +138,7 @@ new_run     = False          # set to True if a run is restarted (atoms got dele
 # ITERATION-SETTINGS ==========================================================#
 #==============================================================================#
 
-for cur_iteration in xrange(args.iter):
+for cur_iteration in range(args.iter):
     # (re-)create lammps-instance
     lmp = lammps()
 

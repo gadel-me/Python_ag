@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import os
 import shutil as sl
 import numpy as np
@@ -122,7 +122,7 @@ for i in frange(-2, 80, 0.5):
         cur_Tm = cgt.translation_matrix(current_shift)
         # translate the coordinates but let the coordinates from frame 0 stay
         # the same
-        coords = dimeric_sys.mm_atm_coords(0, cur_Tm, True, *range(30, len(dimeric_sys.atoms)))
+        coords = dimeric_sys.mm_atm_coords(0, cur_Tm, True, *list(range(30, len(dimeric_sys.atoms))))
         dimeric_sys.ts_coords.append(coords)
     dimeric_sys.chk = "{}.chk".format(output_name)
     dimeric_sys.write_gau("{}.gau".format(output_name), -1, False,

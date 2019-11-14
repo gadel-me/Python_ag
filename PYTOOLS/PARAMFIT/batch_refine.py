@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import os
 import sys
 #import shutil as sl
@@ -80,7 +80,7 @@ cur_prmtop = args.prmtop  # current prmtop file (substituted after each run)
 frcmods = []
 frcmods.append(args.frcmod)
 
-for prm_idx in xrange(num_params):
+for prm_idx in range(num_params):
     cur_quantum = args.quantums[prm_idx]
     cur_mdcrd   = args.mdcrds[prm_idx]
 

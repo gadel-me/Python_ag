@@ -165,8 +165,8 @@ def plot_results(rsgetters, rslabels, linestyles=(), xlabel=r"Distance / $\AA$",
     plt.ylabel(ylabel)
     plt.title(title)
 
-    for rsgetter, rslabel, linestyle in itertools.izip_longest(rsgetters, rslabels, linestyles):
-        xvals, yvals = zip(*rsgetter.normed_results)
+    for rsgetter, rslabel, linestyle in itertools.zip_longest(rsgetters, rslabels, linestyles):
+        xvals, yvals = list(zip(*rsgetter.normed_results))
 
         if linestyle is None:
             plt.plot(xvals, yvals, label=rslabel, linestyle="-")

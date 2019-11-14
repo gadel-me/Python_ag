@@ -68,9 +68,9 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
 
     # heat up
     #lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(300))
-    for _ in xrange(cycles):
+    for _ in range(cycles):
         if rank == 0:
-            print(bcolors.red + "Annealing" + bcolors.endc)
+            print((bcolors.red + "Annealing" + bcolors.endc))
 
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(0.0, tmax))
         lmp.command("run {}".format(steps))
@@ -82,7 +82,7 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
         #    MPI.COMM_WORLD.Abort()
 
         if rank == 0:
-            print(bcolors.yellow + "Quenching 1" + bcolors.endc)
+            print((bcolors.yellow + "Quenching 1" + bcolors.endc))
 
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(tmax, 0.0))
 
@@ -93,7 +93,7 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
             MPI.COMM_WORLD.Abort()
 
         if rank == 0:
-            print(bcolors.yellow + "Quenching 2" + bcolors.endc)
+            print((bcolors.yellow + "Quenching 2" + bcolors.endc))
 
         lmp.command("unfix TFIX")
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(1.0, 1.0))
@@ -105,7 +105,7 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
             MPI.COMM_WORLD.Abort()
 
         if rank == 0:
-            print(bcolors.green + "Minimization" + bcolors.endc)
+            print((bcolors.green + "Minimization" + bcolors.endc))
 
         try:
             lmp.command("minimize 1e-6 1e-9 2000000 100000")

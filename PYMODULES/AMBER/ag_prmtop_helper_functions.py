@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import re
 import math
 import md_stars as mds
@@ -16,7 +16,7 @@ def chunk_list(lst, n):
     """
     Divide a list (listname) into chunks with length n
     """
-    return [lst[i:i + n] for i in xrange(0, len(lst), n)]
+    return [lst[i:i + n] for i in range(0, len(lst), n)]
 
 
 def parse_section(opened_prmtop, geps, chunksize=None, itype=None):
@@ -28,21 +28,21 @@ def parse_section(opened_prmtop, geps, chunksize=None, itype=None):
     mepl:   max entries per line (entries given by format line in prmtop)
     lps:    lines per section (e.g. AMBER_ATOM_TYPE)
     """
-    line      = opened_prmtop.next()  # line with formatting info
+    line      = next(opened_prmtop)  # line with formatting info
     mepl, cpe = [int(i) for i in re.findall(r'\d+', line)][:2]
     lps       = int(math.ceil(geps/mepl))
     entries   = []
 
     if "20a4" in line:
         # following lines do not necessarily have to have spaces
-        for iline in xrange(lps):
+        for iline in range(lps):
             line = opened_prmtop.next().rstrip("\n")  # remove next line
             entries.extend([line[i:i+cpe].strip() for i in
                             range(0, len(line), cpe)])
     else:
         # following lines definitely have spaces and consist of floats or ints
-        for iline in xrange(lps):
-            line = opened_prmtop.next()
+        for iline in range(lps):
+            line = next(opened_prmtop)
             if itype == "int":
                 entries.extend([int(i) for i in line.split()])
             else:
@@ -209,7 +209,7 @@ def get_AB_ids(ntypes, section_nonbonded_parm_index):
     ii_nonbon_param_ids = []
 
     # 1. get lj-ii-indices for section 'nonbonded_parm_index'
-    for i_id in xrange(ntypes):
+    for i_id in range(ntypes):
         i_id += 1  # counting in prmtop starts with 1 (Fortran code)
         cur_ii_nonbon_param_id = ntypes*(i_id-1) + i_id
         # since we are not using Fortran, counting starts on 0

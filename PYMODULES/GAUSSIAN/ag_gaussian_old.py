@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import re
 import numpy as np
 import md_stars as mds
@@ -73,7 +73,7 @@ class GauStuff(mdu.Universe):
         print("***Gau-Info: Reading  Gaussian-Input-File!")
 
         (chk, nproc, mem, job_type, method, basis_set, geom, charge,
-         multiplicity) = [None for _ in xrange(9)]
+         multiplicity) = [None for _ in range(9)]
         cframe = []
 
         with open(gauin, "r") as gau_in:
@@ -131,7 +131,7 @@ class GauStuff(mdu.Universe):
 
                         # read info
                         try:
-                            line = gau_in.next()
+                            line = next(gau_in)
                         except StopIteration:
                             # last line of document reached
                             break
@@ -241,12 +241,12 @@ class GauStuff(mdu.Universe):
             if hasattr(self, "geom") and self.geom.upper() == "CONNECTIVITY":
                 # since gaussian wants bonds in a kind of condensed style,
                 # prepare a dictionary to do so
-                a = range(len(self.atoms))
-                b = [[] for _ in xrange(len(self.atoms))]
-                d = dict(zip(a, b))
+                a = list(range(len(self.atoms)))
+                b = [[] for _ in range(len(self.atoms))]
+                d = dict(list(zip(a, b)))
 
                 # merge bonds of same atom 1 utilizing a dictionary
-                for i in xrange(len(self.bonds)):
+                for i in range(len(self.bonds)):
                     d[self.bonds[i].atm_id1].append(self.bonds[i])
 
                 # write bond-entry

@@ -6,7 +6,7 @@ carrying out molecular dynamics. Given bond information it groups atoms to
 molecules.
 """
 
-from __future__ import print_function, division
+
 import math
 import numpy as np
 import copy
@@ -210,7 +210,7 @@ class Universe(object):
         atoms2delete = set(self.same_molecule_as(False, *atoms2delete))
 
         # /// delete entries
-        for frame_id in xrange(len(self.ts_coords)):
+        for frame_id in range(len(self.ts_coords)):
             self.ts_coords[frame_id] = [coord for coord_idx, coord in enumerate(self.ts_coords[frame_id]) if
                                         coord_idx not in atoms2delete]
 
@@ -428,14 +428,14 @@ class Universe(object):
 
             # disassemble former keys and values (force field) - universe 1
             u1_len_ce = len(u1_ce)
-            u1_ffe_keys = u1_ffe.keys()
-            u1_ffe_vals = u1_ffe.values()
+            u1_ffe_keys = list(u1_ffe.keys())
+            u1_ffe_vals = list(u1_ffe.values())
             u1_len_ffe_keys = len(u1_ffe_keys)
 
             # disassemble former keys and values (force field) - universe 2
             u2_len_ce = len(u2_ce)
-            u2_ffe_keys = u2_ffe.keys()
-            u2_ffe_vals = u2_ffe.values()
+            u2_ffe_keys = list(u2_ffe.keys())
+            u2_ffe_vals = list(u2_ffe.values())
             u1_len_ffe_keys = len(u2_ffe_vals)
 
             # for translation between former and new keys (both universes)
@@ -445,17 +445,17 @@ class Universe(object):
             if mode in ("merge", "append"):
                 if mode == "append":
                     # redefine indices
-                    combined_ffe_keys = range(u1_len_ffe_keys + len(u2_ffe_keys))
+                    combined_ffe_keys = list(range(u1_len_ffe_keys + len(u2_ffe_keys)))
 
                     # concatenate values of current entry
                     combined_ffe_vals = u1_ffe_vals + u2_ffe_vals
 
                     # translate between old and new entry-keys (universe 1)
-                    u1_ffe_keys_old_new = zip(u1_ffe_keys, combined_ffe_keys[:u1_len_ffe_keys])
+                    u1_ffe_keys_old_new = list(zip(u1_ffe_keys, combined_ffe_keys[:u1_len_ffe_keys]))
                     u1_ffe_keys_old_new = dict(u1_ffe_keys_old_new)
 
                     # translate between old and new entry-keys (universe 2)
-                    u2_ffe_keys_old_new = zip(u2_ffe_keys, combined_ffe_keys[u1_len_ffe_keys:])
+                    u2_ffe_keys_old_new = list(zip(u2_ffe_keys, combined_ffe_keys[u1_len_ffe_keys:]))
                     u2_ffe_keys_old_new = dict(u2_ffe_keys_old_new)
 
                 # merge universe 1 and universe 2 (where possible)
@@ -464,14 +464,14 @@ class Universe(object):
                     # a dictionary to translate between old ff-keys and new ones
                     combined_ffe_keys = u1_ffe_keys[:]
                     combined_ffe_vals = u1_ffe_vals[:]
-                    u1_ffe_keys_old_new = dict(zip(u1_ffe_keys, u1_ffe_keys))
+                    u1_ffe_keys_old_new = dict(list(zip(u1_ffe_keys, u1_ffe_keys)))
                     # attributes of class instances of force-field-entry from u2
                     # as dictionary
                     for u2_cffe_key, u2_cvalue in zip(u2_ffe_keys, u2_ffe_vals):
                         # dictionary with attributes and their values for u1
                         u2_cattr = dict(u2_cvalue.__iter__())
-                        u2_cattr_keys = u2_cattr.keys()
-                        u2_cattr_vals = u2_cattr.values()
+                        u2_cattr_keys = list(u2_cattr.keys())
+                        u2_cattr_vals = list(u2_cattr.values())
 
                         # attributes of class instances of force-field-entry from u1
                         # as dictionary
@@ -479,8 +479,8 @@ class Universe(object):
                             same = None
                             # dictionary with attributes and their values for u1
                             u1_cattr = dict(u1_cvalue.__iter__())
-                            u1_cattr_keys = u1_cattr.keys()
-                            u1_cattr_vals = u1_cattr.values()
+                            u1_cattr_keys = list(u1_cattr.keys())
+                            u1_cattr_vals = list(u1_cattr.values())
 
                             # check if attributes are the same
                             if u2_cattr_keys != u1_cattr_keys:
@@ -515,19 +515,19 @@ class Universe(object):
                         u2_ffe_keys_old_new[ckey] = combined_ffe_keys_tmp[u2_ffe_keys_old_new[ckey]]
 
                     # redefine keys for force field entry to start with 0
-                    combined_ffe_keys = range(len(combined_ffe_keys))
+                    combined_ffe_keys = list(range(len(combined_ffe_keys)))
 
                 else:
                     raise TypeError("Wrong keyword for argument 'mode'")
 
                 # concatenation to new entry for all keys of current entry
-                u1_ffe = dict(zip(combined_ffe_keys, combined_ffe_vals))
+                u1_ffe = dict(list(zip(combined_ffe_keys, combined_ffe_vals)))
 
                 # bonds, angles, dihedrals, impropers - concatenation
                 u1_ce.extend(u2_ce)
 
                 # renew atoms-, bonds-, angles-, dihedrals- and impropers-entries
-                for ce_idx in xrange(len(u1_ce)):
+                for ce_idx in range(len(u1_ce)):
 
                     # translate force-field-keys and atom-ids of universe 1 part
                     if ce_idx < u1_len_ce:
@@ -704,7 +704,7 @@ class Universe(object):
             u1_len_molecules = len(self.molecules)
             self.molecules.extend(universe2_copy.molecules)
 
-            for cmol_idx in xrange(len(self.molecules)):
+            for cmol_idx in range(len(self.molecules)):
 
                 # adjust atom-ids of molecules from universe 1
                 if cmol_idx < u1_len_molecules:
@@ -906,7 +906,7 @@ class Universe(object):
 
         """
         # center of geometry
-        cog = self.get_cog(0, *range(len(self.atoms)))
+        cog = self.get_cog(0, *list(range(len(self.atoms))))
         radius = 0  # very small number for initial distance
 
         # get distances for all atoms between center of geometry and current atom
@@ -1062,11 +1062,11 @@ class Universe(object):
                                 linked_cells.ltc_beta,
                                 linked_cells.ltc_gamma)
 
-        for cra in xrange(ra):
+        for cra in range(ra):
             # check from a along box vector b
-            for crb in xrange(rb):
+            for crb in range(rb):
                 # finally check along box vector c (from a and b)
-                for crc in xrange(rc):
+                for crc in range(rc):
 
                     if debug is True:
                         print("Checking current cell: ", cra, crb, crc)
@@ -1275,7 +1275,7 @@ class Universe(object):
         excluded_atm_idxs = []
 
         # move all negative coordinates to the positive quadrant
-        for idx in xrange(len(self.ts_coords[frame_id])):
+        for idx in range(len(self.ts_coords[frame_id])):
 
             if idx in excluded_atm_idxs:
                 continue
@@ -1327,7 +1327,7 @@ class Universe(object):
         self.ts_coords[frame_id] = np.transpose(matmul_coords_T)
 
         # move all negative coordinates to the positive quadrant
-        for idx in xrange(len(self.ts_coords[frame_id])):
+        for idx in range(len(self.ts_coords[frame_id])):
 
             # transpose about a
             if self.ts_coords[frame_id][idx][0] < 0:
@@ -1389,9 +1389,9 @@ class Universe(object):
             # only translation in positive direction -> starting from next unit
             # cell after current one
             if n_start == 0:
-                scope = range(n_start+1, n_stop+1)
+                scope = list(range(n_start+1, n_stop+1))
             else:
-                scope = range(n_start, n_stop+1)
+                scope = list(range(n_start, n_stop+1))
 
             for replica_id in scope:
 
@@ -1629,7 +1629,7 @@ class Universe(object):
         imps_old_length = len(self.impropers)
 
         # n-1 since we are adding these to an already existing topology
-        for i in xrange(0, n):
+        for i in range(0, n):
 
             last_atm_id = len(self.atoms)
             # always alter the same first atoms
@@ -1730,14 +1730,14 @@ class Universe(object):
                 self.imp_types = tmp_dict
 
         # pair types
-        for idx in xrange(len(self.pair_types)):
+        for idx in range(len(self.pair_types)):
             self.pair_types[idx].atm_key_i += mod
             #if hasattr(self.pair_types, "atm_key_j"):
             #    self.pair_types[idx].atm_key_j += 1
             self.pair_types[idx].atm_key_j += mod
 
         # atoms
-        for idx in xrange(len(self.atoms)):
+        for idx in range(len(self.atoms)):
             if hasattr(self.atoms[idx], "atm_id") and "atm_id" in entries:
                 self.atoms[idx].atm_id  += mod
 
@@ -1756,7 +1756,7 @@ class Universe(object):
             #    self.atoms[idx].sitnam = sitnam_idx[0]
 
         # bonds
-        for idx in xrange(len(self.bonds)):
+        for idx in range(len(self.bonds)):
             if hasattr(self.bonds[idx], "bnd_id"):
                 self.bonds[idx].bnd_id  += mod
             if hasattr(self.bonds[idx], "bnd_key"):
@@ -1767,7 +1767,7 @@ class Universe(object):
                 self.bonds[idx].atm_id2 += mod
 
         # angles
-        for idx in xrange(len(self.angles)):
+        for idx in range(len(self.angles)):
             if hasattr(self.angles[idx], "ang_id"):
                 self.angles[idx].ang_id   += mod
             if hasattr(self.angles[idx], "ang_key"):
@@ -1780,7 +1780,7 @@ class Universe(object):
                 self.angles[idx].atm_id3  += mod
 
         # dihedrals
-        for idx in xrange(len(self.dihedrals)):
+        for idx in range(len(self.dihedrals)):
             if hasattr(self.dihedrals[idx], "dih_id"):
                 self.dihedrals[idx].dih_id  += mod
             if hasattr(self.dihedrals[idx], "dih_key"):
@@ -1795,7 +1795,7 @@ class Universe(object):
                 self.dihedrals[idx].atm_id4 += mod
 
         # impropers
-        for idx in xrange(len(self.impropers)):
+        for idx in range(len(self.impropers)):
             if hasattr(self.impropers[idx], "imp_id"):
                 self.impropers[idx].imp_id  += mod
             if hasattr(self.impropers[idx], "imp_key"):
@@ -1810,11 +1810,11 @@ class Universe(object):
                 self.impropers[idx].atm_id4 += mod
 
         # molecules
-        for idx in xrange(len(self.molecules)):
+        for idx in range(len(self.molecules)):
             self.molecules[idx] = [i+mod for i in self.molecules[idx]]
 
         # linked cells
-        for frame in xrange(len(self.ts_lnk_cls)):
+        for frame in range(len(self.ts_lnk_cls)):
             for idx_i, i in enumerate(self.ts_lnk_cls[frame].linked_cells):
                 for idx_j, j in enumerate(i):
                     for idx_k, k in enumerate(j):
@@ -1834,7 +1834,7 @@ class Universe(object):
         """
         destination = np.array(destination)
         natoms = len(self.atoms)
-        atm_idxs = range(natoms)
+        atm_idxs = list(range(natoms))
         cur_cog = self.get_cog(frame_id, *atm_idxs)
         # 'origin - sys_main_cog' since we want to move the system back
         M_trans_main = cgt.translation_matrix(destination - cur_cog)
@@ -2163,7 +2163,7 @@ def merge_systems(systems, frame_idxs=None, pair_coeffs=None):
     # define frame for first system
     sys_merged.ts_coords = [systems[0].ts_coords[get_frame_idx(0)]]
 
-    for sys_add_idx in xrange(len(systems)):
+    for sys_add_idx in range(len(systems)):
 
         if sys_add_idx == 0:
             continue

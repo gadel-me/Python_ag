@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import os
 import argparse
 import md_box as mdb
@@ -55,7 +55,7 @@ mae.change_indices(incr=1, mode="increase")
 mae_basename = os.path.basename(args.mae).rstrip(".01.mae")
 
 nframes = len(mae.ts_coords)  # write one file for each conformation
-for cf in xrange(nframes):
+for cf in range(nframes):
     # create new boxes for each conformation
     cur_box = mdb.Box(boxtype="lammps",
                       lmp_xlo=-20, lmp_xhi=20,

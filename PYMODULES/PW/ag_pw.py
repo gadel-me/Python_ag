@@ -6,7 +6,7 @@ When reading the output file, a common function might be used with decorators
 for reading pwin-coords entry and pwout-coords entry
 """
 
-from __future__ import print_function, division
+
 import math
 import os
 import re
@@ -269,7 +269,7 @@ class PwStuff(mdu.Universe):
                     # get box vectors
                     cbox = mdb.Box(boxtype="cartesian", unit=box_unit)
 
-                    for line_cntr in xrange(3):
+                    for line_cntr in range(3):
                         line = [float(i) for i in opened_pwin.readline().split()]
 
                         # allot each vector to the box
@@ -526,7 +526,7 @@ class PwStuff(mdu.Universe):
         # write entries
         opened_file_instance.write("&{}\n".format(keyword))
 
-        for setting, value in self.pw_entries[keyword].iteritems():
+        for setting, value in self.pw_entries[keyword].items():
 
             # calculate celldm(1), which derives from lattice vector a
             if setting == "celldm(1)":
@@ -565,7 +565,7 @@ class PwStuff(mdu.Universe):
 
             # Pseudopotentials (atom types)
             opened_filename.write("ATOMIC_SPECIES\n")
-            for _, atom_type in self.atm_types.iteritems():
+            for _, atom_type in self.atm_types.items():
                 opened_filename.write("{0} {1:>6} {2:}\n".format(
                     atom_type.sitnam, atom_type.weigh,
                     atom_type.pseudopotential))

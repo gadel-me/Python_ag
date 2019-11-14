@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import ag_vectalg as agv
 import ag_cryst as agc
 

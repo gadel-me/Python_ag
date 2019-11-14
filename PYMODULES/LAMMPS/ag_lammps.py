@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import pdb
 import os
 import numpy as np
@@ -105,12 +105,12 @@ class LmpStuff(mdu.Universe):
 
                 # /// atom types (masses) ///
                 elif "Masses" in line:
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse mass entry
                     atm_tp_old_new = {}
-                    for atmcnt in xrange(total_atmtypes):
-                        line = lmpdat_in.next()
+                    for atmcnt in range(total_atmtypes):
+                        line = next(lmpdat_in)
                         cur_atype = mds.Atom()
                         # parse cgcmm-section
                         lmpdat_stuff, csitnam, cres = self._parse_cgcmm(line)
@@ -125,12 +125,12 @@ class LmpStuff(mdu.Universe):
 
                 # /// bond types(coeffs) ///
                 elif "Bond Coeffs" in line:
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse bond-type entries
                     bnd_tp_old_new = {}
-                    for bndcnt in xrange(total_bndtypes):
-                        line = lmpdat_in.next()
+                    for bndcnt in range(total_bndtypes):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)  # split line into data and comment
                         line = line.split()
 
@@ -176,12 +176,12 @@ class LmpStuff(mdu.Universe):
 
                 # /// angle types(coeffs) ///
                 elif "Angle Coeffs" in line:
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse angle-type entries
                     ang_tp_old_new = {}
-                    for angcnt in xrange(total_angtypes):
-                        line = lmpdat_in.next()
+                    for angcnt in range(total_angtypes):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
 
@@ -215,12 +215,12 @@ class LmpStuff(mdu.Universe):
                 elif "Dihedral Coeffs" in line:
                     if debug is True:
                         print("***Lammps-Data-Info: Only charmm-dihedral-style supported (atm)!")
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse dihedral-type entries
                     dih_tp_old_new = {}
-                    for dihcnt in xrange(total_dihtypes):
-                        line = lmpdat_in.next()
+                    for dihcnt in range(total_dihtypes):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
 
@@ -248,12 +248,12 @@ class LmpStuff(mdu.Universe):
                     if debug is True:
                         print("***Lammps-Data-Info: Only cvff-improper-style supported (atm)!")
 
-                    lmpdat_in.next()
+                    next(lmpdat_in)
 
                     # parse improper-type entries
                     imp_tp_old_new = {}
-                    for impcnt in xrange(total_imptypes):
-                        line = lmpdat_in.next()
+                    for impcnt in range(total_imptypes):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
 
@@ -280,11 +280,11 @@ class LmpStuff(mdu.Universe):
                     if debug is True:
                         print("***Lammps-Data-Info: Parsing Pair Coeffs")
 
-                    lmpdat_in.next()
+                    next(lmpdat_in)
                     total_pairtypes = total_atmtypes
 
-                    for _ in xrange(total_pairtypes):
-                        line = lmpdat_in.next()
+                    for _ in range(total_pairtypes):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
 
@@ -312,11 +312,11 @@ class LmpStuff(mdu.Universe):
                     if debug is True:
                         print("***Lmpdat-Info: Parsing PairIJ Coeffs")
 
-                    lmpdat_in.next()
+                    next(lmpdat_in)
                     total_pairtypes = total_atmtypes*(total_atmtypes+1)/2
 
-                    for _ in xrange(total_pairtypes):
-                        line = lmpdat_in.next()
+                    for _ in range(total_pairtypes):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
                         atm_key_i  = atm_tp_old_new[int(line[0])]
@@ -346,12 +346,12 @@ class LmpStuff(mdu.Universe):
                     #self.atm_idx_id = {}
                     atm_id_old_new = {}
                     tmp_ts = []
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
                     tmp_atm_lines = []
 
                     # parse 'Atoms' and append to self.atoms
-                    for atmcnt in xrange(total_atms):
-                        line = lmpdat_in.next()
+                    for atmcnt in range(total_atms):
+                        line = next(lmpdat_in)
 
                         # divide line in lmpdat- and cgcmm-stuff
                         #lmpdat_stuff, csitnam, cres = self._parse_cgcmm(line)  #TODO old garbage
@@ -441,11 +441,11 @@ class LmpStuff(mdu.Universe):
 
                 # /// bonds entry ///
                 elif line.startswith("Bonds"):
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse bonds
-                    for bndcnt in xrange(total_bnds):
-                        line = lmpdat_in.next()
+                    for bndcnt in range(total_bnds):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
                         #line = [int(i) for i in line]
@@ -478,11 +478,11 @@ class LmpStuff(mdu.Universe):
 
                 # /// angles entry ///
                 elif "Angles" in line:
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse angles
-                    for angcnt in xrange(total_angs):
-                        line = lmpdat_in.next()
+                    for angcnt in range(total_angs):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
                         #line = [int(i) for i in line]
@@ -499,11 +499,11 @@ class LmpStuff(mdu.Universe):
 
                 # /// dihedrals entry ///
                 elif "Dihedrals" in line:
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
                     # parse dihedrals
-                    for dihcnt in xrange(total_dihs):
-                        line = lmpdat_in.next()
+                    for dihcnt in range(total_dihs):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
                         #line = [int(i) for i in line]
@@ -521,10 +521,10 @@ class LmpStuff(mdu.Universe):
 
                 # /// impropers entry ///
                 elif "Impropers" in line:
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
 
-                    for impcnt in xrange(total_imps):
-                        line = lmpdat_in.next()
+                    for impcnt in range(total_imps):
+                        line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
                         #line = [int(i) for i in line]
@@ -546,11 +546,11 @@ class LmpStuff(mdu.Universe):
                     # since lammps also provides us with forces information,
                     # we make it possible to read those from the data file
                     # THIS IS NOT PART OF THE OFFICIAL LAMMPS DATA STRUCTURE!
-                    lmpdat_in.next()  # skip empty line
+                    next(lmpdat_in)  # skip empty line
                     tmp_forces = []
 
                     for atmcnt, sorted_line in enumerate(tmp_atm_lines):
-                        line = lmpdat_in.next()
+                        line = next(lmpdat_in)
                         # parse coordinates
                         cforces = np.array([float(i) for i in line.split()[2:4]])
                         # append coordinates to temporary frame
@@ -1159,7 +1159,7 @@ class LmpStuff(mdu.Universe):
         # fill arrays with coordinates
         ptr = 0  # pointer to place data in right position of array
 
-        for frame_num in xrange(self.nframes):
+        for frame_num in range(self.nframes):
 
             if frm <= frame_num < to_frm:
 

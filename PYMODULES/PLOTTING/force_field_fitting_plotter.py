@@ -211,7 +211,7 @@ def plot_multiple_histo(
     ax.set_xlabel(xlabel, fontweight='bold', fontsize=fontsize)
     ax.set_ylabel("Frequency (normalized)", fontweight='bold', fontsize=fontsize)
 
-    for idx, (key, data) in enumerate(data_dict.iteritems()):
+    for idx, (key, data) in enumerate(data_dict.items()):
         mu = np.mean(data)
         median = np.median(data)
         sigma = np.std(data)

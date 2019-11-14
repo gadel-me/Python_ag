@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import argparse
 import ag_lammps
 #import math
@@ -74,7 +74,7 @@ if args.show_lattice_cells is True:
     exit()
 
 # extend first molecular system with all others
-for idx in xrange(1, len(sys_all)):
+for idx in range(1, len(sys_all)):
 
     # get number of cells from the current merged system
     if args.delete_close_atoms is True:

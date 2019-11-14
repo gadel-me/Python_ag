@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import time
 import math
 import numpy as np
@@ -105,15 +105,15 @@ class LinkedCells(object):
         linked_cells = []
 
         # create containers for linked cells
-        for sub_a in xrange(self.ra):
+        for sub_a in range(self.ra):
             # create first sub row
             clst1 = []
 
-            for sub_b in xrange(self.rb):
+            for sub_b in range(self.rb):
                 # create second sub row
                 clst2 = []
 
-                for sub_c in xrange(self.rc):
+                for sub_c in range(self.rc):
                     # create third sub row
                     clst3 = []
                     clst2.append(clst3)
@@ -129,14 +129,14 @@ class LinkedCells(object):
 
         # get all sub lengths (fractional coordinates) in which the cell is divided
         # (for each box vector)
-        subcell_a = [i*rca for i in xrange(1, self.ra+1)]  # e.g. 1/3, 2/3, 3/3
-        subcell_b = [i*rcb for i in xrange(1, self.rb+1)]
-        subcell_c = [i*rcc for i in xrange(1, self.rc+1)]
+        subcell_a = [i*rca for i in range(1, self.ra+1)]  # e.g. 1/3, 2/3, 3/3
+        subcell_b = [i*rcb for i in range(1, self.rb+1)]
+        subcell_c = [i*rcc for i in range(1, self.rc+1)]
 
         # sub cell-index dictionary
         atm_idx_sub_cell = {}
 
-        for cidx in xrange(len(self.atm_coords)):
+        for cidx in range(len(self.atm_coords)):
             # create container for sub cell indices
             atm_idx_sub_cell[cidx] = []
 

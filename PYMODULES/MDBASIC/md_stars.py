@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import math
 import md_stars_helper as mdsh
 import md_elements as mde
@@ -12,7 +12,7 @@ class IterMixin(object):
     desired object.
     """
     def __iter__(self):
-        for attr, value in self.__dict__.iteritems():
+        for attr, value in self.__dict__.items():
             yield attr, value
 
 

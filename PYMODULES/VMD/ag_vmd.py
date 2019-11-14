@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import pdb
 import os
 import time
@@ -277,7 +277,7 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
         inter_end = [0, 0, 0]
 
         # draw vectors ncylinders times
-        for i in xrange(ncylinders):
+        for i in range(ncylinders):
             inter_end = p_start + p_vector_unit * len_cylinder
 
             if i % 2 == 0:

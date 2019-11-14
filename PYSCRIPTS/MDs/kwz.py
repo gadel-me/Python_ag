@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import os
 import numpy as np
 import re
@@ -373,7 +373,7 @@ if __name__ == "__main__":
                         solvate_sys = aglmp.read_lmpdat(lmpsettings_quench.input_lmpdat,
                                                         dcd=lmpsettings_quench.output_dcd)
                         solvate_sys_natoms = len(solvate_sys.atoms)
-                        atm_idxs_solvate = range(solvate_sys_natoms)
+                        atm_idxs_solvate = list(range(solvate_sys_natoms))
 
                         # change box size according to the coordinates from
                         # quenching in order to save space
@@ -403,7 +403,7 @@ if __name__ == "__main__":
 
                         # create voids and write lammps data with solvate and solvent combined
                         if not os.path.isfile(lmpsettings_void.output_lmprst):
-                            for _ in xrange(5):
+                            for _ in range(5):
                                 no_clashes = agk.create_voids(lmpsettings_void, lmpsettings_quench.input_lmpdat, lmpsettings_quench.output_dcd, lmpsettings_relax_cut.output_dcd)
 
                                 if no_clashes is True:
@@ -443,7 +443,7 @@ if __name__ == "__main__":
                     # check if aggregate is still ok
                     if rank == 0:
                         solution_sys = aglmp.read_lmpdat(lmpsettings_heat.input_lmpdat, lmpsettings_heat.output_dcd)
-                        solution_sys_atoms_idxs = range(len(solution_sys.atoms))
+                        solution_sys_atoms_idxs = list(range(len(solution_sys.atoms)))
 
                         # check aggregation state of the last frame
                         aggregate_ok = solution_sys.check_aggregate(-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])

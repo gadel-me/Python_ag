@@ -25,12 +25,12 @@ class Clmsv(logu.LogUniverse):
                         continue
 
                     keys = line.split()
-                    cdata = collections.OrderedDict(zip(keys, [[] for i in xrange(len(keys))]))
+                    cdata = collections.OrderedDict(list(zip(keys, [[] for i in range(len(keys))])))
 
                     while 1:
                         # check if end of file, append current data
                         try:
-                            line = f_in.next()
+                            line = next(f_in)
                         except StopIteration:
                                 self.data.append(cdata)
                                 break
@@ -60,8 +60,8 @@ class Clmsv(logu.LogUniverse):
             for cnum, cdata in enumerate(self.data):
                 clmsv_out_file = "{}_{}.clmsv".format(clmsv_out, cnum)
 
-                list_of_keys = cdata.keys()
-                list_of_values = cdata.values()
+                list_of_keys = list(cdata.keys())
+                list_of_values = list(cdata.values())
 
                 with open(clmsv_out_file, "w") as f_out:
 
@@ -83,8 +83,8 @@ class Clmsv(logu.LogUniverse):
 
             with open(clmsv_out, "w") as f_out:
                 for cdata in self.data:
-                    list_of_keys = cdata.keys()
-                    list_of_values = cdata.values()
+                    list_of_keys = list(cdata.keys())
+                    list_of_values = list(cdata.values())
 
                     # write header
                     for ikey in list_of_keys:

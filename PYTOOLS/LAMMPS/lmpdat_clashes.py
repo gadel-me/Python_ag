@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import argparse
 import itertools as it
 from numpy import linalg as LA

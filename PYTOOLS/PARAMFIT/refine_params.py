@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import os
 import shutil as sl
 import argparse
@@ -112,8 +112,8 @@ with open(fit_k_out, "r") as f_in:
 
         if "FINAL PARAMETERS" in line:
             # skip the following two lines
-            f_in.next()
-            f_in.next()
+            next(f_in)
+            next(f_in)
             force_const_K = float(f_in.next().split()[2])
             print("***Info: Found value of K: ", force_const_K)
             break

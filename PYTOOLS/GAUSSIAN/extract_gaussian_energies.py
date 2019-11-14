@@ -1,4 +1,4 @@
-from __future__ import division
+
 import os
 import pdb
 import numpy as np
@@ -75,7 +75,7 @@ def get_results(maindir, method, basset, index_atm1, index_atm2):
             cenergy = read_gauout_energy(output_file)
             dists_and_energies.append([cdist, cenergy])
         except IndexError:
-            print("Gaussian calculation has not finished yet or properly; filename is {}".format(output_file))
+            print(("Gaussian calculation has not finished yet or properly; filename is {}".format(output_file)))
 
     return dists_and_energies
 

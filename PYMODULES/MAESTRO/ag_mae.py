@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import numpy as np
 import re
 import md_stars as mds
@@ -33,9 +33,9 @@ class MaestroStuff(mdu.Universe):
 
                     # skip lines until coordinates section is reached
                     while ":::" not in line:
-                        line = mae_in.next()
+                        line = next(mae_in)
 
-                    for iid in xrange(num_atms):
+                    for iid in range(num_atms):
                         catm = mae_in.next().split()
                         atm_id_old_new[int(catm[0])] = iid
                         csitnam = catm[-1]
@@ -73,9 +73,9 @@ class MaestroStuff(mdu.Universe):
 
                     # skip lines until coordinates section is reached
                     while ":::" not in line:
-                        line = mae_in.next()
+                        line = next(mae_in)
 
-                    for iid in xrange(num_bnds):
+                    for iid in range(num_bnds):
                         cbnd = mae_in.next().split()
 
                         # store section

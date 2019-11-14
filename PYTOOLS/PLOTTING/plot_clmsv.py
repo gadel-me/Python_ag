@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import readline  # necessary for raw_input and using arrow keys
 import argparse
 import scipy.stats
@@ -113,13 +113,13 @@ data = collections.OrderedDict()
 
 # merge if multiple files were given
 for cdict in clmsv.data:
-    for key, value in cdict.iteritems():
+    for key, value in cdict.items():
         if key not in data:
             data[key] = []
 
         data[key].extend(value)
 
-keys = data.keys()
+keys = list(data.keys())
 #pdb.set_trace()
 # /// plot data ///
 keep_plotting = "y"
@@ -240,7 +240,7 @@ while keep_plotting in ["Yes", "Y", "yes", "y", ""]:
     previous_lst = args.lst
     previous_every = every
     # continue plotting?
-    keep_plotting = raw_input("Plot something else? Y(es)/n(o): > ")
+    keep_plotting = input("Plot something else? Y(es)/n(o): > ")
 
     if keep_plotting in ["Yes", "Y", "yes", "y", ""]:
         print("\nNext plot...")

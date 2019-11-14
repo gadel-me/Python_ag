@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+
 import pdb
 import argparse
 import numpy as np
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     if args.shft is not None:
         args.shft = np.array(args.shft)
         M_shft = cgt.translation_matrix(args.shft)
-        atm_idxs = range(len(sys_cutfrom.atoms))
+        atm_idxs = list(range(len(sys_cutfrom.atoms)))
         sys_cutfrom.mm_atm_coords(-1, M_shft, False, *atm_idxs)
         del (atm_idxs, M_shft)
 
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         if args.shft_cutshape is not None:
             args.shft_cutshape = np.array(args.shft_cutshape)
             M_shft_cut = cgt.translation_matrix(args.shft_cutshape)
-            atm_idxs = range(len(sys_cutshape.ts_coords[-1]))
+            atm_idxs = list(range(len(sys_cutshape.ts_coords[-1])))
             sys_cutshape.mm_atm_coords(-1, M_shft_cut, False, *atm_idxs)
             del (atm_idxs, M_shft_cut)
 
@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
     if args.shft_cut_result is not None:
         M_shft_cut = cgt.translation_matrix(args.shft_cut_result)
-        atm_idxs = range(len(sys_cutfrom.ts_coords[-1]))
+        atm_idxs = list(range(len(sys_cutfrom.ts_coords[-1])))
         sys_cutfrom.mm_atm_coords(-1, M_shft_cut, False, *atm_idxs)
         del (atm_idxs, M_shft_cut)
 

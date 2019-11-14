@@ -7,7 +7,7 @@ intended to checkout and fit vdw-parameters to ab initio data (scans for ab init
 therefor have to be done the same way).
 """
 
-from __future__ import print_function, division
+
 import pdb
 import os
 import numpy as np
@@ -256,7 +256,7 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
         lmp.command("group frozen id {}".format(" ".join(map(str, frozen_atoms))))
         lmp.command("fix freeze frozen setforce 0.0 0.0 0.0")
 
-    for i in xrange(1, 200):
+    for i in range(1, 200):
 
         if i < 20:
             # push both parts together
@@ -287,7 +287,7 @@ def calculate_distances(lmpdat, dcd, idxs_atm1, idxs_atm2):
     dimer_sys = read_lmpdat(lmpdat, dcd, frame_idx_start=0)
     #pdb.set_trace()
 
-    for frame_idx in xrange(0, len(dimer_sys.ts_coords)):
+    for frame_idx in range(0, len(dimer_sys.ts_coords)):
 
         if len(idxs_atm1) == 1:
             cog1 = dimer_sys.ts_coords[frame_idx][idxs_atm1[0]]
@@ -390,7 +390,7 @@ if __name__ == "__main__":
 
         scan_coordinates(
             EMIN_LMPRST_H0,
-            range(31, 61), FROZEN_COORDS,
+            list(range(31, 61)), FROZEN_COORDS,
             VT_SHIFT, "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
             SETTINGS_FILE, lmpcfg=FF_FILE)
 
@@ -433,7 +433,7 @@ if __name__ == "__main__":
 
         scan_coordinates(
             EMIN_LMPRST_H2,
-            range(31, 61), [25, 26, 28, 55, 56, 58],
+            list(range(31, 61)), [25, 26, 28, 55, 56, 58],
             VT_SHIFT, "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
             SETTINGS_FILE, lmpcfg=FF_FILE)
 
@@ -465,8 +465,8 @@ if __name__ == "__main__":
 
         scan_coordinates(
             "dummy",
-            range(31, 61),
-            range(1, 61),
+            list(range(31, 61)),
+            list(range(1, 61)),
             VT_SHIFT,
             "CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
             SETTINGS_FILE,

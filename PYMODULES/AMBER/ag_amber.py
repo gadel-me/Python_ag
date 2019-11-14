@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 import math
 import numpy as np
 import md_stars as mds
@@ -37,13 +37,13 @@ class AmberStuff(mdu.Universe):
 
                 if line.startswith("%FLAG TITLE"):
                     # section contains the title of the topology file
-                    prmtop_in.next()  # line with formatting info
-                    prmtop_title = prmtop_in.next()
+                    next(prmtop_in)  # line with formatting info
+                    prmtop_title = next(prmtop_in)
                 elif line.startswith("%FLAG POINTERS"):
                     # section which contains the information about how many
                     # parameters are present in all of the sections
 
-                    prmtop_in.next()  # line with formatting info
+                    next(prmtop_in)  # line with formatting info
 
                     line = prmtop_in.next().split()
                     (natom, ntypes, nbonh, mbona, ntheth, mtheta, nphih, mphia,
@@ -356,7 +356,7 @@ class AmberStuff(mdu.Universe):
             atm_id_old_new[iatmkey+1] = iatmkey
 
         # gather residue information
-        for cur_atm_nr in xrange(nres):
+        for cur_atm_nr in range(nres):
             cur_res = section_residue_label[cur_atm_nr]  # residue name
 
             if cur_atm_nr == 0:  # first
@@ -481,15 +481,15 @@ class AmberStuff(mdu.Universe):
 
         with open(inpcrd, "r") as inpcrd_in:
             title = inpcrd_in.readline()
-            line = inpcrd_in.next()
+            line = next(inpcrd_in)
             coords = int(line.split()[0])
 
             # number of following lines (6 coordinate entries per line)
             num_coords_lines = int(math.ceil(coords/2))
 
             # read coordinates line by line
-            for _ in xrange(num_coords_lines):
-                line = inpcrd_in.next()
+            for _ in range(num_coords_lines):
+                line = next(inpcrd_in)
                 line_coords = [float(i) for i in line.split()]
                 # define xyz-coordinates per line
                 coords1 = np.array(line_coords[0:3])
@@ -519,7 +519,7 @@ class AmberStuff(mdu.Universe):
 
         with open(mdcrd, "r") as mdcrd_in:
             reading = True
-            title = mdcrd_in.next()
+            title = next(mdcrd_in)
 
             # number of lines that describe one frame
             lines_per_frame = math.ceil(num_coords/10)
@@ -527,7 +527,7 @@ class AmberStuff(mdu.Universe):
 
             while reading is True:
                 # read lines with coordinates
-                for _ in xrange(lines_per_frame):
+                for _ in range(lines_per_frame):
                     line = mdcrd_in.next().split()
                     coords = [float(i) for i in line]
                     cur_coords.append(coords)
