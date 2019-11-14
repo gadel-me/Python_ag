@@ -2,7 +2,7 @@
 
 import os
 import argparse
-import subprocess32 as sp32
+import subprocess
 import time
 
 # Argument Parsing -------------------------------------------------------------
@@ -33,7 +33,7 @@ for jag_folder in args.jag_folders:
     os.chdir(jag_folder)
     print("Entering directory: ", jag_folder)
     jaguar_in = "{0}.in".format(jag_folder)
-    jaguar_run = sp32.call(["{}/jaguar".format(schrodinger), "run", "-TPP", "4", jaguar_in])
+    jaguar_run = subprocess.run(["{}/jaguar".format(schrodinger), "run", "-TPP", "4", jaguar_in])
     os.chdir(workdir)
     print("Returning to ", workdir)
     print("Waiting for {} h (hopefully job finishes earlier)!".format(args.estimated_duration/3600))

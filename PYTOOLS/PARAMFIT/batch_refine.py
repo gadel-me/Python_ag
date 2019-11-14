@@ -4,7 +4,7 @@ import os
 import sys
 #import shutil as sl
 import argparse
-import subprocess32 as sp32
+import subprocess
 import time
 import ag_amberparamfit as ampf
 import ntpath
@@ -115,7 +115,7 @@ for prm_idx in range(num_params):
         prmfit.write_set_params_in(set_params_in)
 
     if os.path.isfile(set_params_out) is False:
-        set_parms = sp32.call([paramfit,
+        set_parms = subprocess.run([paramfit,
                                "-i", set_params_in,
                                "-p", cur_prmtop])
         time.sleep(2)
@@ -130,7 +130,7 @@ for prm_idx in range(num_params):
     if os.path.isfile(fit_k_out) is False:
         with open(fit_k_out, "w") as out:
             print("***Info: Executing paramfit (initial K)")
-            fit_K = sp32.call([paramfit,
+            fit_K = subprocess.run([paramfit,
                                "-i", fit_k_in,
                                "-p", cur_prmtop,
                                "-c", cur_mdcrd,
@@ -152,7 +152,7 @@ for prm_idx in range(num_params):
     if os.path.isfile(fit_params_out) is False:
         with open(fit_params_out, "w") as out:
             print("***Info: Executing paramfit (fitting parameters)")
-            fit_param = sp32.call([paramfit,
+            fit_param = subprocess.run([paramfit,
                                    "-i", fit_params_in,
                                    "-p", cur_prmtop,
                                    "-c", cur_mdcrd,
@@ -202,7 +202,7 @@ for prm_idx in range(num_params):
 
     # write prmtop
     if os.path.isfile("refined.prmtop") is False:
-        write_prmtop = sp32.call([tleap, "-f", "tleap.in"])
+        write_prmtop = subprocess.run([tleap, "-f", "tleap.in"])
 
     cur_prmtop = os.path.abspath("refined.prmtop")
 

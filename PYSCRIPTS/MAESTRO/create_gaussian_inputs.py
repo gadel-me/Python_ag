@@ -3,7 +3,7 @@
 import os
 import argparse
 import sys
-import subprocess32 as sp32
+import subprocess
 import shutil as sl
 
 # Argument Parsing -------------------------------------------------------------
@@ -64,7 +64,7 @@ for jagfolder in args.jag_folders:
             pass
 
     os.chdir(projectname)
-    sp32.call([python, mae2mdcrd_gau, "-mae", maestro_01_mae, "-out", projectname])
+    subprocess.run([python, mae2mdcrd_gau, "-mae", maestro_01_mae, "-out", projectname])
 
     if os.path.isdir(args.mdcrd_dir) is True:
         # move amber coordinate file

@@ -2,7 +2,7 @@
 
 import argparse
 import os
-import subprocess32 as sp32
+import subprocess
 import time
 
 """
@@ -38,11 +38,11 @@ for gau_in in gau_input_files:
     # get full path of input file
     gau_in = "{}/{}".format(args.gau_folder, gau_in)
 
-    sp32.call(["sbatch", "--job-name", gau_in.lstrip("./"),
+    subprocess.run(["sbatch", "--job-name", gau_in.lstrip("./"),
                args.gau_run, gau_in], bufsize=-1)
 
     # debugging
     #python = "/home/gadelmeier/anaconda2/bin/python"
-    #sp32.call([python, args.gau_run, gau_in], bufsize=-1)
+    #subprocess.run([python, args.gau_run, gau_in], bufsize=-1)
     #break
     time.sleep(0.1)

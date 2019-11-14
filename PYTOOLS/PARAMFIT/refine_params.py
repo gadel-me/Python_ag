@@ -3,7 +3,7 @@
 import os
 import shutil as sl
 import argparse
-import subprocess32 as sp32
+import subprocess
 import time
 
 __version__ = "2017-08-07"
@@ -80,7 +80,7 @@ if set_params_in not in pwd_files:
 # only write file/ run paramfit if none is present already
 if set_params_out not in pwd_files:
     # set parameters using paramfit
-    set_parms = sp32.call([paramfit, "-i", "set_params.in", "-p", args.prmtop])
+    set_parms = subprocess.run([paramfit, "-i", "set_params.in", "-p", args.prmtop])
     time.sleep(5)
 
 
@@ -103,7 +103,7 @@ if fit_k_out not in pwd_files:
     # open file for writing stdout
     with open(fit_k_out, "w") as out:
         print("***Info: Exexuting paramfit (initial K)")
-        fit_K = sp32.call([paramfit, "-i", fit_k_in, "-p", args.prmtop,
+        fit_K = subprocess.run([paramfit, "-i", fit_k_in, "-p", args.prmtop,
                            "-c", args.mdcrd, "-q", args.quantum], stdout=out)
 
 # extract K from fit_K.out
@@ -152,7 +152,7 @@ if fit_params_in not in pwd_files:
 if fit_params_out not in pwd_files:
     with open(fit_params_out, "w") as out:
         print("***Info: Executing paramfit (fitting parameters)")
-        fit_param = sp32.call([paramfit, "-i", "fit_params.in", "-p", args.prmtop,
+        fit_param = subprocess.run([paramfit, "-i", "fit_params.in", "-p", args.prmtop,
                               "-c", args.mdcrd, "-q", args.quantum], stdout=out)
 
 # write amber topology file file using tleap (and a coordinate file which is not of interest here)
@@ -166,7 +166,7 @@ with open("tleap.in", "w") as f_out:
     f_out.write("saveamberparm MOL refined.prmtop mol2.inpcrd\n")
     f_out.write("quit\n")
 
-write_prmtop = sp32.call([tleap, "-f", "tleap.in"])
+write_prmtop = subprocess.run([tleap, "-f", "tleap.in"])
 
 try:
     os.mkdir("tleap")
