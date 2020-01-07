@@ -135,6 +135,11 @@ class GauStuff(mdu.Universe):
                     if not hasattr(self, "mem") or overwrite is True:
                         self.mem = line.split("=")[1].strip("\n")
 
+                # TBD
+                elif "%rwf" in line:
+                    if not hasattr(self, "rwf") or overwrite is True:
+                        self.rwf = line.split("=")[1].strip("\n")
+
                 #// ROUTE SECTION (may be scattered over several files)
                 elif line.startswith("#"):
                     #pdb.set_trace()
@@ -428,6 +433,7 @@ class GauStuff(mdu.Universe):
     def _read_gau_log_summary(self, result_str, overwrite=False):
         """
         """
+        #print(result_str)
         result_str = result_str.split("\\\\")
         atoms_coords = result_str[3].split("\\")
         # remove first entry which is charge and multiplicity
@@ -443,6 +449,13 @@ class GauStuff(mdu.Universe):
         for subresult in result_str:
             if "NImag" in subresult:
                 self.gaussian_other_info["NImag"] = int(subresult.split("NImag=")[1])
+
+            if "HF=" in subresult:
+                subresult = subresult.split("\\")
+
+                for sub_subresult in subresult:
+                    sub_subresult = sub_subresult.split("=")
+                    self.gaussian_other_info[sub_subresult[0]] = sub_subresult[1]
 
         if overwrite is False:
             self.ts_coords.append(ts_coords)
@@ -568,16 +581,26 @@ class GauStuff(mdu.Universe):
                 # read the summary
                 elif line.startswith(" 1\\1\\") is True:
 
+                    # read every line except it ends with \\@
                     while not line.endswith("@\n"):
+                        #print(line)
                         line = line.lstrip()
                         line = line.rstrip()
                         # create one huge string since lines could be oddly wrapped
                         log_resume += line
                         line = opened_gau_log.readline()
+                    else:
+                        # add the next line (that ends with \\@) as well
+                        #print(line)
+                        line = line.lstrip()
+                        line = line.rstrip()
+                        log_resume += line
+
                 else:
                     pass
 
                 line = opened_gau_log.readline()
+                #print(log_resume)
 
         #return (all_scf_cycles_coords, all_scf_cycles_energies)
         # extract geometries with lowest energy, omit other scf geometries
