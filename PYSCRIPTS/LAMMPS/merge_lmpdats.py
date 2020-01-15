@@ -2,28 +2,65 @@
 
 import argparse
 import ag_lammps
-#import math
-#import md_box as mdb
-#import ag_unify_md as agum
+
+# import math
+# import md_box as mdb
+# import ag_unify_md as agum
 
 
 # Argument Parsing -------------------------------------------------------------
 parser = argparse.ArgumentParser(
     prog="top_crds2lmpdat.py",
     formatter_class=argparse.RawTextHelpFormatter,
-    description="Merge two or more lammps data files to a new one."
+    description="Merge two or more lammps data files to a new one.",
 )
 
 # args for topology/forcefield and coordinates
-cell  = parser.add_mutually_exclusive_group()
+cell = parser.add_mutually_exclusive_group()
 
-parser.add_argument("-lmpdats", nargs="*", required=True, default=None, metavar="foo.lmpdat", help="Lammps data files. Provides topology and force field parameters.")
-parser.add_argument("-dcds", nargs="*", required=True, default=None, metavar="foo.dcd", help="Lammps dcd files. Provides coordinates only.")
-parser.add_argument("-sysname", metavar="FOOBAR", default="UNK", help="Name of the molecule/system")
-cell.add_argument("-cell", nargs=6, metavar=("a", "b", "c", "alpha", "beta", "gamma"), type=float, default=None, help="Box vectors a, b, c and box angles alpha, beta, gamma (in degrees) in that particular order.")
+parser.add_argument(
+    "-lmpdats",
+    nargs="*",
+    required=True,
+    default=None,
+    metavar="foo.lmpdat",
+    help="Lammps data files. Provides topology and force field parameters.",
+)
+parser.add_argument(
+    "-dcds",
+    nargs="*",
+    required=False,
+    default=None,
+    metavar="foo.dcd",
+    help="Lammps dcd files. Provides additional coordinates for each lammps data file.",
+)
+parser.add_argument(
+    "-xyzs", nargs="*",
+)
+parser.add_argument(
+    "-sysname", metavar="FOOBAR", default="UNK", help="Name of the molecule/system"
+)
+cell.add_argument(
+    "-cell",
+    nargs=6,
+    metavar=("a", "b", "c", "alpha", "beta", "gamma"),
+    type=float,
+    default=None,
+    help="Box vectors a, b, c and box angles alpha, beta, gamma (in degrees) in that particular order.",
+)
 cell.add_argument("-show_lattice_cells", default=False, action="store_true")
-parser.add_argument("-delete_close_atoms", default=False, action="store_true", help="BUGGY! Atoms from the system that is added to the previous one will be deleted if in close contact with existing atoms.")
-parser.add_argument("-out", metavar="foobar.lmpdat", default="foobar.lmpdat", help="Name of output-file.")
+parser.add_argument(
+    "-delete_close_atoms",
+    default=False,
+    action="store_true",
+    help="BUGGY! Atoms from the system that is added to the previous one will be deleted if in close contact with existing atoms.",
+)
+parser.add_argument(
+    "-out",
+    metavar="foobar.lmpdat",
+    default="foobar.lmpdat",
+    help="Name of output-file.",
+)
 args = parser.parse_args()
 
 # Modeling ---------------------------------------------------------------------
@@ -37,7 +74,9 @@ for idx, lmpdat in enumerate(args.lmpdats):
     except IndexError:
         curdcd = None
 
-    cursys = ag_lammps.read_lmpdat(lmpdat, dcd=curdcd, frame_idx_start=-1, frame_idx_stop=-1)
+    cursys = ag_lammps.read_lmpdat(
+        lmpdat, dcd=curdcd, frame_idx_start=-1, frame_idx_stop=-1
+    )
 
     # resetting the pair types
     cursys.pair_types = []
@@ -96,15 +135,15 @@ for idx in range(1, len(sys_all)):
         sys_all[0].refresh()
         sys_all[0].fetch_molecules_by_bonds()
         sys_all[0].mols_to_grps()
-        #print("Close atoms")
-        #print(close_atoms)
-        #print("Delete atoms")
-        #print(delete_atoms)
+        # print("Close atoms")
+        # print(close_atoms)
+        # print("Delete atoms")
+        # print(delete_atoms)
 
 sys_all[0].pair_types = []
-#sys_all[0].mix_pair_types(mode="ij")
-#sys_all[0].fetch_molecules_by_bonds()
-#sys_all[0].mols_to_grps()
+# sys_all[0].mix_pair_types(mode="ij")
+# sys_all[0].fetch_molecules_by_bonds()
+# sys_all[0].mols_to_grps()
 sys_all[0].change_indices(incr=1, mode="increase")
 
 
