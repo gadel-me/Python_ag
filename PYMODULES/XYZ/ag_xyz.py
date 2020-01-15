@@ -32,7 +32,7 @@ class XYZ(mdu.Universe):
         """
         with open(xyzfile, "r") as xyz_in:
             for line in xyz_in:
-                print(line)
+                #print(line)
                 num_atms = int(line.split()[0])  # line with number of atoms (mandatory)
                 comment_line = next(xyz_in)  # comment line (may be empty)
 
@@ -81,7 +81,7 @@ class XYZ(mdu.Universe):
 
                 # parse coordinates section
                 for iid in range(num_atms):
-                    catm = xyz_in.next().split()
+                    catm = next(xyz_in).split()
                     csitnam = catm[0]
                     ccoords = np.array([float(i) for i in catm[1:5]])
 
