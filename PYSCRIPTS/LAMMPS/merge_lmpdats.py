@@ -68,14 +68,11 @@ sys_all = []
 
 for idx, lmpdat in enumerate(args.lmpdats):
 
-    if args.dcds is None:
+    try:
+        curdcd = args.dcds[idx]
+    except (TypeError, IndexError):
+        # args.dcds is None or list is too short
         curdcd = None
-    else:
-        # read dcds files if available
-        try:
-            curdcd = args.dcds[idx]
-        except IndexError:
-            curdcd = None
 
     cursys = ag_lammps.read_lmpdat(
         lmpdat, dcd=curdcd, frame_idx_start=-1, frame_idx_stop=-1
