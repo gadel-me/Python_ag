@@ -1,7 +1,7 @@
-
 import pdb
 import numpy as np
-#import copy
+
+# import copy
 import md_stars as mds
 import md_box as mdb
 import md_universe as mdu
@@ -16,6 +16,7 @@ class XYZ(mdu.Universe):
     Sources:    https://en.wikipedia.org/wiki/XYZ_file_format
                 http://openbabel.org/wiki/XYZ_%28format%29
     """
+
     def __init__(self):
         """
         Load universe first.
@@ -32,40 +33,56 @@ class XYZ(mdu.Universe):
         """
         with open(xyzfile, "r") as xyz_in:
             for line in xyz_in:
-                #print(line)
+
+                if line == "\n" or line == "":
+                    #print("Reached EOF.")
+                    break
+
                 num_atms = int(line.split()[0])  # line with number of atoms (mandatory)
                 comment_line = next(xyz_in)  # comment line (may be empty)
 
                 # read box information if there is any
                 if "Boxtype" in comment_line:
                     comment_line = comment_line.split()
-                    box = [None if i == "None" else None if round(float(i), 8) == 0 else float(i) for i in comment_line[3::2]]
-                    #print("************", box)
+                    box = [
+                        None
+                        if i == "None"
+                        else None
+                        if round(float(i), 8) == 0
+                        else float(i)
+                        for i in comment_line[3::2]
+                    ]
 
                     if comment_line[1] == "cartesian":
-                        current_box = mdb.Box(boxtype=comment_line[1],
-                                              crt_a=box[0],
-                                              crt_b=box[1],
-                                              crt_c=box[2])
+                        current_box = mdb.Box(
+                            boxtype=comment_line[1],
+                            crt_a=box[0],
+                            crt_b=box[1],
+                            crt_c=box[2],
+                        )
                     elif comment_line[1] == "lattice":
-                        current_box = mdb.Box(boxtype=comment_line[1],
-                                              ltc_a=box[0],
-                                              ltc_b=box[1],
-                                              ltc_c=box[2],
-                                              ltc_alpha=np.radians(box[3]),
-                                              ltc_beta=np.radians(box[4]),
-                                              ltc_gamma=np.radians(box[5]))
+                        current_box = mdb.Box(
+                            boxtype=comment_line[1],
+                            ltc_a=box[0],
+                            ltc_b=box[1],
+                            ltc_c=box[2],
+                            ltc_alpha=np.radians(box[3]),
+                            ltc_beta=np.radians(box[4]),
+                            ltc_gamma=np.radians(box[5]),
+                        )
                     else:
-                        current_box = mdb.Box(boxtype=comment_line[1],
-                                              lmp_xlo=box[0],
-                                              lmp_xhi=box[1],
-                                              lmp_ylo=box[2],
-                                              lmp_yhi=box[3],
-                                              lmp_zlo=box[4],
-                                              lmp_zhi=box[5],
-                                              lmp_xy=box[6],
-                                              lmp_xz=box[7],
-                                              lmp_yz=box[8])
+                        current_box = mdb.Box(
+                            boxtype=comment_line[1],
+                            lmp_xlo=box[0],
+                            lmp_xhi=box[1],
+                            lmp_ylo=box[2],
+                            lmp_yhi=box[3],
+                            lmp_zlo=box[4],
+                            lmp_zhi=box[5],
+                            lmp_xy=box[6],
+                            lmp_xz=box[7],
+                            lmp_yz=box[8],
+                        )
 
                     del (box, comment_line)
 
@@ -112,12 +129,14 @@ class XYZ(mdu.Universe):
                             if not hasattr(self.atoms[iid], "sitnam"):
                                 self.atoms[iid].sitnam = csitnam
 
-                            if not hasattr(self.atoms[iid], "chge") and ccharge is not None:
+                            if (
+                                not hasattr(self.atoms[iid], "chge")
+                                and ccharge is not None
+                            ):
                                 self.atoms[iid].chge = ccharge
 
                     except IndexError:
-                        catm = mds.Atom(atm_id=iid,
-                                        sitnam=csitnam)
+                        catm = mds.Atom(atm_id=iid, sitnam=csitnam)
                         if ccharge is not None:
                             catm.chge = ccharge
                         self.atoms.append(catm)
@@ -151,30 +170,45 @@ class XYZ(mdu.Universe):
                     xyz_out.write("Boxtype {} ".format(self.ts_boxes[frame_id].boxtype))
 
                     if self.ts_boxes[frame_id].boxtype == "cartesian":
-                        xyz_out.write("a: {} b: {} c: {}".format(self.ts_boxes[frame_id].crt_a,
-                                                                   self.ts_boxes[frame_id].crt_b,
-                                                                   self.ts_boxes[frame_id].crt_c))
+                        xyz_out.write(
+                            "a: {} b: {} c: {}".format(
+                                self.ts_boxes[frame_id].crt_a,
+                                self.ts_boxes[frame_id].crt_b,
+                                self.ts_boxes[frame_id].crt_c,
+                            )
+                        )
                     elif self.ts_boxes[frame_id].boxtype == "lattice":
-                        xyz_out.write(("a: {} b: {} c: {} "
-                                       "alpha: {} beta: {} gamma: {}").format(self.ts_boxes[frame_id].ltc_a,
-                                                                              self.ts_boxes[frame_id].ltc_b,
-                                                                              self.ts_boxes[frame_id].ltc_c,
-                                                                              np.degrees(self.ts_boxes[frame_id].ltc_alpha),
-                                                                              np.degrees(self.ts_boxes[frame_id].ltc_beta),
-                                                                              np.degrees(self.ts_boxes[frame_id].ltc_gamma)))
+                        xyz_out.write(
+                            (
+                                "a: {} b: {} c: {} " "alpha: {} beta: {} gamma: {}"
+                            ).format(
+                                self.ts_boxes[frame_id].ltc_a,
+                                self.ts_boxes[frame_id].ltc_b,
+                                self.ts_boxes[frame_id].ltc_c,
+                                np.degrees(self.ts_boxes[frame_id].ltc_alpha),
+                                np.degrees(self.ts_boxes[frame_id].ltc_beta),
+                                np.degrees(self.ts_boxes[frame_id].ltc_gamma),
+                            )
+                        )
                     else:
-                        xyz_out.write(("xlo {} xhi {} "
-                                       "ylo {} yhi {} "
-                                       "zlo {} zhi {} "
-                                       "xy {} xz {} yz {}").format(self.ts_boxes[frame_id].lmp_xlo,
-                                                                   self.ts_boxes[frame_id].lmp_xhi,
-                                                                   self.ts_boxes[frame_id].lmp_ylo,
-                                                                   self.ts_boxes[frame_id].lmp_yhi,
-                                                                   self.ts_boxes[frame_id].lmp_zlo,
-                                                                   self.ts_boxes[frame_id].lmp_zhi,
-                                                                   self.ts_boxes[frame_id].lmp_xy,
-                                                                   self.ts_boxes[frame_id].lmp_xz,
-                                                                   self.ts_boxes[frame_id].lmp_yz))
+                        xyz_out.write(
+                            (
+                                "xlo {} xhi {} "
+                                "ylo {} yhi {} "
+                                "zlo {} zhi {} "
+                                "xy {} xz {} yz {}"
+                            ).format(
+                                self.ts_boxes[frame_id].lmp_xlo,
+                                self.ts_boxes[frame_id].lmp_xhi,
+                                self.ts_boxes[frame_id].lmp_ylo,
+                                self.ts_boxes[frame_id].lmp_yhi,
+                                self.ts_boxes[frame_id].lmp_zlo,
+                                self.ts_boxes[frame_id].lmp_zhi,
+                                self.ts_boxes[frame_id].lmp_xy,
+                                self.ts_boxes[frame_id].lmp_xz,
+                                self.ts_boxes[frame_id].lmp_yz,
+                            )
+                        )
 
                 xyz_out.write("\n")
 
@@ -194,8 +228,11 @@ class XYZ(mdu.Universe):
                         xyz_out.write("{} ".format(sitnam))
 
                     # write coordinates
-                    xyz_out.write("{:> 10.5f} {:> 10.5f} {:> 10.5f} ".format(
-                        ccoords[0], ccoords[1], ccoords[2]))
+                    xyz_out.write(
+                        "{:> 10.5f} {:> 10.5f} {:> 10.5f} ".format(
+                            ccoords[0], ccoords[1], ccoords[2]
+                        )
+                    )
 
                     # write charges as additional info if they were given
                     if hasattr(catm, "chge") is True:
