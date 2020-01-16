@@ -36,7 +36,7 @@ def parse_section(opened_prmtop, geps, chunksize=None, itype=None):
     if "20a4" in line:
         # following lines do not necessarily have to have spaces
         for iline in range(lps):
-            line = opened_prmtop.next().rstrip("\n")  # remove next line
+            line = next(opened_prmtop).rstrip("\n")  # remove next line
             entries.extend([line[i:i+cpe].strip() for i in
                             range(0, len(line), cpe)])
     else:

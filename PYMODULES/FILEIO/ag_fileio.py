@@ -90,9 +90,41 @@ def convert_files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.x
 
     xyz_settings : {dict}
         Settings that will be used when writing an xyz file.
-
+        The dicitonary may look like this:
+        {
+        'frame_ids': [int, int, ...],
+        'title': "DEFAULT",
+        'guess_element': False
+        }
 
     """
+    def read_files():
+        for file in flhn.files:
+            if file.endswith(".gau"):
+
+                if settings is None:
+                    mdsys.read_gau(file)
+                else:
+                    mdsys.read_gau(file, **settings)
+
+            elif file.endswith(".gau.out"):
+
+                if settings is None:
+                    mdsys.read_gau_log(file)
+                else:
+                    mdsys.read_gau_log(file, **settings)
+
+            elif file.endswith(".pwscf_in"):
+                mdsys.read_pwin(file)
+            elif file.endswith(".pwscf_out"):
+
+                if settings is None:
+                    mdsys.read_pwout(file)
+                else:
+                    mdsys.read_pwout(file, **settings)
+            else:
+                print("Unkown type of file  {},\n skipping.".format(file.endswith()))
+
     import ag_unify_md as agum
 
     flhn = FileHandler()
@@ -101,31 +133,9 @@ def convert_files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.x
 
     mdsys = agum.Unification()
 
-    for file in flhn.files:
-        if file.endswith(".gau"):
+    read_files()
 
-            if settings is None:
-                mdsys.read_gau(file)
-            else:
-                mdsys.read_gau(file, **settings)
-
-        elif file.endswith(".gau.out"):
-
-            if settings is None:
-                mdsys.read_gau_log(file)
-            else:
-                mdsys.read_gau_log(file, **settings)
-
-        elif file.endswith(".pwscf_in"):
-            mdsys.read_pwin(file)
-        elif file.endswith(".pwscf_out"):
-
-            if settings is None:
-                mdsys.read_pwout(file)
-            else:
-                mdsys.read_pwout(file, **settings)
-        else:
-            print("Unkown type of file  {},\n skipping.".format(file.endswith()))
-
-    if
-    mdsys.write_xyz(*frame_ids, title="DEFAULT", guess_element=False)
+    if xyz_settings is None:
+        mdsys.write_xyz(xyz_out)
+    else:
+        mdsys.write_xyz(xyz_out, **xyz_settings)
