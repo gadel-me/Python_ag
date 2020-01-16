@@ -433,29 +433,36 @@ class GauStuff(mdu.Universe):
     def _read_gau_log_summary(self, result_str, overwrite=False):
         """
         """
-        #print(result_str)
-        result_str = result_str.split("\\\\")
-        atoms_coords = result_str[3].split("\\")
-        # remove first entry which is charge and multiplicity
+        # divide result string into its details
+        split_str = result_str.split("\\\\")
+
+        # read coordinates section
+        atoms_coords = split_str[3].split("\\")
+
+        # omit first entry (charge and multiplicity)
         atoms_coords.pop(0)
         ts_coords = []
 
+        # read coordinates and atom types section
         for atom_coords in atoms_coords:
             atom_coords = atom_coords.split(",")
+            atm_type = atom_coords[0]
             coords = np.array([float(i) for i in atom_coords[-3:]])
             ts_coords.append(coords)
 
-        # get number of imaginary frequencies (if frequencies were calculated)
-        for subresult in result_str:
-            if "NImag" in subresult:
-                self.gaussian_other_info["NImag"] = int(subresult.split("NImag=")[1])
+        # read further entries (HF-energies, MP2-energies, Symmetry, etc.)
+        sim_details = split_str[-2].split("\\")
 
-            if "HF=" in subresult:
-                subresult = subresult.split("\\")
+        # store entries in self.gaussian_other_info
+        for sim_detail in sim_details:
+            sim_key, sim_value = sim_detail.split("=")
 
-                for sub_subresult in subresult:
-                    sub_subresult = sub_subresult.split("=")
-                    self.gaussian_other_info[sub_subresult[0]] = sub_subresult[1]
+            try:
+                sim_value = float(sim_value)
+            except ValueError:
+                pass
+
+            self.gaussian_other_info[sim_key] = sim_value
 
         if overwrite is False:
             self.ts_coords.append(ts_coords)
@@ -623,7 +630,10 @@ class GauStuff(mdu.Universe):
                 print("***Warning: Gaussian run was aborted before it finished")
 
         if read_summary is True:
-            self._read_gau_log_summary(log_resume, overwrite=overwrite)
+            if log_resume != "":
+                self._read_gau_log_summary(log_resume, overwrite=overwrite)
+            else:
+                print("{} has no result summary".format(gau_log))
 
         # # split string by its entries
         # log_resume = log_resume.split("\\")

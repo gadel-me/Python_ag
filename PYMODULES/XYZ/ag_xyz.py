@@ -127,12 +127,12 @@ class XYZ(mdu.Universe):
                 # append current frame
                 self.ts_coords.append(cframe)
 
-    def write_xyz(self, xyz_file, title="DEFAULT", guess_element=False, *frame_ids):
+    def write_xyz(self, xyz_file, *frame_ids, title="DEFAULT", guess_element=False):
         """
         Write a xyz-file.
         """
         if frame_ids == ():
-            print("***XYZ-Info: Writing last frame as default!")
+            print("***XYZ-Info: Writing last frame by default!")
             frame_ids = [-1]
 
         num_atms = len(self.atoms)

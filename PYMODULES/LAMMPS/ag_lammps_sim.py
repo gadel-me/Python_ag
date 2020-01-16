@@ -170,6 +170,17 @@ class LmpSim(object):
         if unwrap is True:
             lmp.command("dump_modify trajectory unwrap yes")
 
+    def read_dump(self, lmp, filename, nframes):
+        """The read dump command from lammps.
+
+        Shortcut for the read dump command - xyz coordinates always included
+
+        Arguments:
+            lmp {[type]} -- [description]
+            file {[type]} -- [description]
+        """
+        lmp.command(f"read_dump {filename} {nframes} x y z box no format xyz")
+
     def fix_berendsen(self, lmp, group, ensemble, keyword, integrator="nve"):
         """
         """

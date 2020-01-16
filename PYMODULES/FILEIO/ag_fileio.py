@@ -1,6 +1,7 @@
 import os
 import pdb
-#import fnmatch
+
+# import fnmatch
 from pathlib import Path
 
 
@@ -22,14 +23,14 @@ class FileHandler(object):
             name of directory where to find the files in
 
         name_pattern : str
-            name of file ending with '*', e.g. "*.pwscf_out"
+            name of file ending with '*', e.g. ".pwscf_out"
 
         Sources
         -------
         https://docs.python.org/2/library/fnmatch.html#fnmatch.filter
 
         """
-        for filename in Path(path).glob('**/*{}'.format(name_pattern)):
+        for filename in Path(path).glob("**/*{}".format(name_pattern)):
             self.files.append(filename)
 
     def files_to_strings(self):
@@ -61,3 +62,70 @@ class FileHandler(object):
                 symlink.symlink_to(filename.resolve())
             except OSError:
                 pass
+
+
+def convert_files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz_settings=None):
+    """Find and read gaussian or pw files from a given path.
+
+    Read gaussian in- and output files and pw in- and output files.
+    The files may be in subfolders of 'path'; 'settings' may be omitted, if
+    the files shall be read using the standard settings. If non-standard
+    settings should be used, read the documentation of the according functions.
+
+    Parameters
+    ----------
+    path : {str}
+        Path to files (may be in subfolders).
+
+    file_extension : {str}
+        Extension of file. Currently only '.gau', '.gau.out', '.pwscf_in',
+        '.pwscf_out' supported.
+
+    settings : {dict}, optional
+        Settings for each file extension when read
+        (the default is None, which all arguments are set to False).
+
+    xyz_out : {str}
+        Name of output file.
+
+    xyz_settings : {dict}
+        Settings that will be used when writing an xyz file.
+
+
+    """
+    import ag_unify_md as agum
+
+    flhn = FileHandler()
+    flhn.find_files(path, file_extension)
+    flhn.files_to_strings()
+
+    mdsys = agum.Unification()
+
+    for file in flhn.files:
+        if file.endswith(".gau"):
+
+            if settings is None:
+                mdsys.read_gau(file)
+            else:
+                mdsys.read_gau(file, **settings)
+
+        elif file.endswith(".gau.out"):
+
+            if settings is None:
+                mdsys.read_gau_log(file)
+            else:
+                mdsys.read_gau_log(file, **settings)
+
+        elif file.endswith(".pwscf_in"):
+            mdsys.read_pwin(file)
+        elif file.endswith(".pwscf_out"):
+
+            if settings is None:
+                mdsys.read_pwout(file)
+            else:
+                mdsys.read_pwout(file, **settings)
+        else:
+            print("Unkown type of file  {},\n skipping.".format(file.endswith()))
+
+    if
+    mdsys.write_xyz(*frame_ids, title="DEFAULT", guess_element=False)

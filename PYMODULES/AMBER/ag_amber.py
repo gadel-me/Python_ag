@@ -45,19 +45,19 @@ class AmberStuff(mdu.Universe):
 
                     next(prmtop_in)  # line with formatting info
 
-                    line = prmtop_in.next().split()
+                    line = next(prmtop_in).split()
                     (natom, ntypes, nbonh, mbona, ntheth, mtheta, nphih, mphia,
                      nhparm, nparm) = [int(i) for i in line]
 
-                    line = prmtop_in.next().split()
+                    line = next(prmtop_in).split()
                     (nnb, nres, nbona, ntheta, nphia, numbnd, numang, nptra,
                      natyp, nphb) = [int(i) for i in line]
 
-                    line = prmtop_in.next().split()
+                    line = next(prmtop_in).split()
                     (ifpert, nbper, ngper, ndper, mbper, mgper, mdper, ifbox,
                      nmxrs, ifcap) = [int(i) for i in line]
 
-                    line = prmtop_in.next().split()
+                    line = next(prmtop_in).split()
                     numextra = line[0]
 
                     try:
@@ -528,12 +528,12 @@ class AmberStuff(mdu.Universe):
             while reading is True:
                 # read lines with coordinates
                 for _ in range(lines_per_frame):
-                    line = mdcrd_in.next().split()
+                    line = next(mdcrd_in).split()
                     coords = [float(i) for i in line]
                     cur_coords.append(coords)
 
                 # coords per frame
-                cur_frame  = cur_coords[:num_coords]
+                cur_frame = cur_coords[:num_coords]
 
                 # split array into sub-arrays
                 cur_frame = np.array(cur_frame)
