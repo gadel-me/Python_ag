@@ -313,7 +313,7 @@ class LmpStuff(mdu.Universe):
                         print("***Lmpdat-Info: Parsing PairIJ Coeffs")
 
                     next(lmpdat_in)
-                    total_pairtypes = total_atmtypes*(total_atmtypes+1)/2
+                    total_pairtypes = int(total_atmtypes*(total_atmtypes+1)/2)
 
                     for _ in range(total_pairtypes):
                         line = next(lmpdat_in)
