@@ -128,6 +128,11 @@ parser.add_argument("-debug",
                     help="Write all system info to a file called 'info.txt'"
                     )
 
+parser.add_argument("-rerun",
+                    default=None,
+                    help="Rerun command as in the lammps manual."
+                    )
+
 args = parser.parse_args()
 
 if args.ensemble is not None:
@@ -237,7 +242,11 @@ if args.minimize is True:
 if args.ensemble is not None:
     args.ensemble = args.ensemble[0]
     lmp.command("fix ENSEMBLE {0} {1}".format(groupname, args.ensemble))
-    lmp.command("run {}".format(args.steps))
+
+    if args.rerun is None:
+        lmp.command("run {}".format(args.steps))
+    else:
+        lmp.command(arg.rerun)
 
 lmp.command("write_restart {}.lmprst".format(args.out))
 

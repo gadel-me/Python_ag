@@ -1,7 +1,9 @@
-import os
-import pdb
+#!/usr/bin/env python
 
-# import fnmatch
+import pdb
+import os
+import sys
+from natsort import natsorted
 from pathlib import Path
 
 
@@ -63,8 +65,11 @@ class FileHandler(object):
             except OSError:
                 pass
 
+    def sort_files(self):
+        self.files = natsorted(self.files)
 
-def convert_files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz_settings=None):
+
+def files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz_settings=None):
     """Find and read gaussian or pw files from a given path.
 
     Read gaussian in- and output files and pw in- and output files.
@@ -125,17 +130,19 @@ def convert_files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.x
             else:
                 print("Unkown type of file  {},\n skipping.".format(file.endswith()))
 
-    import ag_unify_md as agum
+    # import only when necessary
+    if "ag_unify_md" not in sys.modules:
+        import ag_unify_md as agum
 
     flhn = FileHandler()
     flhn.find_files(path, file_extension)
     flhn.files_to_strings()
-
+    flhn.sort_files()
     mdsys = agum.Unification()
-
     read_files()
+    nframes = range(len(mdsys.ts_coords))
 
     if xyz_settings is None:
-        mdsys.write_xyz(xyz_out)
+        mdsys.write_xyz(xyz_out, *nframes)
     else:
-        mdsys.write_xyz(xyz_out, **xyz_settings)
+        mdsys.write_xyz(xyz_out, *nframes, **xyz_settings)
