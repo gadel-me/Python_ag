@@ -335,7 +335,7 @@ class PwStuff(mdu.Universe):
             print("***Warning: Folder for Pseudopotentials does not exist!")
             #time.sleep(5)
 
-    def read_pwout(self, pwout, read_crystal_sections=False):
+    def read_pwout(self, pwout, read_crystal_sections=False, save_all_scf_steps=True):
         """
         CAVEAT: UNDER CONSTRUCTION! Read the output of pw.x.
 
@@ -482,6 +482,17 @@ class PwStuff(mdu.Universe):
 
                 line = opened_pwout.readline()
                 split_line = None
+
+        # save only the last frame
+        if save_all_scf_steps is False:
+            self.ts_coords = [self.ts_coords[-1]]
+
+            for key in self.pw_other_info:
+
+                try:
+                    self.pw_other_info[key] = [self.pw_other_info[key][-1]]
+                except IndexError:
+                    pass
 
     def _convert_frozen_state(self):
         """

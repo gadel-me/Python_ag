@@ -103,36 +103,36 @@ def files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz
         }
 
     """
+    import ag_unify_md as agum
+
     def read_files():
         for file in flhn.files:
+            mdsys_tmp = agum.Unification()
+
             if file.endswith(".gau"):
 
                 if settings is None:
-                    mdsys.read_gau(file)
+                    mdsys_tmp.read_gau(file)
                 else:
-                    mdsys.read_gau(file, **settings)
+                    mdsys_tmp.read_gau(file, **settings)
 
             elif file.endswith(".gau.out"):
 
                 if settings is None:
-                    mdsys.read_gau_log(file)
+                    mdsys_tmp.read_gau_log(file)
                 else:
-                    mdsys.read_gau_log(file, **settings)
+                    mdsys_tmp.read_gau_log(file, **settings)
 
             elif file.endswith(".pwscf_in"):
-                mdsys.read_pwin(file)
+                mdsys_tmp.read_pwin(file)
             elif file.endswith(".pwscf_out"):
 
                 if settings is None:
-                    mdsys.read_pwout(file)
+                    mdsys_tmp.read_pwout(file)
                 else:
-                    mdsys.read_pwout(file, **settings)
+                    mdsys_tmp.read_pwout(file, **settings)
             else:
                 print("Unkown type of file  {},\n skipping.".format(file.endswith()))
-
-    # import only when necessary
-    if "ag_unify_md" not in sys.modules:
-        import ag_unify_md as agum
 
     flhn = FileHandler()
     flhn.find_files(path, file_extension)
@@ -141,8 +141,12 @@ def files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz
     mdsys = agum.Unification()
     read_files()
     nframes = range(len(mdsys.ts_coords))
+    pdb.set_trace()
 
+    # write the xyz-file
     if xyz_settings is None:
         mdsys.write_xyz(xyz_out, *nframes)
     else:
         mdsys.write_xyz(xyz_out, *nframes, **xyz_settings)
+
+    return md_sys
