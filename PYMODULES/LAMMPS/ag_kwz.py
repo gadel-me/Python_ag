@@ -405,7 +405,7 @@ def _check_sys(md_sys, atm_idx_max):
         return True
 
 
-def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, frame_idx_main=-1, frame_idx_add=-1):
+def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, frame_idx_main=-1, frame_idx_add=-1, main_radius_scale=1.5):
     """
     Prepare the system for the next docking step.
 
@@ -440,6 +440,9 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
     frame_idx_add : int
         frame index of frame to add from dcd_add to lmpdat_add
 
+    main_radius_scale : int or float
+        Radius to scale the main systems radius by
+
     Returns
     -------
     success : bool
@@ -463,7 +466,12 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
     # shift add sys to sphere around main sys
     main_sys_radius = main_sys.get_system_radius(-1)
     add_sys_radius = add_sys.get_system_radius(-1)
-    kwz_radius = main_sys_radius + add_sys_radius
+
+    # old procedure
+    #kwz_radius = main_sys_radius + add_sys_radius
+
+    # new procedure: scale radius by main_sys size
+    kwz_radius = main_sys_radius * radius_scale + add_sys_radius
 
     _shift_sys(add_sys, kwz_radius)
 
