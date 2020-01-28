@@ -1,6 +1,5 @@
 
 import math
-import itertools as it
 
 __version__ = "2017-03-30"
 
@@ -11,7 +10,7 @@ def dot(v1, v2):
     Source: https://en.wikipedia.org/wiki/Dot_product
     Dot-Product in pure python
     """
-    return sum(x*y for x, y in it.izip(v1, v2))
+    return sum(x*y for x, y in zip(v1, v2))
 
 
 def cross(v1, v2):
@@ -32,7 +31,7 @@ def mm_mult(m1, m2):
         m1      array of arrays
         m2      array of arrays
     """
-    result = [[sum(a*b for a, b in it.izip(X_row, Y_col)) for Y_col in it.izip(*m2)] for
+    result = [[sum(a*b for a, b in zip(X_row, Y_col)) for Y_col in zip(*m2)] for
               X_row in m1]
     return result
 
@@ -75,7 +74,7 @@ def get_vt(tail, head, direction="head"):
         list
 
     """
-    v_out = [j-i for i, j in it.izip(tail, head)]
+    v_out = [j-i for i, j in zip(tail, head)]
 
     if direction == "head":
         pass
@@ -92,7 +91,7 @@ def add_vts(*vects):
     Add all given vectors.
     Only works with vector coordinates as lists.
     """
-    return [sum(x) for x in it.izip(*vects)]
+    return [sum(x) for x in zip(*vects)]
 
 
 def get_mag(vector, unrooted=False):
@@ -137,7 +136,7 @@ def get_ang(v1, v2, deg=False):
             >>> angle_between((1, 0, 0), (-1, 0, 0))
             3.141592653589793 (pi)
     """
-    numerator = sum([i*j for i, j in it.izip(v1, v2)])
+    numerator = sum([i*j for i, j in zip(v1, v2)])
     denominator = get_mag(v1)*get_mag(v2)
     gamma = math.acos(numerator/denominator)
 

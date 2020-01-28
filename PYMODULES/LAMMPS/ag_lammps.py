@@ -720,16 +720,17 @@ class LmpStuff(mdu.Universe):
                 # only write triclinic section, if there box vectors and if they
                 # are bigger than 1e-5; otherwise neglect them
                 # None is always smaller than any number
-                lmp_xy_eval = cbox.lmp_xy > 1e-5
-                lmp_xz_eval = cbox.lmp_xz > 1e-5
-                lmp_yz_eval = cbox.lmp_yz > 1e-5
+                if cbox.lmp_xy is not None and cbox.lmp_xz is not None and cbox.lmp_yz is not None:
+                    lmp_xy_eval = cbox.lmp_xy > 1e-5
+                    lmp_xz_eval = cbox.lmp_xz > 1e-5
+                    lmp_yz_eval = cbox.lmp_yz > 1e-5
 
-                if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
-                    lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
-                        cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
-                    )
+                    if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
+                        lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
+                            cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
+                        )
 
-                del (lmp_xy_eval, lmp_xz_eval, lmp_yz_eval)
+                    del (lmp_xy_eval, lmp_xz_eval, lmp_yz_eval)
 
                 lmpdat_out.write("\n")
 
