@@ -139,6 +139,17 @@ parser.add_argument(
     "-rerun", default=None, help="Rerun command as in the lammps manual."
 )
 
+parser.add_argument(
+    "-phonon",
+    default=None,
+    help=(
+        f"Calculate the dynamical matrix from molecular dynamics simulations "
+        f"based on fluctuation-dissipation theory for a group of atoms. "
+        f"Input is the same as in the lammps manual; gamma points only"
+        f"fix ID group-ID phonon N Noutput Nwait map_file prefix keyword values ..."
+    ),
+)
+
 args = parser.parse_args()
 
 if args.ensemble is not None:
@@ -287,6 +298,9 @@ if args.ensemble is not None:
         lmp.command("run {}".format(args.steps))
     else:
         lmp.command(args.rerun)
+
+if args.phonon is not None:
+    lmp.command(f"fix {args.phonon}")
 
 lmp.command("write_restart {}.lmprst".format(args.out))
 

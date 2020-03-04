@@ -1,4 +1,3 @@
-
 import collections
 
 __version__ = "2017-05-05"
@@ -8,6 +7,7 @@ class LogUniverse(object):
     """
     Contains basic methods for processing log-outputs.
     """
+
     def __init__(self):
         """
         data = [{ikey: [value1, value2, ...], jkey: [value1, value2, ...], ...}]
@@ -21,7 +21,7 @@ class LogUniverse(object):
         Sort data by key.
         Sources:    http://stackoverflow.com/questions/9001509/how-can-i-sort-a-dictionary-by-key
         """
-        #TODO CHECK IF DICTIONARY WAS ALTERED, HAS NOT BEEN TESTED YET!
+        # TODO CHECK IF DICTIONARY WAS ALTERED, HAS NOT BEEN TESTED YET!
         for cdata in self.data:
             for subdata in cdata:
                 cdata = collections.OrderedDict(sorted(cdata.items()))
@@ -33,14 +33,14 @@ class LogUniverse(object):
         start:      float/int; first value in list of keyword, e.g. 2500 (Step)
         stop:       float/int; last value in list of keyword, e.g. 350.6 (K)
         """
-        #TODO currently not working properly
+        # TODO currently not working properly
         if keyword is not None:
             for cdata in self.data:
 
                 for ikey in cdata:
                     if ikey == keyword:
                         start_ptr = cdata[ikey].index(start)
-                        stop_ptr  = cdata[ikey].index(stop)
+                        stop_ptr = cdata[ikey].index(stop)
                     break
 
                 for jkey in cdata:

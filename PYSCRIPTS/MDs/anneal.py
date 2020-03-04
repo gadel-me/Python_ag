@@ -2,35 +2,47 @@ from lammps import lammps
 from mpi4py import MPI
 import argparse
 
-#==============================================================================#
+# ==============================================================================#
 # Setup MPI
-#==============================================================================#
+# ==============================================================================#
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
 
-#==============================================================================#
+# ==============================================================================#
 # Helping functions
-#==============================================================================#
+# ==============================================================================#
 class bcolors:
-    header = '\033[95m'
-    blue = '\033[94m'
-    green = '\033[92m'
-    yellow = '\033[93m'
-    red = '\033[91m'
-    endc = '\033[0m'
-    bold = '\033[1m'
-    underline = '\033[4m'
+    header = "\033[95m"
+    blue = "\033[94m"
+    green = "\033[92m"
+    yellow = "\033[93m"
+    red = "\033[91m"
+    endc = "\033[0m"
+    bold = "\033[1m"
+    underline = "\033[4m"
 
 
-def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, ff_file=None):
+def anneal(
+    lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, ff_file=None
+):
     """
     """
 
-    thermargs = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl",
-                 "ecoul", "ebond", "enthalpy"]
+    thermargs = [
+        "step",
+        "temp",
+        "pe",
+        "eangle",
+        "edihed",
+        "eimp",
+        "evdwl",
+        "ecoul",
+        "ebond",
+        "enthalpy",
+    ]
 
     lmp = lammps(cmdargs=["-screen", "lmp_out.txt"])
     lmp.command("log {}.lmplog".format(output))
@@ -67,7 +79,7 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
     lmp.command("fix NVE all nve")
 
     # heat up
-    #lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(300))
+    # lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(300))
     for _ in range(cycles):
         if rank == 0:
             print((bcolors.red + "Annealing" + bcolors.endc))
@@ -75,9 +87,9 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(0.0, tmax))
         lmp.command("run {}".format(steps))
 
-        #try:
+        # try:
         #    lmp.command("run {}".format(steps))
-        #except:
+        # except:
         #    print("***Error: Simulation crashed (annealing)! Force constants too high?")
         #    MPI.COMM_WORLD.Abort()
 
@@ -87,7 +99,7 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(tmax, 0.0))
 
         try:
-            lmp.command("run {}".format(steps*2))
+            lmp.command("run {}".format(steps * 2))
         except:
             print("***Error: Simulation crashed (annealing)! Force constants too high?")
             MPI.COMM_WORLD.Abort()
@@ -99,7 +111,7 @@ def anneal(lmpdat, tmax, steps, save_step, cycles, output, settings_file=None, f
         lmp.command("fix TFIX all langevin {} {} 100 24601".format(1.0, 1.0))
 
         try:
-            lmp.command("run {}".format(steps*2))
+            lmp.command("run {}".format(steps * 2))
         except:
             print("***Error: Simulation crashed (annealing)! Force constants too high?")
             MPI.COMM_WORLD.Abort()
@@ -125,5 +137,13 @@ if __name__ == "__main__":
     PARSER.add_argument("-ff", default=None)
     PARSER.add_argument("-out", default="DEFAULTNAME", help="Name of energy files.")
     ARGS = PARSER.parse_args()
-    anneal(ARGS.lmpdat, ARGS.tmax, ARGS.steps, ARGS.save_step, ARGS.cycles,
-           ARGS.out, settings_file=ARGS.set, ff_file=ARGS.ff)
+    anneal(
+        ARGS.lmpdat,
+        ARGS.tmax,
+        ARGS.steps,
+        ARGS.save_step,
+        ARGS.cycles,
+        ARGS.out,
+        settings_file=ARGS.set,
+        ff_file=ARGS.ff,
+    )

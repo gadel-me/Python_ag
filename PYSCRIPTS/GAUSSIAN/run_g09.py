@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#SBATCH --exclusive
+# SBATCH --exclusive
 
 
 import argparse
@@ -20,16 +20,16 @@ by g09 program and a qm calculation is performed.
 
 # Helper functions for cpu and memory capacities on current node ---------------
 def get_real_cores():
-    ht_info = os.popen('lscpu').readlines()[6]
-    socket_info = os.popen('lscpu').readlines()[7]
-    cores = int(re.search(r'\d+', ht_info).group(0))
-    sockets = int(re.search(r'\d+', socket_info).group(0))
-    return (cores*sockets)
+    ht_info = os.popen("lscpu").readlines()[6]
+    socket_info = os.popen("lscpu").readlines()[7]
+    cores = int(re.search(r"\d+", ht_info).group(0))
+    sockets = int(re.search(r"\d+", socket_info).group(0))
+    return cores * sockets
 
 
 def get_real_memory():
     mem = psutil.virtual_memory()
-    mem_in_gb = int(math.floor(mem.available*9.31323e-10))
+    mem_in_gb = int(math.floor(mem.available * 9.31323e-10))
     return mem_in_gb
 
 
@@ -37,10 +37,10 @@ def get_real_memory():
 parser = argparse.ArgumentParser(
     prog="gau_run.py",
     formatter_class=argparse.RawTextHelpFormatter,
-    description="Submit a gaussian calculation.")
+    description="Submit a gaussian calculation.",
+)
 
-parser.add_argument("gau_in",
-                    help="Gaussian input file (.gau).")
+parser.add_argument("gau_in", help="Gaussian input file (.gau).")
 
 args = parser.parse_args()
 
@@ -51,8 +51,8 @@ gau = aggau.GauStuff(nproc=get_real_cores(), mem=get_real_memory())
 gau.read_gau(args.gau_in)
 
 # write new output file
-gau.write_gau(args.gau_in+".tmp", 0)
-sl.move(args.gau_in+".tmp", args.gau_in)
+gau.write_gau(args.gau_in + ".tmp", 0)
+sl.move(args.gau_in + ".tmp", args.gau_in)
 exit()
 
 # execute gaussian

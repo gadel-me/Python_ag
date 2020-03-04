@@ -1,4 +1,3 @@
-
 import math
 import numpy as np
 import md_stars as mds
@@ -12,6 +11,7 @@ class AmberStuff(mdu.Universe):
     """
     Sources:    http://ambermd.org/formats.html
     """
+
     def __init__(self):
         """
         Get our containers ready.
@@ -46,23 +46,53 @@ class AmberStuff(mdu.Universe):
                     next(prmtop_in)  # line with formatting info
 
                     line = next(prmtop_in).split()
-                    (natom, ntypes, nbonh, mbona, ntheth, mtheta, nphih, mphia,
-                     nhparm, nparm) = [int(i) for i in line]
+                    (
+                        natom,
+                        ntypes,
+                        nbonh,
+                        mbona,
+                        ntheth,
+                        mtheta,
+                        nphih,
+                        mphia,
+                        nhparm,
+                        nparm,
+                    ) = [int(i) for i in line]
 
                     line = next(prmtop_in).split()
-                    (nnb, nres, nbona, ntheta, nphia, numbnd, numang, nptra,
-                     natyp, nphb) = [int(i) for i in line]
+                    (
+                        nnb,
+                        nres,
+                        nbona,
+                        ntheta,
+                        nphia,
+                        numbnd,
+                        numang,
+                        nptra,
+                        natyp,
+                        nphb,
+                    ) = [int(i) for i in line]
 
                     line = next(prmtop_in).split()
-                    (ifpert, nbper, ngper, ndper, mbper, mgper, mdper, ifbox,
-                     nmxrs, ifcap) = [int(i) for i in line]
+                    (
+                        ifpert,
+                        nbper,
+                        ngper,
+                        ndper,
+                        mbper,
+                        mgper,
+                        mdper,
+                        ifbox,
+                        nmxrs,
+                        ifcap,
+                    ) = [int(i) for i in line]
 
                     line = next(prmtop_in).split()
                     numextra = line[0]
 
                     try:
                         ncopy = line[1]  # entry "copy" need not to be given
-                    except(IndexError):
+                    except (IndexError):
                         pass
 
                 elif line.startswith("%FLAG ATOM_NAME"):
@@ -93,77 +123,75 @@ class AmberStuff(mdu.Universe):
                     # sigma and epsilon parameters are assigned to the same type (regardless
                     # of whether they have the same AMBER ATOM TYPE).
                     section_atom_type_index = agphf.parse_section(
-                        prmtop_in, natom, itype="int")
+                        prmtop_in, natom, itype="int"
+                    )
 
                 elif line.startswith("%FLAG NUMBER_EXCLUDED_ATOMS"):
                     # section which contains the number of atoms that need to be
                     # excluded from the non-bonded calculation loop for atom i
                     # because i is involved in a bond, angle, or torsion with those atoms
                     section_number_excluded_atoms = agphf.parse_section(
-                        prmtop_in, natom, itype="int")
+                        prmtop_in, natom, itype="int"
+                    )
 
                 elif line.startswith("%FLAG NONBONDED_PARM_INDEX"):
                     # section which contains the pointers for each pair of LJ
                     # atom types into the LENNARD JONES ACOEF and
                     # LENNARD JONES BCOEF arrays
                     section_nonbonded_parm_index = agphf.parse_section(
-                        prmtop_in, ntypes*ntypes, itype="int")
+                        prmtop_in, ntypes * ntypes, itype="int"
+                    )
 
                 elif line.startswith("%FLAG RESIDUE_LABEL"):
                     # section which contains the residue name for every residue
                     # in the prmtop
-                    section_residue_label = agphf.parse_section(
-                        prmtop_in, nres)
+                    section_residue_label = agphf.parse_section(prmtop_in, nres)
                 elif line.startswith("%FLAG RESIDUE_POINTER"):
                     section_residue_pointer = agphf.parse_section(
-                        prmtop_in, nres, itype="int")
+                        prmtop_in, nres, itype="int"
+                    )
                 elif line.startswith("%FLAG BOND_FORCE_CONSTANT"):
                     # section which lists all of the bond force constants
                     # k in kcal/(mol*Angstrom**2) for each unique bond type
-                    section_bond_force_constant = agphf.parse_section(
-                        prmtop_in, numbnd)
+                    section_bond_force_constant = agphf.parse_section(prmtop_in, numbnd)
                 elif line.startswith("%FLAG BOND_EQUIL_VALUE"):
                     # section which lists all of the bond equilibrium distances
                     # in "Angstrom" for each unique bond type
-                    section_bond_equil_value = agphf.parse_section(
-                        prmtop_in, numbnd)
+                    section_bond_equil_value = agphf.parse_section(prmtop_in, numbnd)
                 elif line.startswith("%FLAG ANGLE_FORCE_CONSTANT"):
                     # section which contains all of the angle equilibrium angles
                     # in "radians"
                     section_angle_force_constant = agphf.parse_section(
-                        prmtop_in, numang)
+                        prmtop_in, numang
+                    )
                 elif line.startswith("%FLAG ANGLE_EQUIL_VALUE"):
                     # section which contains all of the angle equilibrium angles
                     # in "radians"
-                    section_angle_equil_value = agphf.parse_section(
-                        prmtop_in, numang)
+                    section_angle_equil_value = agphf.parse_section(prmtop_in, numang)
                 elif line.startswith("%FLAG DIHEDRAL_FORCE_CONSTANT"):
                     # section which lists the torsion force constants in kcal/mol
                     # for each unique torsion type
                     section_dihedral_force_constant = agphf.parse_section(
-                        prmtop_in, nptra)
+                        prmtop_in, nptra
+                    )
                 elif line.startswith("%FLAG DIHEDRAL_PERIODICITY"):
                     # section which lists the periodicity n for each unique
                     # torsion type; only int
-                    section_dihedral_periodicity = agphf.parse_section(
-                        prmtop_in, nptra)
+                    section_dihedral_periodicity = agphf.parse_section(prmtop_in, nptra)
                 elif line.startswith("%FLAG DIHEDRAL_PHASE"):
                     # section which lists the phase shift for each unique
                     # torsion type in "radians"
-                    section_dihedral_phase = agphf.parse_section(
-                        prmtop_in, nptra)
+                    section_dihedral_phase = agphf.parse_section(prmtop_in, nptra)
                 elif line.startswith("%FLAG SCEE_SCALE_FACTOR"):
                     # section which lists the factor by which 1-4 electrostatic
                     # interactions are divided (i.e., the two atoms on either
                     # end of a torsion)
-                    section_scee_scale_factor = agphf.parse_section(
-                        prmtop_in, nptra)
+                    section_scee_scale_factor = agphf.parse_section(prmtop_in, nptra)
                 elif line.startswith("%FLAG SCNB_SCALE_FACTOR"):
                     # section which lists the factor by which 1-4 van der Waals
                     # interactions are divided (i.e., the two atoms on either
                     # end of a torsion)
-                    section_scnb_scale_factor = agphf.parse_section(
-                        prmtop_in, nptra)
+                    section_scnb_scale_factor = agphf.parse_section(prmtop_in, nptra)
                 elif line.startswith("%FLAG SOLTY"):
                     # section which is unused
                     section_solty = agphf.parse_section(prmtop_in, natyp)
@@ -171,43 +199,50 @@ class AmberStuff(mdu.Universe):
                     # section contains the LJ A-coefficients for all pairs of
                     # distinct LJ types
                     section_lennard_jones_acoef = agphf.parse_section(
-                        prmtop_in, ntypes*(ntypes+1)/2)
+                        prmtop_in, ntypes * (ntypes + 1) / 2
+                    )
                 elif line.startswith("%FLAG LENNARD_JONES_BCOEF"):
                     # section contains the LJ A-coefficients for all pairs of
                     # distinct LJ types
                     section_lennard_jones_bcoef = agphf.parse_section(
-                        prmtop_in, ntypes*(ntypes+1)/2)
+                        prmtop_in, ntypes * (ntypes + 1) / 2
+                    )
                 elif line.startswith("%FLAG BONDS_INC_HYDROGEN"):
                     # section which contains a list of every bond in the system
                     # in which at least one atom is Hydrogen
                     section_bonds_inc_hydrogen = agphf.parse_section(
-                        prmtop_in, 3*nbonh, chunksize=3, itype="int")
+                        prmtop_in, 3 * nbonh, chunksize=3, itype="int"
+                    )
                 elif line.startswith("%FLAG BONDS_WITHOUT_HYDROGEN"):
                     # section contains a list of every bond in the system in
                     # which neither atom is a Hydrogen
                     section_bonds_without_hydrogen = agphf.parse_section(
-                        prmtop_in, 3*nbona, chunksize=3, itype="int")
+                        prmtop_in, 3 * nbona, chunksize=3, itype="int"
+                    )
                 elif line.startswith("%FLAG ANGLES_INC_HYDROGEN"):
                     # section contains a list of every angle in the system in
                     # which at least one atom is Hydrogen
                     section_angles_inc_hydrogen = agphf.parse_section(
-                        prmtop_in, 4*ntheth, chunksize=4, itype="int")
+                        prmtop_in, 4 * ntheth, chunksize=4, itype="int"
+                    )
                 elif line.startswith("%FLAG ANGLES_WITHOUT_HYDROGEN"):
                     # section which contains a list of every angle in the system
                     # in which no atom is Hydrogen
                     section_angles_without_hydrogen = agphf.parse_section(
-                        prmtop_in, 4*ntheta, chunksize=4, itype="int")
+                        prmtop_in, 4 * ntheta, chunksize=4, itype="int"
+                    )
                 elif line.startswith("%FLAG DIHEDRALS_INC_HYDROGEN"):
                     # section contains a list of every torsion in the system in
                     # which at least one atom is Hydrogen
                     section_dihedrals_inc_hydrogen = agphf.parse_section(
-                        prmtop_in, 5*nphih, chunksize=5, itype="int")
+                        prmtop_in, 5 * nphih, chunksize=5, itype="int"
+                    )
                 elif line.startswith("%FLAG DIHEDRALS_WITHOUT_HYDROGEN"):
                     section_dihedrals_without_hydrogen = agphf.parse_section(
-                        prmtop_in, 5*nphia, chunksize=5, itype="int")
+                        prmtop_in, 5 * nphia, chunksize=5, itype="int"
+                    )
                 elif line.startswith("%FLAG AMBER_ATOM_TYPE"):
-                    section_amber_atom_type = agphf.parse_section(
-                        prmtop_in, natom)
+                    section_amber_atom_type = agphf.parse_section(prmtop_in, natom)
                 elif line.startswith("%FLAG TREE_CHAIN_CLASSIFICATION"):
                     agphf.entry_not_read("TREE_CHAIN_CLASSIFICATION")
                 elif line.startswith("%FLAG JOIN_ARRAY"):
@@ -217,8 +252,7 @@ class AmberStuff(mdu.Universe):
                 elif line.startswith("%FLAG RADIUS_SET"):
                     agphf.entry_not_read("RADIUS_SET")
                 elif line.startswith("%FLAG RADII"):
-                    section_radii = agphf.parse_section(
-                        prmtop_in, natom)
+                    section_radii = agphf.parse_section(prmtop_in, natom)
                 elif line.startswith("%FLAG SCREEN"):
                     agphf.entry_not_read("SCREEN")
                 else:
@@ -236,21 +270,22 @@ class AmberStuff(mdu.Universe):
         atm_key_old_new = {}
 
         for cidx, cid in enumerate(abcoef_ids):
-            #cidx += 1
-            cur_sig, cur_eps = agphf.sig_eps_from_AB(section_lennard_jones_acoef[cid],
-                                                     section_lennard_jones_bcoef[cid])
+            # cidx += 1
+            cur_sig, cur_eps = agphf.sig_eps_from_AB(
+                section_lennard_jones_acoef[cid], section_lennard_jones_bcoef[cid]
+            )
 
             # skip duplicates
             try:
                 if self.atm_types[cidx]:
                     print("***Prmtop-Info: Skipping atom type {}".format(cid))
             except KeyError:
-                self.atm_types[cidx] = mds.Atom(sigma=cur_sig,
-                                                epsilon=cur_eps,
-                                                energy_unit="kcal/mol")
+                self.atm_types[cidx] = mds.Atom(
+                    sigma=cur_sig, epsilon=cur_eps, energy_unit="kcal/mol"
+                )
 
             # add old key as key and new key as value
-            atm_key_old_new[cidx+1] = cidx
+            atm_key_old_new[cidx + 1] = cidx
 
         # ityp:      atom type as number (= atom key)
         # imass:     mass of atom type
@@ -260,41 +295,43 @@ class AmberStuff(mdu.Universe):
 
         # type-id (key), mass, type-name
         atypemass = {}
-        for ityp, imass, itypamb in zip(section_atom_type_index,
-                                        section_mass,
-                                        section_amber_atom_type):
+        for ityp, imass, itypamb in zip(
+            section_atom_type_index, section_mass, section_amber_atom_type
+        ):
             # iterate through names- and mass-list, overwrite duplicates
             # -> only single atom-types remain
             atypemass[ityp] = [imass, itypamb]
 
         for akey in atypemass:
             akey_new = atm_key_old_new[akey]  # translate old key
-            self.atm_types[akey_new].weigh   = atypemass[akey][0]
-            self.atm_types[akey_new].sitnam  = atypemass[akey][1]
+            self.atm_types[akey_new].weigh = atypemass[akey][0]
+            self.atm_types[akey_new].sitnam = atypemass[akey][1]
 
         # /// bond-types
         bnd_key_old_new = {}
-        for cbnd_id, (bnd_fconst, bnd_r0) in enumerate(zip(section_bond_force_constant,
-                                                           section_bond_equil_value)):
-            self.bnd_types[cbnd_id] = mds.Bond(prm1=bnd_fconst,
-                                               prm2=bnd_r0,
-                                               energy_unit="kcal/mol")
-            bnd_key_old_new[cbnd_id+1] = cbnd_id
+        for cbnd_id, (bnd_fconst, bnd_r0) in enumerate(
+            zip(section_bond_force_constant, section_bond_equil_value)
+        ):
+            self.bnd_types[cbnd_id] = mds.Bond(
+                prm1=bnd_fconst, prm2=bnd_r0, energy_unit="kcal/mol"
+            )
+            bnd_key_old_new[cbnd_id + 1] = cbnd_id
 
         # /// angle-types
         ang_key_old_new = {}
-        for cang_id, (ang_fconst, ang_r0) in enumerate(zip(section_angle_force_constant,
-                                                           section_angle_equil_value)):
-            self.ang_types[cang_id] = mds.Angle(prm1=ang_fconst,
-                                                prm2=ang_r0,
-                                                energy_unit="kcal/mol",
-                                                angle_unit="rad")
-            ang_key_old_new[cang_id+1] = cang_id
+        for cang_id, (ang_fconst, ang_r0) in enumerate(
+            zip(section_angle_force_constant, section_angle_equil_value)
+        ):
+            self.ang_types[cang_id] = mds.Angle(
+                prm1=ang_fconst, prm2=ang_r0, energy_unit="kcal/mol", angle_unit="rad"
+            )
+            ang_key_old_new[cang_id + 1] = cang_id
 
         # /// dihedral- and improper-types
         #     assign dihedrals and impropers to "dih" and "imp"
-        dih_imp_dict = agphf.unmask_imp(section_dihedrals_inc_hydrogen,
-                                        section_dihedrals_without_hydrogen)
+        dih_imp_dict = agphf.unmask_imp(
+            section_dihedrals_inc_hydrogen, section_dihedrals_without_hydrogen
+        )
 
         # dicts where we can look up, which old dihedral-/improper-key points to the new key
         dih_old_new = {}
@@ -304,56 +341,70 @@ class AmberStuff(mdu.Universe):
         imp_cntr = 0  # improper key-counter, for consecutive numbering
 
         dih_key_old_new = {}
-        #imp_key_old_new = {}
-        for cdih_id, (dih_fconst, dih_prd, dih_phase) in enumerate(zip(section_dihedral_force_constant,
-                                                                       section_dihedral_periodicity,
-                                                                       section_dihedral_phase)):
-            cur_key = cdih_id+1
+        # imp_key_old_new = {}
+        for cdih_id, (dih_fconst, dih_prd, dih_phase) in enumerate(
+            zip(
+                section_dihedral_force_constant,
+                section_dihedral_periodicity,
+                section_dihedral_phase,
+            )
+        ):
+            cur_key = cdih_id + 1
             dih_prd = int(dih_prd)
 
             if dih_imp_dict[cur_key] == "dih":
-                self.dih_types[dih_cntr] = mds.Dihedral(prm_k=dih_fconst,
-                                                        prm_n=dih_prd,
-                                                        prm_d=dih_phase,
-                                                        energy_unit="kcal/mol",
-                                                        angle_unit="rad")
+                self.dih_types[dih_cntr] = mds.Dihedral(
+                    prm_k=dih_fconst,
+                    prm_n=dih_prd,
+                    prm_d=dih_phase,
+                    energy_unit="kcal/mol",
+                    angle_unit="rad",
+                )
                 # pointer new-key -> old-key
                 dih_old_new[cur_key] = dih_cntr
-                dih_key_old_new[dih_cntr+1] = dih_cntr
+                dih_key_old_new[dih_cntr + 1] = dih_cntr
                 dih_cntr += 1  # right enumeration for dih-key (starting at 1)
 
             elif dih_imp_dict[cur_key] == "imp":
-                self.imp_types[imp_cntr] = mds.Improper(prm_k=dih_fconst,
-                                                        prm_n=dih_prd,
-                                                        prm_d=dih_phase,
-                                                        energy_unit="kcal/mol",
-                                                        angle_unit="rad")
+                self.imp_types[imp_cntr] = mds.Improper(
+                    prm_k=dih_fconst,
+                    prm_n=dih_prd,
+                    prm_d=dih_phase,
+                    energy_unit="kcal/mol",
+                    angle_unit="rad",
+                )
                 # check if prm_k and prm_n fulfill cvff convention (see lammps)
                 agphf.check_cvff_compatibility(dih_phase, dih_prd)
                 # pointer new-key -> old-key
                 imp_old_new[cur_key] = imp_cntr
-                #imp_key_old_new[imp_cntr+1] = imp_cntr
+                # imp_key_old_new[imp_cntr+1] = imp_cntr
                 imp_cntr += 1  # right enumeration for imp-key (starting at 1)
             else:
-                raise RuntimeError("***Undefined dihedral! Something went totally wrong!")
+                raise RuntimeError(
+                    "***Undefined dihedral! Something went totally wrong!"
+                )
 
         # /// arrange data - topology section ///
         # /// atoms
         atm_id_old_new = {}
-        for iatmkey, (itype, ichge, isitnam) in enumerate(zip(section_atom_type_index,
-                                                              section_charge,
-                                                              section_atom_name)):
+        for iatmkey, (itype, ichge, isitnam) in enumerate(
+            zip(section_atom_type_index, section_charge, section_atom_name)
+        ):
             # since amber is/was based on fortran, increment atom-ids by 1
-            self.atoms.append(mds.Atom(atm_id=iatmkey,
-                                       atm_key=atm_key_old_new[itype],
-                                       chge=ichge,
-                                       sitnam=isitnam,
-                                       grp_id=0))
+            self.atoms.append(
+                mds.Atom(
+                    atm_id=iatmkey,
+                    atm_key=atm_key_old_new[itype],
+                    chge=ichge,
+                    sitnam=isitnam,
+                    grp_id=0,
+                )
+            )
 
             # save into the corresponding dictionary to translate amber-ids to internal ids
-            #self.atm_idx_id[iatmkey] = iatmkey+1
-            #self.atm_id_idx[iatmkey+1] = iatmkey
-            atm_id_old_new[iatmkey+1] = iatmkey
+            # self.atm_idx_id[iatmkey] = iatmkey+1
+            # self.atm_id_idx[iatmkey+1] = iatmkey
+            atm_id_old_new[iatmkey + 1] = iatmkey
 
         # gather residue information
         for cur_atm_nr in range(nres):
@@ -366,64 +417,80 @@ class AmberStuff(mdu.Universe):
 
             try:
                 # atom-pointer after present atom-pointer
-                iptr = section_residue_pointer[cur_atm_nr+1]
-            except(IndexError):
+                iptr = section_residue_pointer[cur_atm_nr + 1]
+            except (IndexError):
                 iptr = None  # None, if no pointer after present pointer
 
             for iatm in self.atoms[pptr:iptr]:
                 iatm.res = cur_res
 
         # /// bonds
-        self.bonds = agphf.relocate_parsed(section_bonds_inc_hydrogen,
-                                           self.bonds,
-                                           "bonds",
-                                           bnd_key_old_new,
-                                           atm_id_old_new)
+        self.bonds = agphf.relocate_parsed(
+            section_bonds_inc_hydrogen,
+            self.bonds,
+            "bonds",
+            bnd_key_old_new,
+            atm_id_old_new,
+        )
 
-        self.bonds = agphf.relocate_parsed(section_bonds_without_hydrogen,
-                                           self.bonds,
-                                           "bonds",
-                                           bnd_key_old_new,
-                                           atm_id_old_new)
+        self.bonds = agphf.relocate_parsed(
+            section_bonds_without_hydrogen,
+            self.bonds,
+            "bonds",
+            bnd_key_old_new,
+            atm_id_old_new,
+        )
 
         # /// angles
-        self.angles = agphf.relocate_parsed(section_angles_inc_hydrogen,
-                                            self.angles,
-                                            "angles",
-                                            ang_key_old_new,
-                                            atm_id_old_new)
+        self.angles = agphf.relocate_parsed(
+            section_angles_inc_hydrogen,
+            self.angles,
+            "angles",
+            ang_key_old_new,
+            atm_id_old_new,
+        )
 
-        self.angles = agphf.relocate_parsed(section_angles_without_hydrogen,
-                                            self.angles,
-                                            "angles",
-                                            ang_key_old_new,
-                                            atm_id_old_new)
+        self.angles = agphf.relocate_parsed(
+            section_angles_without_hydrogen,
+            self.angles,
+            "angles",
+            ang_key_old_new,
+            atm_id_old_new,
+        )
 
         # /// dihedrals
-        self.dihedrals = agphf.relocate_parsed(section_dihedrals_inc_hydrogen,
-                                               self.dihedrals,
-                                               "dihedrals",
-                                               dih_old_new,
-                                               atm_id_old_new)
+        self.dihedrals = agphf.relocate_parsed(
+            section_dihedrals_inc_hydrogen,
+            self.dihedrals,
+            "dihedrals",
+            dih_old_new,
+            atm_id_old_new,
+        )
 
-        self.dihedrals = agphf.relocate_parsed(section_dihedrals_without_hydrogen,
-                                               self.dihedrals,
-                                               "dihedrals",
-                                               dih_old_new,
-                                               atm_id_old_new)
+        self.dihedrals = agphf.relocate_parsed(
+            section_dihedrals_without_hydrogen,
+            self.dihedrals,
+            "dihedrals",
+            dih_old_new,
+            atm_id_old_new,
+        )
 
         # /// impropers
-        self.impropers = agphf.relocate_parsed(section_dihedrals_inc_hydrogen,
-                                               self.impropers,
-                                               "impropers",
-                                               imp_old_new,
-                                               atm_id_old_new)
+        self.impropers = agphf.relocate_parsed(
+            section_dihedrals_inc_hydrogen,
+            self.impropers,
+            "impropers",
+            imp_old_new,
+            atm_id_old_new,
+        )
 
-        self.impropers = agphf.relocate_parsed(section_dihedrals_without_hydrogen,
-                                               self.impropers,
-                                               "impropers",
-                                               imp_old_new,
-                                               atm_id_old_new)
+        self.impropers = agphf.relocate_parsed(
+            section_dihedrals_without_hydrogen,
+            self.impropers,
+            "impropers",
+            imp_old_new,
+            atm_id_old_new,
+        )
 
         # delete variables not needed (at the moment)
         del prmtop_version
@@ -485,7 +552,7 @@ class AmberStuff(mdu.Universe):
             coords = int(line.split()[0])
 
             # number of following lines (6 coordinate entries per line)
-            num_coords_lines = int(math.ceil(coords/2))
+            num_coords_lines = int(math.ceil(coords / 2))
 
             # read coordinates line by line
             for _ in range(num_coords_lines):
@@ -512,17 +579,17 @@ class AmberStuff(mdu.Universe):
         """
         Read an amber trajectory file (currently only coordinates can be read).
         """
-        #TODO UNTESTED, PROBABLY WILL NOT WORK (RIGHT)
+        # TODO UNTESTED, PROBABLY WILL NOT WORK (RIGHT)
         print("***Mdcrd-Info: Reading Amber-Coordinates-File!")
         num_atms = len(self.atoms)
-        num_coords = num_atms*3
+        num_coords = num_atms * 3
 
         with open(mdcrd, "r") as mdcrd_in:
             reading = True
             title = next(mdcrd_in)
 
             # number of lines that describe one frame
-            lines_per_frame = math.ceil(num_coords/10)
+            lines_per_frame = math.ceil(num_coords / 10)
             cur_coords = []
 
             while reading is True:
@@ -559,9 +626,11 @@ class AmberStuff(mdu.Universe):
 
             for frame_id in frame_ids:
                 # flatten list
-                flatten_coords = [coord for
-                                  xyz_coords in self.ts_coords[frame_id] for
-                                  coord in xyz_coords]
+                flatten_coords = [
+                    coord
+                    for xyz_coords in self.ts_coords[frame_id]
+                    for coord in xyz_coords
+                ]
 
                 for cidx, ccoord in enumerate(flatten_coords):
                     # write coordinates

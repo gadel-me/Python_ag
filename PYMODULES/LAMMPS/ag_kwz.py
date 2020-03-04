@@ -1,16 +1,19 @@
-
 import pdb
 import datetime
 import os
-#import copy
+
+# import copy
 import shutil as sl
 import re
-#import argparse
+
+# import argparse
 import math
-#import time
+
+# import time
 import numpy as np
-#from natsort import natsorted
-#import itertools as it
+
+# from natsort import natsorted
+# import itertools as it
 import scipy.stats
 from mpi4py import MPI
 from lammps import lammps, PyLammps
@@ -18,27 +21,30 @@ import Transformations as cgt
 import md_elements as mde
 import md_box as mdb
 import md_universe as mdu
-#import ag_unify_md as agum
+
+# import ag_unify_md as agum
 import ag_geometry as agm
 import ag_lammps as aglmp
 import ag_lmplog as agl
-#import ag_vectalg as agv
+
+# import ag_vectalg as agv
 import ag_statistics as ags
 import ag_plotting as agplot
-#import vmd
 
-#==============================================================================#
+# import vmd
+
+# ==============================================================================#
 # Setup MPI
-#==============================================================================#
+# ==============================================================================#
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
 
-#==============================================================================#
+# ==============================================================================#
 # Helper functions
-#==============================================================================#
+# ==============================================================================#
 def generate_timestamp():
     """[summary]
 
@@ -77,7 +83,7 @@ def get_natms(lmpdat):
     """
     with open(lmpdat, "r") as f_in:
         line = f_in.readline()
-        while line != '':
+        while line != "":
             line = f_in.readline()
             if "atoms" in line:
                 return int(line.split()[0])
@@ -93,14 +99,18 @@ def get_remaining_cycles(total_cycles):
         remaining cycles
 
     """
+
     def get_next_cycle():
         """
         """
+
         def get_finished_cycles():
             """
             """
             fc = []
-            folders_pwd = ["{}/{}".format(pwd, i) for i in os.listdir(pwd) if os.path.isdir(i)]
+            folders_pwd = [
+                "{}/{}".format(pwd, i) for i in os.listdir(pwd) if os.path.isdir(i)
+            ]
 
             # get last cycle from directory
             for folder in folders_pwd:
@@ -108,8 +118,8 @@ def get_remaining_cycles(total_cycles):
                 if "fail" in folder:
                     continue
 
-                #print(folder)
-                cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
+                # print(folder)
+                cycle = re.match(r".*?([0-9]+)$", folder).group(1)
                 cycle = int(cycle)
 
                 # avoid duplicates
@@ -125,7 +135,11 @@ def get_remaining_cycles(total_cycles):
         except ValueError:
             current_cycle = 0
 
-        last_requench_file = pwd + "/requench_{}/".format(current_cycle) + "requench_{}.dcd".format(current_cycle)
+        last_requench_file = (
+            pwd
+            + "/requench_{}/".format(current_cycle)
+            + "requench_{}.dcd".format(current_cycle)
+        )
 
         if len(finished_cycles) >= 1:
 
@@ -146,18 +160,20 @@ def get_remaining_cycles(total_cycles):
     remain_cycles = total_cycles[idx_next_cycle:]
     return (remain_cycles, last_requench_file)
 
-    #===========================#
+    # ===========================#
     # Molecule to add by pattern
-    #===========================#
-    #id_pattern = 0
-    #num_patterns = len(args.pa) - 1  # indices start with 0 so one less
-    #total_cycles = []
+    # ===========================#
+    # id_pattern = 0
+    # num_patterns = len(args.pa) - 1  # indices start with 0 so one less
+    # total_cycles = []
+
+
 #
-    #for cycle in range(args.cycles):
-    #    if id_pattern > num_patterns:
-    #        id_pattern = 0
-    #    total_cycles.append((cycle, args.pa[id_pattern]))
-    #    id_pattern += 1
+# for cycle in range(args.cycles):
+#    if id_pattern > num_patterns:
+#        id_pattern = 0
+#    total_cycles.append((cycle, args.pa[id_pattern]))
+#    id_pattern += 1
 
 
 def create_folder(folder):
@@ -177,12 +193,15 @@ def write_to_log(string, filename="kwz_log"):
     with open("kwz_log", "a") as kwz_log:
         kwz_log.write(string)
 
+
 ################################################################################
 # Ensembles
 ################################################################################
 
 
-def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=True):
+def md_simulation(
+    lmpcuts, group, style, ensemble, keyword_min=None, keyword=None, unwrap_dcd=True
+):
     """
     Perform an md simulation.
     """
@@ -213,11 +232,15 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
 
     # pre-minimize system before running the actual simulation
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
-        #lmp.command("min_modify line quadratic")
+        # lmp.command("min_modify line quadratic")
         lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
 
     # barostatting, thermostatting
-    lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(lmpcuts.momentum_steps))
+    lmp.command(
+        "fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(
+            lmpcuts.momentum_steps
+        )
+    )
 
     # set the group
     if group != "all":
@@ -245,8 +268,8 @@ def md_simulation(lmpcuts, group, style, ensemble, keyword_min=None, keyword=Non
         if size > 1:
             MPI.COMM_WORLD.Abort()
 
-    #lmp.command("run {}".format(lmpcuts.runsteps))
-    #lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
+    # lmp.command("run {}".format(lmpcuts.runsteps))
+    # lmpcuts.minimize(lmp, style="cg", keyword=keyword_min)
     lmpcuts.unfix_undump(pylmp, lmp)
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
@@ -292,15 +315,16 @@ def nose_hoover_md(lmpcuts, group="all"):
             MPI.COMM_WORLD.Abort()
 
     lmpcuts.unfix_undump(pylmp, lmp)
-    #lmp.command("reset_timestep 0")
+    # lmp.command("reset_timestep 0")
     lmp.command("write_restart {}".format(lmpcuts.output_lmprst))
     lmp.command("clear")
     lmp.close()
 
 
-#==============================================================================#
+# ==============================================================================#
 # System Preparation
-#==============================================================================#
+# ==============================================================================#
+
 
 def _molecules_radii(lmp_sys):
     """
@@ -375,15 +399,23 @@ def _create_new_box(md_sys):
     """
     # add new orthogonal box
     md_sys.ts_boxes = []  # delete all previous unneeded boxes
-    #box_diameter = md_sys.get_system_radius(-1) + 100
+    # box_diameter = md_sys.get_system_radius(-1) + 100
     # diameter with an additional size of 20 should suffice since it
     # is quite expensive for simulation runs with solvent
-    #box_diameter = md_sys.get_system_radius(-1) + 50
-    box_diameter = md_sys.get_system_radius(-1) + 200  # very large box which will be altered later anyways
+    # box_diameter = md_sys.get_system_radius(-1) + 50
+    box_diameter = (
+        md_sys.get_system_radius(-1) + 200
+    )  # very large box which will be altered later anyways
     pi_2 = math.pi / 2
-    new_box = mdb.Box(boxtype="lattice", ltc_a=box_diameter, ltc_b=box_diameter,
-                      ltc_c=box_diameter, ltc_alpha=pi_2, ltc_beta=pi_2,
-                      ltc_gamma=pi_2)
+    new_box = mdb.Box(
+        boxtype="lattice",
+        ltc_a=box_diameter,
+        ltc_b=box_diameter,
+        ltc_c=box_diameter,
+        ltc_alpha=pi_2,
+        ltc_beta=pi_2,
+        ltc_gamma=pi_2,
+    )
     md_sys.ts_boxes.append(new_box)
     md_sys.ts_boxes[0].box_lat2lmp(triclinic=False)
 
@@ -405,7 +437,16 @@ def _check_sys(md_sys, atm_idx_max):
         return True
 
 
-def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, frame_idx_main=-1, frame_idx_add=-1, main_radius_scale=1.5):
+def sysprep(
+    lmpdat_out,
+    lmpdat_main,
+    lmpdat_add,
+    dcd_main=None,
+    dcd_add=None,
+    frame_idx_main=-1,
+    frame_idx_add=-1,
+    main_radius_scale=1.5,
+):
     """
     Prepare the system for the next docking step.
 
@@ -468,7 +509,7 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
     add_sys_radius = add_sys.get_system_radius(-1)
 
     # old procedure
-    #kwz_radius = main_sys_radius + add_sys_radius
+    # kwz_radius = main_sys_radius + add_sys_radius
 
     # new procedure: scale radius by main_sys size
     kwz_radius = main_sys_radius * radius_scale + add_sys_radius
@@ -489,14 +530,16 @@ def sysprep(lmpdat_out, lmpdat_main, lmpdat_add, dcd_main=None, dcd_add=None, fr
     if success is True:
         # write new data file
         main_sys.change_indices(incr=1, mode="increase")
-        main_sys.write_lmpdat(lmpdat_out, frame_id=0, title="System ready" +
-                              "for docking", cgcmm=True)
+        main_sys.write_lmpdat(
+            lmpdat_out, frame_id=0, title="System ready" + "for docking", cgcmm=True
+        )
     return success
 
 
 ################################################################################
 # Quenching
 ################################################################################
+
 
 def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
@@ -522,8 +565,8 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         else:
             succeeded = comm.recv(source=0)
 
-        #print(succeeded)
-        #succeeded = comm.bcast(succeeded, 0)
+        # print(succeeded)
+        # succeeded = comm.bcast(succeeded, 0)
 
         # stop trying if it was
         if succeeded is True:
@@ -566,7 +609,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
 
     lmpcuts.load_system(lmp)
 
-    #lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
+    # lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
     lmpcuts.thermo(lmp)
@@ -580,8 +623,8 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
 
     # define the atoms that may move during the simulation
     lmp.command("group grp_add_sys id > {}".format(natoms_main_sys))
-    #lmp.command("group grp_main_sys id <= {}".format(natoms_main_sys))
-    #lmp.command("fix freeze grp_main_sys setforce {0} {0} {0}".format(0.0))
+    # lmp.command("group grp_main_sys id <= {}".format(natoms_main_sys))
+    # lmp.command("fix freeze grp_main_sys setforce {0} {0} {0}".format(0.0))
 
     # pre-optimization
     lmp.command("min_style cg")
@@ -593,7 +636,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     # (prevents losing atoms due to being localized outside the cutoff)
     if rank == 0:
         prep_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
-        cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
+        cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1 :])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
         cog_force = cog * -1
@@ -604,9 +647,13 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     else:
         cog_force = comm.recv(source=0)
 
-    #cog_force = comm.bcast(cog_force, 0)
+    # cog_force = comm.bcast(cog_force, 0)
     # barostatting, thermostatting only for atoms that will be docked
-    lmp.command("fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
+    lmp.command(
+        "fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(
+            lmpcuts.tstart, lmpcuts.tstop
+        )
+    )
     quench_success = False
 
     # runs attempts to dock the molecule
@@ -641,11 +688,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
         addforce_cmd = addforce_cmd.format(c=cog_force)
         lmp.command(addforce_cmd)
-        #import time
-        #time.sleep(30)
+        # import time
+        # time.sleep(30)
 
         # set force does not work
-        #lmp.command("fix push grp_add_sys setforce {0} {0} {0}".format(*cog))
+        # lmp.command("fix push grp_add_sys setforce {0} {0} {0}".format(*cog))
         _run(1)
 
         # remove pushing force
@@ -655,8 +702,8 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         _run(int(lmpcuts.runsteps * 0.5))
 
         # stop to-be-docked molecules from moving
-        #lmp.command("velocity grp_add_sys set 0.0 0.0 0.0")
-        #lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(0.0))
+        # lmp.command("velocity grp_add_sys set 0.0 0.0 0.0")
+        # lmp.command("fix freeze grp_add_sys setforce {0} {0} {0}".format(0.0))
 
         _run(int(lmpcuts.runsteps * 0.25))
 
@@ -666,6 +713,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
 ################################################################################
 # Annealing
 ################################################################################
+
 
 def _fix_indent_ids(radii, cogs, group_name, scale_start=1, scale_stop=12):
     """
@@ -751,7 +799,7 @@ def _check_clashes(sys_both, sys_a, sys_b, dcd_b=None, unwrap=False):
         solvent atoms otherwise
 
     """
-    #sys_both.reset_cells()
+    # sys_both.reset_cells()
     # read latest solvent coordinates and boxes
     if dcd_b:
         sys_b.import_dcd(dcd_b)
@@ -764,13 +812,15 @@ def _check_clashes(sys_both, sys_a, sys_b, dcd_b=None, unwrap=False):
         sys_b.unwrap_cell(frame_id=-1)
 
     # testing #################################################################
-    #sys_b.change_indices()
-    #sys_b.write_lmpdat("unwrapped.lmpdat", frame_id=-1, cgcmm=True)
-    #exit()
+    # sys_b.change_indices()
+    # sys_b.write_lmpdat("unwrapped.lmpdat", frame_id=-1, cgcmm=True)
+    # exit()
     # #########################################################################
 
     # concatenate solute and latest solvent coordinates
-    sys_both.ts_coords.append(np.concatenate((sys_a.ts_coords[-1], sys_b.ts_coords[-1])))
+    sys_both.ts_coords.append(
+        np.concatenate((sys_a.ts_coords[-1], sys_b.ts_coords[-1]))
+    )
     sys_both.ts_boxes = sys_b.ts_boxes
     sys_both.create_linked_cells(-1, rcut_a=2, rcut_b=2, rcut_c=2)
     close_atms_ab = sys_both.chk_atm_dist(-1, min_dist=1.0, exclude_same_molecule=True)
@@ -786,19 +836,30 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     """
     """
     # solvate with molecule radii and cogs
-    solvate_sys = aglmp.read_lmpdat(lmpdat_solvate, dcd_solvate, frame_idx_start=-2, frame_idx_stop=-1)
+    solvate_sys = aglmp.read_lmpdat(
+        lmpdat_solvate, dcd_solvate, frame_idx_start=-2, frame_idx_stop=-1
+    )
     radii_mol, cogs_mol = _molecules_radii(solvate_sys)
-    indent_strs = _fix_indent_ids(radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15)
+    indent_strs = _fix_indent_ids(
+        radii_mol, cogs_mol, "molecule", scale_start=10, scale_stop=15
+    )
 
     # load solution system (last frame only)
-    solvent_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd_solvent, frame_idx_start=-2, frame_idx_stop=-1)
+    solvent_sys = aglmp.read_lmpdat(
+        lmpcuts.input_lmpdat, dcd_solvent, frame_idx_start=-2, frame_idx_stop=-1
+    )
     solution_sys = mdu.merge_systems([solvate_sys, solvent_sys])
     solution_sys.reset_cells()
 
     # check solvate atoms with too close contacts to solvent atoms
     close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys)
     cogs_atoms = [solvate_sys.ts_coords[-1][i] for i in close_atoms]
-    radii_atoms = [mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)] for i in close_atoms]
+    radii_atoms = [
+        mde.elements_mass_radii[
+            round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)
+        ]
+        for i in close_atoms
+    ]
 
     # gather close atoms and remember which were close
     all_close_atoms = []
@@ -831,10 +892,12 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
-    #lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
-    lmpcuts.fix_berendsen(lmp, group="all", ensemble="npt", keyword="iso", integrator="nve/limit 0.2")
-    #lmp.command("unfix integrator")
-    #lmp.command("fix limit_movement all nve/limit 0.05")
+    # lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
+    lmpcuts.fix_berendsen(
+        lmp, group="all", ensemble="npt", keyword="iso", integrator="nve/limit 0.2"
+    )
+    # lmp.command("unfix integrator")
+    # lmp.command("fix limit_movement all nve/limit 0.05")
     _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=True)
 
     factor_start = 10
@@ -843,9 +906,17 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
     if close_atoms != []:
         # move solvent molecules away from close solvate atoms
         for _ in range(5):
-            indent_strs = _fix_indent_ids(all_radii_atoms, all_cogs_atoms, "atom", scale_start=factor_start, scale_stop=factor_stop)
+            indent_strs = _fix_indent_ids(
+                all_radii_atoms,
+                all_cogs_atoms,
+                "atom",
+                scale_start=factor_start,
+                scale_stop=factor_stop,
+            )
             _lmp_indent(lmp, indent_strs, lmpcuts.runsteps, keep_last_fixes=False)
-            close_atoms = _check_clashes(solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd)
+            close_atoms = _check_clashes(
+                solution_sys, solvate_sys, solvent_sys, lmpcuts.output_dcd
+            )
 
             # add new close atoms to present ones or stop indenting
             if close_atoms == []:
@@ -853,10 +924,19 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
 
             # add further close atoms to present ones
             for atm_idx in close_atoms:
-                #print(close_atoms)
+                # print(close_atoms)
                 if atm_idx not in all_close_atoms:
                     all_close_atoms.append(atm_idx)
-                    all_radii_atoms.append(mde.elements_mass_radii[round(solvate_sys.atm_types[solvate_sys.atoms[i].atm_key].weigh, 1)])
+                    all_radii_atoms.append(
+                        mde.elements_mass_radii[
+                            round(
+                                solvate_sys.atm_types[
+                                    solvate_sys.atoms[i].atm_key
+                                ].weigh,
+                                1,
+                            )
+                        ]
+                    )
                     all_cogs_atoms.append(solvate_sys.ts_coords[-1][atm_idx])
 
             # dynamically grow sphere around atoms
@@ -902,7 +982,9 @@ def requench(lmpcuts, minstyle="cg"):
     lmpcuts.load_system(lmp)
     lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
-    lmp.command("fix integrator all nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop))
+    lmp.command(
+        "fix integrator all nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop)
+    )
     lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
@@ -935,7 +1017,7 @@ def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
     data.extend(cur_data)
 
 
-#def vmd_rmsd_and_cluster(lmpdat_solution, lmpdat_solvate, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
+# def vmd_rmsd_and_cluster(lmpdat_solution, lmpdat_solvate, dcd_files, atm_idxs, xyz_out, percentage_to_check=80):
 #    """
 #    Align solvate molecules and calculate the rmsd.
 #
@@ -1005,6 +1087,7 @@ def _append_data(data, lmplog, fstart=1, thermo="PotEng"):
 # Annealing
 ################################################################################
 
+
 def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     """Helper function for the annealing step of the kawska-zahn approach.
 
@@ -1058,7 +1141,9 @@ def _anneal(lmpcuts, pe_atm_idxs, ensemble, group="all", keyword="iso"):
     atm_ids_str = " ".join(map(str, pe_atm_ids))
     lmp.command("group resname_atoms id {}".format(atm_ids_str))
     lmp.command("compute pe_per_atom_solvate resname_atoms pe/atom")
-    lmp.command("compute pe_solvate_complete resname_atoms reduce sum c_pe_per_atom_solvate")
+    lmp.command(
+        "compute pe_solvate_complete resname_atoms reduce sum c_pe_per_atom_solvate"
+    )
 
     if "c_pe_solvate_complete" not in lmpcuts.thermargs:
         lmpcuts.thermargs.append("c_pe_solvate_complete")
@@ -1110,7 +1195,9 @@ def _test_anneal_equil(data, output=None, xlabel=None):
     # save the histogram plot
     agplot.gnuplot_gaussfit_plot(data, xlabel=xlabel, output=output + "_histogram")
 
-    qq_normal = ags.qq_test(data, rsquare_thrsh=0.998, output=output + "_qq_plot", save_plot=True)
+    qq_normal = ags.qq_test(
+        data, rsquare_thrsh=0.998, output=output + "_qq_plot", save_plot=True
+    )
     skew_normal = ags.test_gauss_shape("skewness", data)
 
     try:
@@ -1120,12 +1207,25 @@ def _test_anneal_equil(data, output=None, xlabel=None):
 
     # does not work properly with many
     equilibrated = qq_normal and (skew_normal or kurtosis_normal)
-    print("QQ-Normal: {}, Kurtosis: {}, Skew: {}".format(qq_normal, kurtosis_normal, skew_normal))
+    print(
+        "QQ-Normal: {}, Kurtosis: {}, Skew: {}".format(
+            qq_normal, kurtosis_normal, skew_normal
+        )
+    )
 
     return equilibrated
 
 
-def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, group="all", keyword=None, attempts=500, output=None):
+def anneal_productive(
+    lmpcuts,
+    atm_idxs_solvate,
+    percentage_to_check,
+    ensemble,
+    group="all",
+    keyword=None,
+    attempts=500,
+    output=None,
+):
     """
     Carry out a productive run for the annealing step of the Kawska-Zahn approach.
 
@@ -1185,20 +1285,24 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         log_path, log_filename = os.path.split(lmpcuts.output_lmplog)
 
         # create a filename having 'run_idx' and check if this file already exists
-        run_idx_pattern = re.compile(r'^[0-9]+')
+        run_idx_pattern = re.compile(r"^[0-9]+")
 
         # check if filename starts with an integer
         if run_idx_pattern.match(dcd_filename) is not None:
             # split dcd-file by '_'
             split_dcd_filename = dcd_filename.split("_")
-            dcd_filename = "{}_{}_{}".format(run_idx, split_dcd_filename[1], split_dcd_filename[2])
+            dcd_filename = "{}_{}_{}".format(
+                run_idx, split_dcd_filename[1], split_dcd_filename[2]
+            )
             del split_dcd_filename
         else:
             dcd_filename = str(run_idx) + "_" + dcd_filename
 
         if run_idx_pattern.match(log_filename) is not None:
             split_log_filename = log_filename.split("_")
-            log_filename = "{}_{}_{}".format(run_idx, split_log_filename[1], split_log_filename[2])
+            log_filename = "{}_{}_{}".format(
+                run_idx, split_log_filename[1], split_log_filename[2]
+            )
             del split_log_filename
         else:
             log_filename = str(run_idx) + "_" + log_filename
@@ -1245,12 +1349,19 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
             num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
 
             # last X % of all frames (from end to start)
-            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], xlabel="Potential Energy / eV", output=output)
+            normally_dstributed = _test_anneal_equil(
+                all_data[-num_frames_to_check:],
+                xlabel="Potential Energy / eV",
+                output=output,
+            )
 
             # check if aggregate is still fine after the last run (only if we have a normal distribution)
             solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
             solution_sys_atoms_idxs = list(range(len(solution_sys.atoms)))
-            aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+            aggregate_ok = solution_sys.check_aggregate(
+                frame_id=-1,
+                excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:],
+            )
             del (num_frames_to_check, solution_sys, solution_sys_atoms_idxs)
         else:
             aggregate_ok = False
@@ -1262,11 +1373,13 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         # stop further runs if the aggregate is not ok or if the aggregate
         # is ok and the run is equilibrated (i.e. normal distribution of the
         # potential energy of the whole system)
-        if (aggregate_ok is True and normally_dstributed is True) or aggregate_ok is False:
+        if (
+            aggregate_ok is True and normally_dstributed is True
+        ) or aggregate_ok is False:
             break
 
         # the following prevents the 'else' condition (from for loop above) to execute
-        #if run_idx == (attempts - 1):
+        # if run_idx == (attempts - 1):
         #    break
 
     # this only applies if all attempts already exist, but the
@@ -1276,12 +1389,21 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
 
         if rank == 0:
             num_frames_to_check = int(percentage_to_check / 100 * len(all_data))
-            normally_dstributed = _test_anneal_equil(all_data[-num_frames_to_check:], xlabel="Potential Energy / eV", output=output)
+            normally_dstributed = _test_anneal_equil(
+                all_data[-num_frames_to_check:],
+                xlabel="Potential Energy / eV",
+                output=output,
+            )
 
             if normally_dstributed is True:
-                solution_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, lmpcuts.output_dcd)
+                solution_sys = aglmp.read_lmpdat(
+                    lmpcuts.input_lmpdat, lmpcuts.output_dcd
+                )
                 solution_sys_atoms_idxs = list(range(len(solution_sys.atoms)))
-                aggregate_ok = solution_sys.check_aggregate(frame_id=-1, excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:])
+                aggregate_ok = solution_sys.check_aggregate(
+                    frame_id=-1,
+                    excluded_atm_idxs=solution_sys_atoms_idxs[solvate_sys_natoms:],
+                )
         else:
             normally_dstributed = False
             aggregate_ok = False
@@ -1289,7 +1411,7 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
         aggregate_ok = comm.bcast(aggregate_ok, root=0)
         normally_dstributed = comm.bcast(normally_dstributed, root=0)
 
-        #if aggregate_ok is True and normally_dstributed is True:
+        # if aggregate_ok is True and normally_dstributed is True:
         #    sl.copy(lmpcuts.inter_lmprst, lmpcuts.output_lmprst)
 
     # if everything worked, name intermediate restart file as final output file
@@ -1299,7 +1421,9 @@ def anneal_productive(lmpcuts, atm_idxs_solvate, percentage_to_check, ensemble, 
     return aggregate_ok and normally_dstributed
 
 
-def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to_check=80):
+def find_best_frame(
+    lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to_check=80
+):
     """
     Find the frame with the lowest energy / value for use in the requenching procedure.
 
@@ -1324,9 +1448,9 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to
         lowest value found over all lmplogs for thermo
 
     """
-    #total_min_val = 1e20
-    #total_min_idx = None
-    #total_min_dcd = ""
+    # total_min_val = 1e20
+    # total_min_idx = None
+    # total_min_dcd = ""
     total_data = []
 
     # read the whole dataset, i.e. all lmplog files
@@ -1354,13 +1478,17 @@ def find_best_frame(lmplogs, dcds, thermo="c_pe_solvate_complete", percentage_to
     else:
         raise Exception("This should not have happened :/")
 
-    #return (total_min_dcd, total_min_idx, total_min_val)
+    # return (total_min_dcd, total_min_idx, total_min_val)
 
 
-def write_requench_data(lmpdat_a, dcd_ab, index,
-                        lmpdat_b=None,
-                        output_lmpdat_a="output_name_a.lmpdat",
-                        output_lmpdat_b="output_name_b.lmpdat"):
+def write_requench_data(
+    lmpdat_a,
+    dcd_ab,
+    index,
+    lmpdat_b=None,
+    output_lmpdat_a="output_name_a.lmpdat",
+    output_lmpdat_b="output_name_b.lmpdat",
+):
     """
     Write a new data file with the coordinates from a dcd file given by the index.
 
@@ -1403,11 +1531,23 @@ def write_requench_data(lmpdat_a, dcd_ab, index,
     sys_lmpdat_a.wrap_cell(frame_id=-1, same_molecule=True)
 
     sys_lmpdat_a.change_indices()
-    sys_lmpdat_a.write_lmpdat(output_lmpdat_a, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
+    sys_lmpdat_a.write_lmpdat(
+        output_lmpdat_a,
+        -1,
+        title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index),
+        cgcmm=True,
+    )
 
     # write only relevant coordinates for system b
     if lmpdat_b is not None:
         sys_lmpdat_b = aglmp.read_lmpdat(lmpdat_b)
-        sys_lmpdat_b.ts_coords.append(sys_dcd_ab.ts_coords[sys_lmpdat_a_natoms + 1:])
+        sys_lmpdat_b.ts_coords.append(sys_dcd_ab.ts_coords[sys_lmpdat_a_natoms + 1 :])
         sys_lmpdat_b.change_indices()
-        sys_lmpdat_b.write_lmpdat(output_lmpdat_b, -1, title="Best frame of {} with index {}".format(os.path.basename(dcd_ab), index), cgcmm=True)
+        sys_lmpdat_b.write_lmpdat(
+            output_lmpdat_b,
+            -1,
+            title="Best frame of {} with index {}".format(
+                os.path.basename(dcd_ab), index
+            ),
+            cgcmm=True,
+        )

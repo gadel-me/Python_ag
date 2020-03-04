@@ -26,7 +26,7 @@ def find_circles(image, show_result=False):
             cv2.circle(img, (cX, cY), 7, (255, 255, 108), -1)
 
     if show_result is True:
-        cv2.imshow('Image Contours', img)
+        cv2.imshow("Image Contours", img)
         cv2.waitKey(0)
 
     return midpoints

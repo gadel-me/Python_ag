@@ -1,12 +1,11 @@
-
 import math
 import scipy.constants as sc
 
 
 # some conversion factors between kj(/mol), kcal(/mol), eV
-kCalMol_eV = (1000*sc.calorie)*(1/sc.eV)/sc.N_A
-kJ_kCal = 1/sc.calorie
-kJMol_eV = 1000*(1/sc.eV)/sc.N_A
+kCalMol_eV = (1000 * sc.calorie) * (1 / sc.eV) / sc.N_A
+kJ_kCal = 1 / sc.calorie
+kJMol_eV = 1000 * (1 / sc.eV) / sc.N_A
 
 
 def convert_energy_unit(parameter, energy_unit_in, energy_unit_out):

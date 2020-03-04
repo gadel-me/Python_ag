@@ -13,10 +13,12 @@ import re
 import pdb
 import numpy as np
 import scipy.constants as sc
+
 # import time
 import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
+
 # import ag_vectalg as agv
 
 __version__ = "2018-06-22"
@@ -59,15 +61,15 @@ class PwStuff(mdu.Universe):
         """
         # container to supply atoms from "ATOMIC_POSITIONS" with info from "ATOMIC_SPECIES"
         # which may be compared to lammps "Masses" and "Atoms" input
-        #TODO write frozen atoms
+        # TODO write frozen atoms
         atm_types_ptrs = {}
 
         with open(pwin) as opened_pwin:
             line = opened_pwin.readline()
-            while line != '':
+            while line != "":
 
                 if line.startswith("&CONTROL"):
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         # skip empty lines, end if end of block ('/') is reached
@@ -79,7 +81,7 @@ class PwStuff(mdu.Universe):
                             pass
 
                         # split line by '=' and ' '
-                        split_line = re.split(r'\s*=\s*', line)
+                        split_line = re.split(r"\s*=\s*", line)
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
@@ -91,9 +93,11 @@ class PwStuff(mdu.Universe):
                             except ValueError:
                                 pass
 
-                        self.pw_entries["CONTROL"][split_line[0].strip()] = split_line[1]
+                        self.pw_entries["CONTROL"][split_line[0].strip()] = split_line[
+                            1
+                        ]
                 elif line.startswith("&SYSTEM"):
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         if line.startswith("\n"):
@@ -103,7 +107,7 @@ class PwStuff(mdu.Universe):
                         else:
                             pass
 
-                        split_line = re.split(r'\s*=\s*', line)
+                        split_line = re.split(r"\s*=\s*", line)
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
@@ -117,7 +121,7 @@ class PwStuff(mdu.Universe):
 
                         self.pw_entries["SYSTEM"][split_line[0].strip()] = split_line[1]
                 elif line.startswith("&ELECTRONS"):
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         if line.startswith("\n"):
@@ -127,7 +131,7 @@ class PwStuff(mdu.Universe):
                         else:
                             pass
 
-                        split_line = re.split(r'\s*=\s*', line)
+                        split_line = re.split(r"\s*=\s*", line)
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
@@ -139,9 +143,11 @@ class PwStuff(mdu.Universe):
                             except ValueError:
                                 pass
 
-                        self.pw_entries["ELECTRONS"][split_line[0].strip()] = split_line[1]
+                        self.pw_entries["ELECTRONS"][
+                            split_line[0].strip()
+                        ] = split_line[1]
                 elif line.startswith("&IONS"):
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         if line.startswith("\n"):
@@ -151,7 +157,7 @@ class PwStuff(mdu.Universe):
                         else:
                             pass
 
-                        split_line = re.split(r'\s*=\s*', line)
+                        split_line = re.split(r"\s*=\s*", line)
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
@@ -165,7 +171,7 @@ class PwStuff(mdu.Universe):
 
                         self.pw_entries["IONS"][split_line[0].strip()] = split_line[1]
                 elif line.startswith("&CELL"):
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         if line.startswith("\n"):
@@ -175,7 +181,7 @@ class PwStuff(mdu.Universe):
                         else:
                             pass
 
-                        split_line = re.split(r'\s*=\s*', line)
+                        split_line = re.split(r"\s*=\s*", line)
                         split_line[1] = split_line[1].strip()
 
                         # convert str float/int if possible
@@ -192,7 +198,7 @@ class PwStuff(mdu.Universe):
                     # GET ATOM TYPES
                     atmcnt = 0
 
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         # end of block
@@ -201,9 +207,11 @@ class PwStuff(mdu.Universe):
 
                         split_line = line.split()
                         # add current atom type to atom types
-                        self.atm_types[atmcnt] = mds.Atom(sitnam=split_line[0],
-                                                          weigh=float(split_line[1]),
-                                                          pseudopotential=split_line[2])
+                        self.atm_types[atmcnt] = mds.Atom(
+                            sitnam=split_line[0],
+                            weigh=float(split_line[1]),
+                            pseudopotential=split_line[2],
+                        )
                         # "C": 0, "H": 1, and so on
                         atm_types_ptrs[split_line[0]] = atmcnt
                         atmcnt += 1
@@ -211,7 +219,7 @@ class PwStuff(mdu.Universe):
                     # GET ATOM COORDINATES
                     self.ts_coords.append([])
 
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         # end of block
@@ -226,7 +234,7 @@ class PwStuff(mdu.Universe):
                             self.atoms.append(mds.Atom(sitnam=cur_atm_sitnam))
                         else:
                             cur_atm_key = atm_types_ptrs[cur_atm_sitnam]
-                            #cur_atm_key = self.atm_types[cur_atm_key_idx]
+                            # cur_atm_key = self.atm_types[cur_atm_key_idx]
                             catom = mds.Atom(sitnam=cur_atm_sitnam, atm_key=cur_atm_key)
 
                             # read frozen info if given
@@ -238,14 +246,16 @@ class PwStuff(mdu.Universe):
                             self.atoms.append(catom)
 
                         # add coordinates from current atom to the current frame
-                        self.ts_coords[-1].append(np.array([float(i) for i in split_line[1:4]]))
+                        self.ts_coords[-1].append(
+                            np.array([float(i) for i in split_line[1:4]])
+                        )
 
                 elif line.startswith("K_POINTS"):
                     kpoints_line = line.split()
                     self.pw_entries["K_POINTS"]["option"] = kpoints_line[1]
 
                     # read upcoming lines
-                    while line != '':
+                    while line != "":
                         line = opened_pwin.readline()
 
                         if line.startswith("\n"):
@@ -254,7 +264,9 @@ class PwStuff(mdu.Universe):
                         split_line = line.split()
 
                         if kpoints_line[1].strip("{}()") == "automatic":
-                            self.pw_entries["K_POINTS"]["k_point_grid"] = [int(i) for i in split_line]
+                            self.pw_entries["K_POINTS"]["k_point_grid"] = [
+                                int(i) for i in split_line
+                            ]
                             break
                         elif kpoints_line[1] == "gamma":
                             self.pw_entries["K_POINTS"]["k_point_grid"] = []
@@ -263,7 +275,7 @@ class PwStuff(mdu.Universe):
                             pass
 
                 elif line.startswith("CELL_PARAMETERS"):
-                    #TODO: calculate from Bohr to Angstrom in place?
+                    # TODO: calculate from Bohr to Angstrom in place?
                     box_unit = line.split()[1].strip("{}")
 
                     # get box vectors
@@ -287,12 +299,14 @@ class PwStuff(mdu.Universe):
                 line = opened_pwin.readline()
 
         # convert cell to lattice cell and append it to the current cells
-        if ("A" in self.pw_entries["SYSTEM"] and
-            "B" in self.pw_entries["SYSTEM"] and
-            "C" in self.pw_entries["SYSTEM"] and
-            "cosAB" in self.pw_entries["SYSTEM"] and
-            "cosAC" in self.pw_entries["SYSTEM"] and
-            "cosBC" in self.pw_entries["SYSTEM"]):
+        if (
+            "A" in self.pw_entries["SYSTEM"]
+            and "B" in self.pw_entries["SYSTEM"]
+            and "C" in self.pw_entries["SYSTEM"]
+            and "cosAB" in self.pw_entries["SYSTEM"]
+            and "cosAC" in self.pw_entries["SYSTEM"]
+            and "cosBC" in self.pw_entries["SYSTEM"]
+        ):
             #
             cbox = mdb.Box(
                 ltc_a=float(self.pw_entries["SYSTEM"]["A"]),
@@ -302,7 +316,8 @@ class PwStuff(mdu.Universe):
                 ltc_beta=math.acos(float(self.pw_entries["SYSTEM"]["cosAC"])),
                 ltc_gamma=math.acos(float(self.pw_entries["SYSTEM"]["cosAB"])),
                 boxtype="lattice",
-                unit="angstrom")
+                unit="angstrom",
+            )
 
             # delete surplus box entries
             del self.pw_entries["SYSTEM"]["A"]
@@ -313,7 +328,7 @@ class PwStuff(mdu.Universe):
             del self.pw_entries["SYSTEM"]["cosAB"]
 
             # add celldm(1) and convert it to bohr
-            #self.pw_entries["SYSTEM"]["celldm(1)"] = cbox.ltc_a * ANGSTROM_BOHR
+            # self.pw_entries["SYSTEM"]["celldm(1)"] = cbox.ltc_a * ANGSTROM_BOHR
             self.pw_entries["SYSTEM"]["ibrav"] = 0
 
             # convert lattice box to cartesian
@@ -321,19 +336,24 @@ class PwStuff(mdu.Universe):
             self.ts_boxes.append(cbox)
 
         # convert celldm (= alat) to box vector a with angstrom
-        #try:
-            #self.ts_boxes[-1].ltc_a = float(self.pw_entries["SYSTEM"]["celldm(1)"]*BOHR_ANGSTROM)
-        #except KeyError:
-            #pass
+        # try:
+        # self.ts_boxes[-1].ltc_a = float(self.pw_entries["SYSTEM"]["celldm(1)"]*BOHR_ANGSTROM)
+        # except KeyError:
+        # pass
 
         # final check
         if len(self.atoms) != self.pw_entries["SYSTEM"]["nat"]:
             print("***Warning: Number of atoms and SYSTEM entry 'nat' differ!")
-            #time.sleep(5)
+            # time.sleep(5)
 
-        if os.path.isdir(self.pw_entries["CONTROL"]["pseudo_dir"].strip("'")) is False:
-            print("***Warning: Folder for Pseudopotentials does not exist!")
-            #time.sleep(5)
+        if "pseudo_dir" in self.pw_entries["CONTROL"].keys():
+            if (
+                os.path.isdir(self.pw_entries["CONTROL"]["pseudo_dir"].strip("'"))
+                is False
+                and "ESPRESSO_PSEUDO" not in os.environ
+            ):
+                print("***Warning: Folder for Pseudopotentials does not exist!")
+                # time.sleep(5)
 
     def read_pwout(self, pwout, read_crystal_sections=False, save_all_scf_steps=True):
         """
@@ -343,10 +363,10 @@ class PwStuff(mdu.Universe):
         Cell vector alat (celldm(1)) is converted to angstrom when read.
         #TODO READ FROZEN ATOMS
         """
-        #print(pwout)
+        # print(pwout)
         with open(pwout) as opened_pwout:
             line = opened_pwout.readline()
-            while line != '':
+            while line != "":
                 if line.startswith("CELL_PARAMETERS"):
                     # get alat
                     split_line = line.split()
@@ -355,7 +375,7 @@ class PwStuff(mdu.Universe):
                     cbox = mdb.Box(boxtype="cartesian")
 
                     if "alat" in line:
-                        #self.pw_entries["SYSTEM"]["celldm(1)"] = float(split_line[2].strip(")"))
+                        # self.pw_entries["SYSTEM"]["celldm(1)"] = float(split_line[2].strip(")"))
                         cbox.unit = "alat"
                     elif "bohr" in line:
                         cbox.unit = "bohr"
@@ -364,12 +384,9 @@ class PwStuff(mdu.Universe):
                     else:
                         raise Warning("Keyword for box unknown and not implemented.")
 
-                    cbox.crt_a = [float(i)
-                                  for i in opened_pwout.readline().split()]
-                    cbox.crt_b = [float(i)
-                                  for i in opened_pwout.readline().split()]
-                    cbox.crt_c = [float(i)
-                                  for i in opened_pwout.readline().split()]
+                    cbox.crt_a = [float(i) for i in opened_pwout.readline().split()]
+                    cbox.crt_b = [float(i) for i in opened_pwout.readline().split()]
+                    cbox.crt_c = [float(i) for i in opened_pwout.readline().split()]
 
                     if cbox.unit == "alat":
                         cbox.alat2angstrom(float(split_line[2].strip(")")))
@@ -381,14 +398,14 @@ class PwStuff(mdu.Universe):
                     atm_types_ptrs = {}
                     atm_type_cntr = 0
 
-                    while line != '\n':
-                        #print(repr(line))
+                    while line != "\n":
+                        # print(repr(line))
                         atm_types_ptrs[line.split()[0]] = atm_type_cntr
                         atm_type_cntr += 1
                         line = opened_pwout.readline()
 
                 elif line.startswith("ATOMIC_POSITIONS"):
-                    #TODO: need a smarter way to do this!
+                    # TODO: need a smarter way to do this!
                     # overwrite existing atoms
                     self.atoms = []
                     # prepare container for coordinates to come
@@ -396,11 +413,13 @@ class PwStuff(mdu.Universe):
                     atm_cntr = 0
 
                     # read the coordinates
-                    while line != '':
+                    while line != "":
                         line = opened_pwout.readline()
 
                         # stop reading when EOF is reached
-                        if line.startswith("\n") or line.startswith("End final coordinates"):
+                        if line.startswith("\n") or line.startswith(
+                            "End final coordinates"
+                        ):
                             break
 
                         split_line = line.split()
@@ -408,7 +427,8 @@ class PwStuff(mdu.Universe):
                         cur_atm = mds.Atom(
                             sitnam=split_line[0],
                             atm_id=atm_cntr,
-                            atm_key=atm_types_ptrs[split_line[0]])
+                            atm_key=atm_types_ptrs[split_line[0]],
+                        )
                         self.atoms.append(cur_atm)
                         cur_atm_coords = np.array([float(i) for i in split_line[1:]])
                         self.ts_coords[-1].append(cur_atm_coords)
@@ -435,18 +455,26 @@ class PwStuff(mdu.Universe):
                     if line.startswith("     lattice parameter (alat)"):
                         # not sure why alat was converted here before, seems to be wrong
                         # when the whole box is converted later anyway
-                        alat = float(line.split()[-2])  #* BOHR_ANGSTROM
-                        #print(alat)
+                        alat = float(line.split()[-2])  # * BOHR_ANGSTROM
+                        # print(alat)
 
                     # get box with box vectors
-                    elif line.startswith("     crystal axes: (cart. coord. in units of alat)"):
+                    elif line.startswith(
+                        "     crystal axes: (cart. coord. in units of alat)"
+                    ):
                         # get box vectors
                         cbox = mdb.Box(boxtype="cartesian")
                         cbox.unit = "alat"
 
-                        cbox.crt_a = [float(i) for i in opened_pwout.readline().split()[3:6]]
-                        cbox.crt_b = [float(i) for i in opened_pwout.readline().split()[3:6]]
-                        cbox.crt_c = [float(i) for i in opened_pwout.readline().split()[3:6]]
+                        cbox.crt_a = [
+                            float(i) for i in opened_pwout.readline().split()[3:6]
+                        ]
+                        cbox.crt_b = [
+                            float(i) for i in opened_pwout.readline().split()[3:6]
+                        ]
+                        cbox.crt_c = [
+                            float(i) for i in opened_pwout.readline().split()[3:6]
+                        ]
                         cbox.alat2angstrom(alat)
                         self.ts_boxes.append(cbox)
 
@@ -462,7 +490,7 @@ class PwStuff(mdu.Universe):
                         opened_pwout.readline()
 
                         # read the coordinates
-                        while line != '':
+                        while line != "":
                             line = opened_pwout.readline()
 
                             # stop reading when end of current entry is reached
@@ -474,9 +502,12 @@ class PwStuff(mdu.Universe):
                             cur_atm = mds.Atom(
                                 sitnam=split_line[1],
                                 atm_id=atm_cntr,
-                                atm_key=atm_types_ptrs[split_line[1]])
+                                atm_key=atm_types_ptrs[split_line[1]],
+                            )
                             self.atoms.append(cur_atm)
-                            cur_atm_coords = np.array([float(i) * alat for i in split_line[6:9]])
+                            cur_atm_coords = np.array(
+                                [float(i) * alat for i in split_line[6:9]]
+                            )
                             self.ts_coords[-1].append(cur_atm_coords)
                             atm_cntr += 1
 
@@ -523,7 +554,7 @@ class PwStuff(mdu.Universe):
                     atom.ifrz_y = 1
                     atom.ifrz_z = 1
                 else:
-                    #ifrz is None or 2 for example
+                    # ifrz is None or 2 for example
                     pass
 
     def _write_section(self, opened_file_instance, frame_id, keyword):
@@ -541,11 +572,13 @@ class PwStuff(mdu.Universe):
 
             # calculate celldm(1), which derives from lattice vector a
             if setting == "celldm(1)":
-                opened_file_instance.write("    {0:<24s}= {1}\n".format(
-                    setting, self.ts_boxes[frame_id].ltc_a * ANGSTROM_BOHR))
+                opened_file_instance.write(
+                    "    {0:<24s}= {1}\n".format(
+                        setting, self.ts_boxes[frame_id].ltc_a * ANGSTROM_BOHR
+                    )
+                )
             else:
-                opened_file_instance.write("    {0:<24s}= {1}\n".format(
-                    setting, value))
+                opened_file_instance.write("    {0:<24s}= {1}\n".format(setting, value))
 
         opened_file_instance.write("/\n\n")
 
@@ -561,7 +594,7 @@ class PwStuff(mdu.Universe):
         """
         self.pw_entries["CONTROL"]["verbosity"] = verbosity
         self.pw_entries["SYSTEM"]["nat"] = len(self.atoms)
-        #self.pw_entries["SYSTEM"]["A"] = agv.get_mag(self.ts_boxes[frame_id].crt_a)
+        # self.pw_entries["SYSTEM"]["A"] = agv.get_mag(self.ts_boxes[frame_id].crt_a)
 
         with open(filename, "w") as opened_filename:
             # since it seems that a certain order must be maintained,
@@ -577,41 +610,57 @@ class PwStuff(mdu.Universe):
             # Pseudopotentials (atom types)
             opened_filename.write("ATOMIC_SPECIES\n")
             for _, atom_type in self.atm_types.items():
-                opened_filename.write("{0} {1:>6} {2:}\n".format(
-                    atom_type.sitnam, atom_type.weigh,
-                    atom_type.pseudopotential))
+                opened_filename.write(
+                    "{0} {1:>6} {2:}\n".format(
+                        atom_type.sitnam, atom_type.weigh, atom_type.pseudopotential,
+                    )
+                )
             opened_filename.write("\n")
 
             # Atom Coordinates
             opened_filename.write("ATOMIC_POSITIONS {angstrom}\n")
             # check if a single atom is frozen -> all atoms have to be frozen
             for atom in self.atoms:
-                if hasattr(atom, "ifrz_x") and hasattr(atom, "ifrz_y") and hasattr(atom, "ifrz_z"):
+                if (
+                    hasattr(atom, "ifrz_x")
+                    and hasattr(atom, "ifrz_y")
+                    and hasattr(atom, "ifrz_z")
+                ):
                     print_frozen_state = True
                     coordinate_string = "{0:<5s} {1:> 18.9f}{2:> 18.9f}{3:> 18.9f}{4:> 18}{5:> 18}{6:> 18}\n"
                     break
             else:
                 print_frozen_state = False
-                coordinate_string = "{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n"
+                coordinate_string = (
+                    "{0:<5s} {c[0]:> 18.9f}{c[1]:> 18.9f}{c[2]:> 18.9f}\n"
+                )
 
-            for atom, atom_coordinates in zip(self.atoms,
-                                              self.ts_coords[frame_id]):
+            for atom, atom_coordinates in zip(self.atoms, self.ts_coords[frame_id]):
 
                 # write format for frozen atoms
                 if print_frozen_state is False:
-                    opened_filename.write(coordinate_string.format(
-                        atom.sitnam, c=atom_coordinates))
+                    opened_filename.write(
+                        coordinate_string.format(atom.sitnam, c=atom_coordinates)
+                    )
                 else:
-                    opened_filename.write(coordinate_string.format(
-                        atom.sitnam,
-                        atom_coordinates[0], atom_coordinates[1], atom_coordinates[2],
-                        atom.ifrz_x, atom.ifrz_y, atom.ifrz_z))
+                    opened_filename.write(
+                        coordinate_string.format(
+                            atom.sitnam,
+                            atom_coordinates[0],
+                            atom_coordinates[1],
+                            atom_coordinates[2],
+                            atom.ifrz_x,
+                            atom.ifrz_y,
+                            atom.ifrz_z,
+                        )
+                    )
 
             opened_filename.write("\n")
 
             # K Points
-            opened_filename.write("K_POINTS {}\n".format(
-                self.pw_entries["K_POINTS"]["option"]))
+            opened_filename.write(
+                "K_POINTS {}\n".format(self.pw_entries["K_POINTS"]["option"])
+            )
 
             # write grid or skip entry if gamma point is set
             if self.pw_entries["K_POINTS"]["option"].strip("{}()") == "automatic":
@@ -626,20 +675,95 @@ class PwStuff(mdu.Universe):
             try:
                 if self.pw_entries["SYSTEM"]["ibrav"] == 0:
                     cell_string = "{v[0]:> 24.9f}{v[1]:> 18.9f}{v[2]:> 18.9f}\n"
-                    opened_filename.write("CELL_PARAMETERS {{{0}}}\n".format(
-                        self.ts_boxes[frame_id].unit))
                     opened_filename.write(
-                        cell_string.format(v=self.ts_boxes[frame_id].crt_a))
+                        "CELL_PARAMETERS {{{0}}}\n".format(self.ts_boxes[frame_id].unit)
+                    )
                     opened_filename.write(
-                        cell_string.format(v=self.ts_boxes[frame_id].crt_b))
+                        cell_string.format(v=self.ts_boxes[frame_id].crt_a)
+                    )
                     opened_filename.write(
-                        cell_string.format(v=self.ts_boxes[frame_id].crt_c))
+                        cell_string.format(v=self.ts_boxes[frame_id].crt_b)
+                    )
+                    opened_filename.write(
+                        cell_string.format(v=self.ts_boxes[frame_id].crt_c)
+                    )
             except KeyError:
                 pass
 
 
-def read_pw_out(pw_out, read_crystal_sections=False):
-    """Read a pw output file."""
-    pw_sys = PwStuff()
-    pw_sys.read_pwout(pw_out, read_crystal_sections)
-    return pw_sys
+class PhStuff(mdu.Universe):
+    """Read the input file format of quantum espresso's ph.x.
+
+    Read and process the input file format of quantum espresso's ph.
+    """
+
+    def __init__(self):
+        """Initialize PhStuff.
+
+        Initialize PhStuff and define ph_entries for all entries to come.
+        """
+        self.ph_entries = {}
+
+    def read_ph_in(self, filename):
+        """Read the input file format of quantum espresso's ph.
+
+        Reader function for ph.x file format.
+
+        Parameters
+        ----------
+        filename : {str}
+            [description]
+        """
+        with open(filename) as opened_ph_in:
+            line = opened_ph_in.readline()
+
+            while line != "":
+                line = opened_ph_in.readline()
+
+                if line.lower() == "&inputph":
+                    self.ph_entries["INPUTPH"] = {}
+
+                    while line != "/" or line != "\n" or line != "":
+                        line = opened_ph_in.readline()
+                        # split line by key and value
+                        phin_key, phin_val = line.split("=")
+                        phin_key = phin_key.strip(" ")
+                        phin_val = phin_val.strip(" '")
+                        self.ph_entries["INPUTPH"][phin_key] = phin_val
+
+            # read the following sections depending on the keywords ldisp and
+            # qplot
+
+            phinput_keys = self.ph_entries["INPUTPH"].keys()
+            if "ldisp" not in phinput_keys:
+                phinput_keys["ldisp"] = False
+
+            if "qplot" not in phinput_keys:
+                phinput_keys["qplot"] = False
+
+            # read section: [ xq(1) xq(2) xq(3) ]
+            if phinput_keys["ldisp"] is False and phinput_keys["qplot"] is False:
+
+                while line != "\n" or line != "":
+                    line = opened_ph_in.readline()
+                    self.ph_entries["QPOINTS"] = [float(i) for i in line.split("")]
+
+            elif phinput_keys["qplot"] is True:
+                nqs = int(line)
+                self.ph_entries["QPOINTS"] = [[] for i in range(nqs)]
+
+                for idx in range(nqs):
+                    line = opened_ph_in.readline()
+                    self.ph_entries["QPOINTS"][idx] = line.split()
+
+    def write_phin(self, filename="DEFAULT.ph_in", title="Default ph.x input title"):
+        """[summary]
+
+        [description]
+
+        Parameters
+        ----------
+        filename : {str}, optional
+            [description] (the default is "DEFAULT.ph_in", which [default_description])
+        """
+        pass

@@ -1,4 +1,3 @@
-
 import re
 import numpy as np
 import md_stars as mds
@@ -11,18 +10,21 @@ class GauStuff(mdu.Universe):
     indices start with 0 (converted during reading and reconverted during
     writing procedure).
     """
-    def __init__(self,
-                 chk=None,
-                 nproc=None,
-                 mem=None,
-                 job_type=None,
-                 method=None,
-                 basis_set=None,
-                 geom=None,
-                 charge=None,
-                 dispersion=None,
-                 multiplicity=None,
-                 energy_unit=None):
+
+    def __init__(
+        self,
+        chk=None,
+        nproc=None,
+        mem=None,
+        job_type=None,
+        method=None,
+        basis_set=None,
+        geom=None,
+        charge=None,
+        dispersion=None,
+        multiplicity=None,
+        energy_unit=None,
+    ):
         """
         Sources:    http://gaussian.com/basissets/
                     http://gaussian.com/dft/
@@ -57,13 +59,49 @@ class GauStuff(mdu.Universe):
         if dispersion is not None:
             self.dispersion = dispersion
 
-        self.ab_initio_keywords = set(("HF", "RHF", "UHF", "ROHF", "OSS", "GVB",
-                                       "CASSCF", "MP2", "MP3", "MP4", "MP4DQ",
-                                       "MP$SDQ", "MP4SDTQ", "CI", "CIS", "CISD",
-                                       "QCISD", "QCISD(T)"))
-        self.basis_sets = set(("STO-3G", "3-21G", "4-21G", "6-21G", "6-31G", "LP-31G",
-                               "LP-41G", "6-311G", "MC-311G", "D95", "D95V", "SEC",
-                               "CEP-4G", "CEP-31G", "CEP-121G", "LANLIMB", "LANLIDZ"))
+        self.ab_initio_keywords = set(
+            (
+                "HF",
+                "RHF",
+                "UHF",
+                "ROHF",
+                "OSS",
+                "GVB",
+                "CASSCF",
+                "MP2",
+                "MP3",
+                "MP4",
+                "MP4DQ",
+                "MP$SDQ",
+                "MP4SDTQ",
+                "CI",
+                "CIS",
+                "CISD",
+                "QCISD",
+                "QCISD(T)",
+            )
+        )
+        self.basis_sets = set(
+            (
+                "STO-3G",
+                "3-21G",
+                "4-21G",
+                "6-21G",
+                "6-31G",
+                "LP-31G",
+                "LP-41G",
+                "6-311G",
+                "MC-311G",
+                "D95",
+                "D95V",
+                "SEC",
+                "CEP-4G",
+                "CEP-31G",
+                "CEP-121G",
+                "LANLIMB",
+                "LANLIDZ",
+            )
+        )
         self.job_types = set(("SP", "Opt", "Freq"))
         self.gau_energies = []
 
@@ -72,8 +110,9 @@ class GauStuff(mdu.Universe):
         """
         print("***Gau-Info: Reading  Gaussian-Input-File!")
 
-        (chk, nproc, mem, job_type, method, basis_set, geom, charge,
-         multiplicity) = [None for _ in range(9)]
+        (chk, nproc, mem, job_type, method, basis_set, geom, charge, multiplicity) = [
+            None for _ in range(9)
+        ]
         cframe = []
 
         with open(gauin, "r") as gau_in:
@@ -87,7 +126,7 @@ class GauStuff(mdu.Universe):
                 elif "%mem" in line:
                     if not hasattr(self, "mem"):
                         mem = line.split("=")[1].strip("\n")
-                        self.mem = int(re.findall(r'^\d+', mem)[0])
+                        self.mem = int(re.findall(r"^\d+", mem)[0])
                 elif line.startswith("#"):
                     # job settings direction
                     job_settings = line.split()
@@ -116,7 +155,7 @@ class GauStuff(mdu.Universe):
                         else:
                             pass
 
-                elif re.findall(r'^-?\d+ \d$', line):
+                elif re.findall(r"^-?\d+ \d$", line):
                     line = line.split()
 
                     if not hasattr(self, "charge"):
@@ -154,7 +193,7 @@ class GauStuff(mdu.Universe):
 
                 elif hasattr(self, "geom") and self.geom == "connectivity":
                     # section with bonds-information
-                    if bool(re.search(r'(^\d+ \d+ \d+.\d+)|(^\d+\n$)', line)) is True:
+                    if bool(re.search(r"(^\d+ \d+ \d+.\d+)|(^\d+\n$)", line)) is True:
                         line = line.split()
 
                         # get rest of the bond-entries
@@ -178,8 +217,9 @@ class GauStuff(mdu.Universe):
                                         catm_id2 = int(cur_subentry)
                                         # decrease indices by 1 since internally
                                         # atom-indices start with 0
-                                        cbnd = mds.Bond(atm_id1=catm_id1-1,
-                                                        atm_id2=catm_id2-1)
+                                        cbnd = mds.Bond(
+                                            atm_id1=catm_id1 - 1, atm_id2=catm_id2 - 1
+                                        )
                                     else:
                                         cbnd_order = float(cur_subentry)
                                         cbnd.bnd_order = cbnd_order
@@ -213,9 +253,15 @@ class GauStuff(mdu.Universe):
             gau_out.write("%mem={}GB\n".format(self.mem))
 
             if hasattr(self, "geom"):
-                gau_out.write("#P {} {}/{} geom={} ".format(self.job_type, self.method, self.basis_set, self.geom))
+                gau_out.write(
+                    "#P {} {}/{} geom={} ".format(
+                        self.job_type, self.method, self.basis_set, self.geom
+                    )
+                )
             else:
-                gau_out.write("#P {} {}/{} ".format(self.job_type, self.method, self.basis_set))
+                gau_out.write(
+                    "#P {} {}/{} ".format(self.job_type, self.method, self.basis_set)
+                )
 
             if hasattr(self, "dispersion"):
                 gau_out.write("EmpiricalDispersion={}".format(self.dispersion))
@@ -228,11 +274,13 @@ class GauStuff(mdu.Universe):
             gau_out.write("{} {}\n".format(self.charge, self.multiplicity))
 
             for idx, catm in enumerate(self.atoms):
-                gau_out.write("{:<3} {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
-                    catm.sitnam,
-                    self.ts_coords[frame_id][idx][0],
-                    self.ts_coords[frame_id][idx][1],
-                    self.ts_coords[frame_id][idx][2])
+                gau_out.write(
+                    "{:<3} {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
+                        catm.sitnam,
+                        self.ts_coords[frame_id][idx][0],
+                        self.ts_coords[frame_id][idx][1],
+                        self.ts_coords[frame_id][idx][2],
+                    )
                 )
 
             gau_out.write("\n")
@@ -252,12 +300,12 @@ class GauStuff(mdu.Universe):
                 # write bond-entry
                 for i in d:
                     # write current atom
-                    gau_out.write("{}".format(i+1))
+                    gau_out.write("{}".format(i + 1))
 
                     for val in d[i]:
                         if val != []:
-                            gau_out.write(" {} {}".format(
-                                val.atm_id2+1, float(val.bnd_order))
+                            gau_out.write(
+                                " {} {}".format(val.atm_id2 + 1, float(val.bnd_order))
                             )
 
                     # newline after each entry
@@ -293,7 +341,7 @@ class GauStuff(mdu.Universe):
         coordinates_cntr = 0
 
         for entry in log_resume:
-            if entry == '':
+            if entry == "":
                 coordinates_cntr += 1
 
             if coordinates_cntr == 3:

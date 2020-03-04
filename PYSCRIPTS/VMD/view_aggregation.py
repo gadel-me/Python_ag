@@ -7,23 +7,25 @@ import pathlib
 
 import ag_vmd
 
-#import atomsel   # Replaces AtomSel and atomselection
-#import axes
+# import atomsel   # Replaces AtomSel and atomselection
+# import axes
 import color
 import display
-#import graphics
-#import imd
-#import label
-#import material
+
+# import graphics
+# import imd
+# import label
+# import material
 import molecule
 import molrep
-#import mouse
-#import render
-#import trans
-#import vmdmenu
-#import Label
-#import Material
-#import Molecule
+
+# import mouse
+# import render
+# import trans
+# import vmdmenu
+# import Label
+# import Material
+# import Molecule
 import VMD
 
 
@@ -31,14 +33,16 @@ def get_finished_cycles(maindir):
     """
     """
     fc = []
-    folders = ["{}/{}".format(maindir, i) for i in os.listdir(maindir) if os.path.isdir(i)]
+    folders = [
+        "{}/{}".format(maindir, i) for i in os.listdir(maindir) if os.path.isdir(i)
+    ]
     # get last cycle from directory
     for folder in folders:
         # skip all folders where anything went wrong
         if "fail" in folder:
             continue
-        #print(folder)
-        cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
+        # print(folder)
+        cycle = re.match(r".*?([0-9]+)$", folder).group(1)
         cycle = int(cycle)
         # avoid duplicates
         if cycle not in fc:
@@ -49,7 +53,7 @@ def get_finished_cycles(maindir):
 
 def get_files(maindir, filepattern):
     files = []
-    #pdb.set_trace()
+    # pdb.set_trace()
 
     for cfile in pathlib.Path(maindir).glob("**/{}".format(filepattern)):
         files.append(cfile)
@@ -69,15 +73,25 @@ if __name__ == "__main__":
     ITERATIONS = None
 
     SELECTIONS = [
-        {"style": "Lines 1.0", "color": "Name", "selection": "type 'c'", "material": "Basic1Pantone"},
-        {"style": "Lines 2.0", "color": "Name", "selection": "name C15 or type hn or type o or name N2", "material": "Basic1Pantone"}
+        {
+            "style": "Lines 1.0",
+            "color": "Name",
+            "selection": "type 'c'",
+            "material": "Basic1Pantone",
+        },
+        {
+            "style": "Lines 2.0",
+            "color": "Name",
+            "selection": "name C15 or type hn or type o or name N2",
+            "material": "Basic1Pantone",
+        },
     ]
 
     SYSPREP_LMPDAT_RAW = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat"
     QUENCH_DCD_RAW = "{0}/quench_{1}/quench_{1}.dcd"
     EQUIL_ANNEAL_DCD_RAW = "{0}/anneal_{1}/equil_anneal_{1}.dcd"
     PROD_ANNEAL_DCD_RAW = r"[0-9]+_anneal_{0}.dcd"
-    #REQUENCH_LMPDAT = "{0}/requench_{1}/requench_out_{1}.lmpdat"
+    # REQUENCH_LMPDAT = "{0}/requench_{1}/requench_out_{1}.lmpdat"
     REQUENCH_DCD_RAW = "{0}/requench_{1}/requench_{1}.dcd"
 
     # find all iterations
@@ -99,7 +113,8 @@ if __name__ == "__main__":
                 style=CSEL["style"],
                 color=CSEL["color"],
                 selection=CSEL["selection"],
-                material=CSEL["material"])
+                material=CSEL["material"],
+            )
 
         # quenching
         QUENCH_DCD = QUENCH_DCD_RAW.format(MAINDIR, CURCYCLE)
@@ -113,7 +128,8 @@ if __name__ == "__main__":
         ANNEAL_DIR = "{}/anneal_{}".format(MAINDIR, CURCYCLE)
         PROD_ANNEAL_DCDS = get_files(
             "{0}/anneal_{1}/".format(ANNEAL_DIR, CURCYCLE),
-            PROD_ANNEAL_DCD_RAW.format(CURCYCLE))
+            PROD_ANNEAL_DCD_RAW.format(CURCYCLE),
+        )
 
         for CUR_DCD in PROD_ANNEAL_DCDS:
             print(CUR_DCD)

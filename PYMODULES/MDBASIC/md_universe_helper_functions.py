@@ -1,10 +1,9 @@
-
 import ag_vectalg as agv
 import ag_cryst as agc
 
 
 def get_lattice(box):
-        # get lattice box vectors for box
+    # get lattice box vectors for box
     if box.boxtype == "cartesian":
         box.cart2lat()
     elif box.boxtype == "lammps":
@@ -37,7 +36,7 @@ def merge_entries(dict1, dict2):
     for _merge_dicts function.
     """
     num_entries = len(dict1)
-    ptr_dict    = {}
+    ptr_dict = {}
 
     for key1 in dict1:
         for key2 in dict2:

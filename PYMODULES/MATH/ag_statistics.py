@@ -29,10 +29,11 @@ import matplotlib as mpl
 try:
     os.environ["DISPLAY"]
 except KeyError:
-    mpl.use('Agg')
+    mpl.use("Agg")
 
 import matplotlib.pyplot as plt
-#import statsmodels.api as sm
+
+# import statsmodels.api as sm
 import scipy.stats
 from scipy.optimize import curve_fit
 
@@ -150,7 +151,7 @@ def test_normality(test, data, alpha=0.05, filename=None):
             cv_anderson = result_anderson.critical_values[idx]
 
             # check if the null hypothesis can be rejected (H0: normal distributed)
-            #_print_result(cv_anderson, stat, stat, test_name, filename)
+            # _print_result(cv_anderson, stat, stat, test_name, filename)
 
             # if H0 is ok at any confidence level, stop further testing
             if (cv_anderson > result_anderson.statistic) and (alpha_anderson == alpha):
@@ -180,7 +181,9 @@ def _write_data(data1, data2, output):
 
     This is just a helper function for qq_test and probplot_test.
     """
-    summary = collections.OrderedDict({"Experimental Quantiles": data1, "Theoretical Quantiles": data2})
+    summary = collections.OrderedDict(
+        {"Experimental Quantiles": data1, "Theoretical Quantiles": data2}
+    )
     table = pd.DataFrame(summary)
     table.to_csv("{}.csv".format(output), index=False)
     return table
@@ -192,7 +195,7 @@ def _write_qq_plot(data1, data2, output, slope, intercept, title):
 
     This is just a helper function for qq_test and probplot_test.
     """
-    qq_fig = plt.figure(figsize=(12, 8), facecolor='1.0')
+    qq_fig = plt.figure(figsize=(12, 8), facecolor="1.0")
     plt.plot(data1, data2, "o")
     plt.plot(data1, intercept + slope * data1, "r--", label="fitted line")
     plt.title(title, size=16)
@@ -247,8 +250,10 @@ def qq_test(data, rsquare_thrsh=0.993, output=None, save_plot=False):
     # for Q-Q plot all data must be sorted
     sorted_norm = np.sort(norm)
     # trend line from linear regression
-    slope, intercept, rvalue, pvalue, stderr = scipy.stats.linregress(sorted_norm, sorted_data)
-    rsquare = rvalue**2
+    slope, intercept, rvalue, pvalue, stderr = scipy.stats.linregress(
+        sorted_norm, sorted_data
+    )
+    rsquare = rvalue ** 2
 
     # write raw data to file
     if output is not None:
@@ -256,9 +261,16 @@ def qq_test(data, rsquare_thrsh=0.993, output=None, save_plot=False):
 
     # save the plot as png file
     if save_plot is True:
-        _write_qq_plot(sorted_norm, sorted_data, output, slope, intercept, "Q-Q plot - " + r"$r^2$" + "={:> 2.4f}".format(rsquare))
+        _write_qq_plot(
+            sorted_norm,
+            sorted_data,
+            output,
+            slope,
+            intercept,
+            "Q-Q plot - " + r"$r^2$" + "={:> 2.4f}".format(rsquare),
+        )
 
-    #pdb.set_trace()
+    # pdb.set_trace()
     return rsquare >= rsquare_thrsh
 
 
@@ -293,8 +305,10 @@ def probability_plot(data, rsquare_thrsh=0.99, output=None, save_plot=False):
     rsquare >= rsquare_thrsh : bool
 
     """
-    (osm, osr), (slope, intercept, rvalue) = scipy.stats.probplot(data, dist="norm", fit=True)
-    rsquare = rvalue**2
+    (osm, osr), (slope, intercept, rvalue) = scipy.stats.probplot(
+        data, dist="norm", fit=True
+    )
+    rsquare = rvalue ** 2
 
     # write raw data to file
     if output is not None:
@@ -302,7 +316,14 @@ def probability_plot(data, rsquare_thrsh=0.99, output=None, save_plot=False):
 
     # save the plot as png file
     if save_plot is True:
-        _write_qq_plot(osm, osr, output, slope, intercept, r"Probability plot ($\r^2$={})".format(rsquare))
+        _write_qq_plot(
+            osm,
+            osr,
+            output,
+            slope,
+            intercept,
+            r"Probability plot ($\r^2$={})".format(rsquare),
+        )
 
     return rsquare >= rsquare_thrsh
 
@@ -351,7 +372,9 @@ def test_gauss_shape(test, data, min_val=-0.3, max_val=0.3):
     else:
         raise NameError("Test named '{}' not known!".format(test))
 
-    result_str = "minimum: {1}; {0}: {2: .3f}; maximum: {3}".format(test, min_val, value, max_val)
+    result_str = "minimum: {1}; {0}: {2: .3f}; maximum: {3}".format(
+        test, min_val, value, max_val
+    )
     print(result_str)
     return min_val <= value <= max_val
 
@@ -378,7 +401,7 @@ def chi_square_error(data1, data2):
     chi_squares = []
 
     for en1, en2 in zip(data1, data2):
-        chi_squares.append(abs(en1 - en2)**2)
+        chi_squares.append(abs(en1 - en2) ** 2)
 
     return sum(chi_squares)
 
@@ -401,7 +424,11 @@ def gnuplot_gaussfit(x_values, y_values, debug=False):
         Equation of the gaussian function.
         """
         A, mu, sigma = p
-        return A / np.sqrt(2 * sigma**2 * np.pi) * np.exp(-(x - mu)**2 / (2.0 * sigma**2))
+        return (
+            A
+            / np.sqrt(2 * sigma ** 2 * np.pi)
+            * np.exp(-((x - mu) ** 2) / (2.0 * sigma ** 2))
+        )
 
     # RMSE to evaluate goodness of fit
     def rmse(predictions, targets):
@@ -409,7 +436,11 @@ def gnuplot_gaussfit(x_values, y_values, debug=False):
 
     xmax = max(x_values)  # minimum x value of data to plot
     xmin = min(x_values)  # maximum x value of data to plot
-    p0 = [1., (xmax + xmin) / 2, (xmax - xmin) / 8]  # initial value to start fitting with
+    p0 = [
+        1.0,
+        (xmax + xmin) / 2,
+        (xmax - xmin) / 8,
+    ]  # initial value to start fitting with
 
     # fitting procedure
     coeff, var_matrix = curve_fit(gauss, x_values, y_values, p0=p0, maxfev=1000000)
@@ -419,7 +450,7 @@ def gnuplot_gaussfit(x_values, y_values, debug=False):
 
     if debug is True:
         print("Rms error: {0}".format(rmse_val))
-        print('Fitted mean = {0}'.format(coeff[1]))
-        print('Fitted standard deviation = {0}\n'.format(coeff[2]))
+        print("Fitted mean = {0}".format(coeff[1]))
+        print("Fitted standard deviation = {0}\n".format(coeff[2]))
 
-    return(gauss_data)
+    return gauss_data

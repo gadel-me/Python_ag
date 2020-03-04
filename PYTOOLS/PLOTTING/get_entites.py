@@ -1,4 +1,3 @@
-
 import pdb
 import argparse
 import numpy as np
@@ -13,7 +12,7 @@ def chunks(l, n):
 
     Sources : https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks
     """
-    return [l[i:i + n] for i in range(0, len(l), n)]
+    return [l[i : i + n] for i in range(0, len(l), n)]
 
 
 def get_entity(crds, idxs, molecule_offset):
@@ -43,18 +42,19 @@ def get_entity(crds, idxs, molecule_offset):
 
         # Bond
         if len(idxs) == 2:
-            measured_entity = np.linalg.norm(
-                crds[idxs[0]] - crds[idxs[1]])
+            measured_entity = np.linalg.norm(crds[idxs[0]] - crds[idxs[1]])
         # angle
         elif len(idxs) == 3:
-            measured_entity = np.degrees(agm.get_angle(
-                crds[idxs[0]], crds[idxs[1]],
-                crds[idxs[2]]))
+            measured_entity = np.degrees(
+                agm.get_angle(crds[idxs[0]], crds[idxs[1]], crds[idxs[2]])
+            )
         # dihedral or improper
         elif len(idxs) == 4:
-            measured_entity = np.degrees(agm.get_dihedral(
-                crds[idxs[0]], crds[idxs[1]],
-                crds[idxs[2]], crds[idxs[3]]))
+            measured_entity = np.degrees(
+                agm.get_dihedral(
+                    crds[idxs[0]], crds[idxs[1]], crds[idxs[2]], crds[idxs[3]]
+                )
+            )
         else:
             raise Warning("***Too many atom indices! Unclear what to measure")
 
@@ -105,20 +105,39 @@ def process_entity_idxs(data, crds, entity_idxs, entity_type, increment=0):
 
 
 if __name__ == "__main__":
-    #=== parse arguments ===
+    # === parse arguments ===
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("-lmpdat", default=None,
-                        help="Lammps' data-file")
-    PARSER.add_argument("-dcd",
-                        help="dcd file from minimization run of the cbz dimer system")
-    PARSER.add_argument("-bonds", nargs="*", type=int, default=None,
-                        help="indices of atoms that form bonds")
-    PARSER.add_argument("-angles", nargs="*", type=int, default=None,
-                        help="indices of atoms that form angles")
-    PARSER.add_argument("-dihedrals", nargs="*", type=int, default=None,
-                        help="indices of atoms that form dihedrals/impropers")
-    PARSER.add_argument("-offset", type=int, default=30,
-                        help="number of atoms a molecule/scan-block consists of")
+    PARSER.add_argument("-lmpdat", default=None, help="Lammps' data-file")
+    PARSER.add_argument(
+        "-dcd", help="dcd file from minimization run of the cbz dimer system"
+    )
+    PARSER.add_argument(
+        "-bonds",
+        nargs="*",
+        type=int,
+        default=None,
+        help="indices of atoms that form bonds",
+    )
+    PARSER.add_argument(
+        "-angles",
+        nargs="*",
+        type=int,
+        default=None,
+        help="indices of atoms that form angles",
+    )
+    PARSER.add_argument(
+        "-dihedrals",
+        nargs="*",
+        type=int,
+        default=None,
+        help="indices of atoms that form dihedrals/impropers",
+    )
+    PARSER.add_argument(
+        "-offset",
+        type=int,
+        default=30,
+        help="number of atoms a molecule/scan-block consists of",
+    )
 
     PARSER.add_argument("-o", default="DEFAULTNAME", help="Prefix of output files")
     ARGS = PARSER.parse_args()
@@ -135,23 +154,27 @@ if __name__ == "__main__":
         MOLSYS.import_dcd(ARGS.dcd)
         MOLSYS.read_frames(frame=-2)
 
-    #=== split the indices ===
+    # === split the indices ===
     if ARGS.bonds is not None:
         ENTITY_IDXS = chunks(ARGS.bonds, 2)
-        process_entity_idxs(COMPLETE_DATA.data,
-                            MOLSYS.ts_coords[-1],
-                            ENTITY_IDXS, "bonds", increment=1)
+        process_entity_idxs(
+            COMPLETE_DATA.data, MOLSYS.ts_coords[-1], ENTITY_IDXS, "bonds", increment=1
+        )
 
     if ARGS.angles is not None:
         ENTITY_IDXS = chunks(ARGS.angles, 3)
-        process_entity_idxs(COMPLETE_DATA.data,
-                            MOLSYS.ts_coords[-1],
-                            ENTITY_IDXS, "angles", increment=1)
+        process_entity_idxs(
+            COMPLETE_DATA.data, MOLSYS.ts_coords[-1], ENTITY_IDXS, "angles", increment=1
+        )
 
     if ARGS.dihedrals is not None:
         ENTITY_IDXS = chunks(ARGS.dihedrals, 4)
-        process_entity_idxs(COMPLETE_DATA.data,
-                            MOLSYS.ts_coords[-1],
-                            ENTITY_IDXS, "dihedrals", increment=1)
+        process_entity_idxs(
+            COMPLETE_DATA.data,
+            MOLSYS.ts_coords[-1],
+            ENTITY_IDXS,
+            "dihedrals",
+            increment=1,
+        )
 
     COMPLETE_DATA.write_clmsv(ARGS.o)

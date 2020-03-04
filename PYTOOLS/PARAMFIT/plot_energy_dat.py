@@ -10,14 +10,16 @@ __version__ = "2017-08-07"
 parser = argparse.ArgumentParser(
     prog="plot_energy_dat.py",
     formatter_class=argparse.RawTextHelpFormatter,
-    description="Plot data from paramfit output which compares " +
-                "quantum, fitted and non fitted gaff parameters")
+    description="Plot data from paramfit output which compares "
+    + "quantum, fitted and non fitted gaff parameters",
+)
 
-parser.add_argument("energy_dat",
-                    metavar="*.dat",
-                    action="store",
-                    help="Paramfit output file which compares fitting results.",
-                    )
+parser.add_argument(
+    "energy_dat",
+    metavar="*.dat",
+    action="store",
+    help="Paramfit output file which compares fitting results.",
+)
 
 args = parser.parse_args()
 
@@ -45,11 +47,28 @@ xyfig.canvas.set_window_title("Fit energy")
 plt.title("Fit energy")
 plt.xlabel("Structure", fontsize=custom_fontsize)
 plt.ylabel("Energy / kcal*mol-1", fontsize=custom_fontsize)
-plt.xticks(np.arange(min(num), max(num)+1, 5))
-plt.plot(num, amber_k, "r-<", markersize=mymarkersize, antialiased=True, label="Fit Amber")
-plt.plot(num, initial_amber_k, "b-*", markersize=mymarkersize, antialiased=True, label="Initial Amber")
-plt.plot(num, quantum, "k-^", markersize=mymarkersize, antialiased=True, label="Quantum")
-plt.legend(bbox_to_anchor=(0., 1., 1., .1), loc="upper right",
-           borderaxespad=0., frameon=True, shadow=False, numpoints=1,
-           prop={'size': 8})
+plt.xticks(np.arange(min(num), max(num) + 1, 5))
+plt.plot(
+    num, amber_k, "r-<", markersize=mymarkersize, antialiased=True, label="Fit Amber"
+)
+plt.plot(
+    num,
+    initial_amber_k,
+    "b-*",
+    markersize=mymarkersize,
+    antialiased=True,
+    label="Initial Amber",
+)
+plt.plot(
+    num, quantum, "k-^", markersize=mymarkersize, antialiased=True, label="Quantum"
+)
+plt.legend(
+    bbox_to_anchor=(0.0, 1.0, 1.0, 0.1),
+    loc="upper right",
+    borderaxespad=0.0,
+    frameon=True,
+    shadow=False,
+    numpoints=1,
+    prop={"size": 8},
+)
 plt.show()

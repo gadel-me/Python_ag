@@ -7,14 +7,19 @@ import ag_unify_md as agum
 
 parser = argparse.ArgumentParser()
 
-#parser.add_argument("-lmpdat",
+# parser.add_argument("-lmpdat",
 #                    default=None,
 #                    help="Lammps' data-file"
 #                    )
 
 parser.add_argument("pwin")
 parser.add_argument("pwout")
-parser.add_argument("-sf", type=float, default=1.00, help="Scaling factor for enlarging the box and its atom coordinates")
+parser.add_argument(
+    "-sf",
+    type=float,
+    default=1.00,
+    help="Scaling factor for enlarging the box and its atom coordinates",
+)
 parser.add_argument("-o", default="Default")
 
 args = parser.parse_args()

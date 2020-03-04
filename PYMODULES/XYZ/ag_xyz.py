@@ -35,7 +35,7 @@ class XYZ(mdu.Universe):
             for line in xyz_in:
 
                 if line == "\n" or line == "":
-                    #print("Reached EOF.")
+                    # print("Reached EOF.")
                     break
 
                 num_atms = int(line.split()[0])  # line with number of atoms (mandatory)

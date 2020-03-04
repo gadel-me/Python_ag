@@ -11,7 +11,17 @@ FILEENDING = ".gau.out"
 PCFILE = ""
 SETTINGS = ""
 
-LMPSETTINGS = aglmpsim.LmpSim(tstart=1, tstop=1, logsteps=1, runsteps=0, pc_file=PCFILE, settings_file=SETTINGS, input_lmpdat="", output_lmplog="", )
+LMPSETTINGS = aglmpsim.LmpSim(
+    tstart=1,
+    tstop=1,
+    logsteps=1,
+    runsteps=0,
+    pc_file=PCFILE,
+    settings_file=SETTINGS,
+    input_lmpdat="",
+    output_lmplog="",
+)
+
 
 def ab_initio2xyz(mainpath, filetype=".gau.out"):
     FH = ag_fileio.FileHandler()
@@ -25,7 +35,6 @@ def ab_initio2xyz(mainpath, filetype=".gau.out"):
 
     frame_ids = range(len(MAINSYS.ts_coords))
     MAINSYS.write_xyz("tmp.xyz", *frame_ids, title="DEFAULT", guess_element=False)
-
 
 
 if __name__ == "__main__":

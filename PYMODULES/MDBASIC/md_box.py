@@ -1,27 +1,42 @@
-
-#import numpy as np
+# import numpy as np
 import scipy.constants as sc
 import ag_vectalg as agv
 import ag_cryst as agc
 
 __version__ = "2017-03-30"
 
-BOHR_ANGSTROM = sc.value("Bohr radius")/sc.angstrom
-ANGSTROM_BOHR = sc.angstrom/sc.value("Bohr radius")
+BOHR_ANGSTROM = sc.value("Bohr radius") / sc.angstrom
+ANGSTROM_BOHR = sc.angstrom / sc.value("Bohr radius")
 
 
 class Box(object):
     """
     Settings for simulation-box.
     """
-    def __init__(self, boxtype="lattice", unit="angstrom",
-                 crt_a=None, crt_b=None, crt_c=None,
-                 ltc_a=None, ltc_b=None, ltc_c=None,
-                 ltc_alpha=None, ltc_beta=None, ltc_gamma=None,
-                 lmp_xlo=None, lmp_xhi=None,
-                 lmp_ylo=None, lmp_yhi=None,
-                 lmp_zlo=None, lmp_zhi=None,
-                 lmp_xy=None, lmp_xz=None, lmp_yz=None):
+
+    def __init__(
+        self,
+        boxtype="lattice",
+        unit="angstrom",
+        crt_a=None,
+        crt_b=None,
+        crt_c=None,
+        ltc_a=None,
+        ltc_b=None,
+        ltc_c=None,
+        ltc_alpha=None,
+        ltc_beta=None,
+        ltc_gamma=None,
+        lmp_xlo=None,
+        lmp_xhi=None,
+        lmp_ylo=None,
+        lmp_yhi=None,
+        lmp_zlo=None,
+        lmp_zhi=None,
+        lmp_xy=None,
+        lmp_xz=None,
+        lmp_yz=None,
+    ):
         """
         Get box attributes.
         boxtype: 'cartesian', 'lattice', 'lammps'
@@ -65,18 +80,23 @@ class Box(object):
             self.lmp_xz = lmp_xz
             self.lmp_yz = lmp_yz
         else:
-            raise AttributeError("'boxtype' has to be 'cartesian', " +
-                                 "'lattice' or 'lammps'!")
+            raise AttributeError(
+                "'boxtype' has to be 'cartesian', " + "'lattice' or 'lammps'!"
+            )
 
     def box_cart2lat(self):
         """
         Cartesian -> Lattice
         Input: a, b, c = (1,3)-lists
         """
-        (self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta,
-         self.ltc_gamma) = agc.box_cart2lat(self.crt_a,
-                                            self.crt_b,
-                                            self.crt_c)
+        (
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        ) = agc.box_cart2lat(self.crt_a, self.crt_b, self.crt_c)
         # change box
         self.boxtype = "lattice"
         del (self.crt_a, self.crt_b, self.crt_c)
@@ -86,13 +106,13 @@ class Box(object):
         Cartesian -> Lammps
         a, b, c = (1,3)-lists
         """
-        lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz = agc.box_cart2lmp(self.crt_a,
-                                                                             self.crt_b,
-                                                                             self.crt_c)
+        lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz = agc.box_cart2lmp(
+            self.crt_a, self.crt_b, self.crt_c
+        )
 
-        self.lmp_xhi = lx/2
-        self.lmp_yhi = ly/2
-        self.lmp_zhi = lz/2
+        self.lmp_xhi = lx / 2
+        self.lmp_yhi = ly / 2
+        self.lmp_zhi = lz / 2
         self.lmp_xlo = -self.lmp_xhi
         self.lmp_ylo = -self.lmp_yhi
         self.lmp_zlo = -self.lmp_zhi
@@ -105,16 +125,24 @@ class Box(object):
         Lattice -> Cartesian
          alpha, beta, gamma = floats (radians)
         """
-        self.crt_a, self.crt_b, self.crt_c = agc.box_lat2cart(self.ltc_a,
-                                                              self.ltc_b,
-                                                              self.ltc_c,
-                                                              self.ltc_alpha,
-                                                              self.ltc_beta,
-                                                              self.ltc_gamma)
+        self.crt_a, self.crt_b, self.crt_c = agc.box_lat2cart(
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        )
         # change box
         self.boxtype = "cartesian"
-        del (self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta,
-             self.ltc_gamma)
+        del (
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        )
 
     def box_lat2lmp(self, triclinic=True):
         """
@@ -126,15 +154,17 @@ class Box(object):
             triclinic            boolean; always delete (mark as None)
                                  xy, xz and yz in order to make cell orthogonal
         """
-        lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz = agc.box_lat2lmp(self.ltc_a,
-                                                                            self.ltc_b,
-                                                                            self.ltc_c,
-                                                                            self.ltc_alpha,
-                                                                            self.ltc_beta,
-                                                                            self.ltc_gamma)
-        self.lmp_xhi = lx/2
-        self.lmp_yhi = ly/2
-        self.lmp_zhi = lz/2
+        lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz = agc.box_lat2lmp(
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        )
+        self.lmp_xhi = lx / 2
+        self.lmp_yhi = ly / 2
+        self.lmp_zhi = lz / 2
         self.lmp_xlo = -self.lmp_xhi
         self.lmp_ylo = -self.lmp_yhi
         self.lmp_zlo = -self.lmp_zhi
@@ -145,8 +175,14 @@ class Box(object):
         if triclinic is False:
             self.lmp_xy = self.lmp_xz = self.lmp_yz = None
 
-        del (self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta,
-             self.ltc_gamma)
+        del (
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        )
 
     def box_lmp2cart(self):
         """
@@ -164,14 +200,22 @@ class Box(object):
         if self.lmp_yz is None:
             self.lmp_yz = 0
 
-        self.crt_a, self.crt_b, self.crt_c = agc.box_lmp2cart(lx, ly, lz,
-                                                              self.lmp_xy,
-                                                              self.lmp_xz,
-                                                              self.lmp_yz)
+        self.crt_a, self.crt_b, self.crt_c = agc.box_lmp2cart(
+            lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz
+        )
         # change box
         self.boxtype = "cartesian"
-        del (self.lmp_xhi, self.lmp_yhi, self.lmp_zhi, self.lmp_xlo, self.lmp_ylo,
-             self.lmp_zlo, self.lmp_xy, self.lmp_xz, self.lmp_yz)
+        del (
+            self.lmp_xhi,
+            self.lmp_yhi,
+            self.lmp_zhi,
+            self.lmp_xlo,
+            self.lmp_ylo,
+            self.lmp_zlo,
+            self.lmp_xy,
+            self.lmp_xz,
+            self.lmp_yz,
+        )
 
     def box_lmp2lat(self):
         """
@@ -188,13 +232,27 @@ class Box(object):
         if self.lmp_yz is None:
             self.lmp_yz = 0
 
-        (self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta,
-         self.ltc_gamma) = agc.box_lmp2lat(lx, ly, lz,
-                                           self.lmp_xy, self.lmp_xz, self.lmp_yz)
+        (
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        ) = agc.box_lmp2lat(lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz)
         # change box
         self.boxtype = "lattice"
-        del (self.lmp_xhi, self.lmp_yhi, self.lmp_zhi, self.lmp_xlo, self.lmp_ylo,
-             self.lmp_zlo, self.lmp_xy, self.lmp_xz, self.lmp_yz)
+        del (
+            self.lmp_xhi,
+            self.lmp_yhi,
+            self.lmp_zhi,
+            self.lmp_xlo,
+            self.lmp_ylo,
+            self.lmp_zlo,
+            self.lmp_xy,
+            self.lmp_xz,
+            self.lmp_yz,
+        )
 
     def get_center(self):
         """
@@ -204,15 +262,15 @@ class Box(object):
             self.center = [
                 agv.vs_mult(self.crt_a, 0.5),
                 agv.vs_mult(self.crt_b, 0.5),
-                agv.vs_mult(self.crt_c, 0.5)
+                agv.vs_mult(self.crt_c, 0.5),
             ]
         elif self.boxtype == "lattice":
             self.center = [0.5, 0.5, 0.5]
         elif self.boxtype == "lammps":
             self.center = [
-                (abs(self.lmp_xlo)+abs(self.lmp_xhi))*0.5,
-                (abs(self.lmp_ylo)+abs(self.lmp_yhi))*0.5,
-                (abs(self.lmp_zlo)+abs(self.lmp_zhi))*0.5
+                (abs(self.lmp_xlo) + abs(self.lmp_xhi)) * 0.5,
+                (abs(self.lmp_ylo) + abs(self.lmp_yhi)) * 0.5,
+                (abs(self.lmp_zlo) + abs(self.lmp_zhi)) * 0.5,
             ]
         else:
             pass
@@ -228,9 +286,9 @@ class Box(object):
                 self.ltc_b *= ANGSTROM_BOHR
                 self.ltc_c *= ANGSTROM_BOHR
             elif self.boxtype == "cartesian":
-                self.crt_a = [i*ANGSTROM_BOHR for i in self.crt_a]
-                self.crt_b = [i*ANGSTROM_BOHR for i in self.crt_b]
-                self.crt_c = [i*ANGSTROM_BOHR for i in self.crt_c]
+                self.crt_a = [i * ANGSTROM_BOHR for i in self.crt_a]
+                self.crt_b = [i * ANGSTROM_BOHR for i in self.crt_b]
+                self.crt_c = [i * ANGSTROM_BOHR for i in self.crt_c]
             else:
                 raise Warning("Conversion of lammps boxes currently not supported!")
 
@@ -247,9 +305,9 @@ class Box(object):
                 self.ltc_b *= BOHR_ANGSTROM
                 self.ltc_c *= BOHR_ANGSTROM
             elif self.boxtype == "cartesian":
-                self.crt_a = [i*BOHR_ANGSTROM for i in self.crt_a]
-                self.crt_b = [i*BOHR_ANGSTROM for i in self.crt_b]
-                self.crt_c = [i*BOHR_ANGSTROM for i in self.crt_c]
+                self.crt_a = [i * BOHR_ANGSTROM for i in self.crt_a]
+                self.crt_b = [i * BOHR_ANGSTROM for i in self.crt_b]
+                self.crt_c = [i * BOHR_ANGSTROM for i in self.crt_c]
             else:
                 raise Warning("Conversion of lammps boxes currently not supported!")
 
@@ -263,12 +321,15 @@ class Box(object):
         if self.unit == "alat":
             # check if the box type is cartesian or it will not be converted
             if self.boxtype == "cartesian":
-                self.crt_a = [i*BOHR_ANGSTROM*alat for i in self.crt_a]
-                self.crt_b = [i*BOHR_ANGSTROM*alat for i in self.crt_b]
-                self.crt_c = [i*BOHR_ANGSTROM*alat for i in self.crt_c]
+                self.crt_a = [i * BOHR_ANGSTROM * alat for i in self.crt_a]
+                self.crt_b = [i * BOHR_ANGSTROM * alat for i in self.crt_b]
+                self.crt_c = [i * BOHR_ANGSTROM * alat for i in self.crt_c]
             else:
-                print("Wrong unit with wrong boxtype ({}/{})!".format(
-                    self.unit, self.boxtype))
+                print(
+                    "Wrong unit with wrong boxtype ({}/{})!".format(
+                        self.unit, self.boxtype
+                    )
+                )
         else:
             print("Wrong unit ({})!".format(self.unit))
 
@@ -278,4 +339,11 @@ class Box(object):
         """
         Calculate the volume of the cell.
         """
-        self.volume = agc.box_lat_volume(self.ltc_a, self.ltc_b, self.ltc_c, self.ltc_alpha, self.ltc_beta, self.ltc_gamma)
+        self.volume = agc.box_lat_volume(
+            self.ltc_a,
+            self.ltc_b,
+            self.ltc_c,
+            self.ltc_alpha,
+            self.ltc_beta,
+            self.ltc_gamma,
+        )

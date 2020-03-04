@@ -9,7 +9,8 @@ import argparse
 import math
 import numpy as np
 from natsort import natsorted
-#import itertools as it
+
+# import itertools as it
 import scipy.stats
 from lammps import lammps, PyLammps
 import Transformations as cgt

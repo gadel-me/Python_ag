@@ -67,7 +67,18 @@ def get_values(filename, filetype):
     else:
         raise Warning("Only pwout, lmplog and cif are valid keywords")
 
-    keys = ("a", "b", "c", "alpha", "beta", "gamma", "temp", "volume", "density", "energy")
+    keys = (
+        "a",
+        "b",
+        "c",
+        "alpha",
+        "beta",
+        "gamma",
+        "temp",
+        "volume",
+        "density",
+        "energy",
+    )
     values = (box_a, box_b, box_c, alpha, beta, gamma, temp, volume, density, energy)
     return OrderedDict(list(zip(keys, values)))
 
@@ -100,14 +111,20 @@ def norm_by_polymorph(polymorph, keys_and_values, supercell=False):
     nmols_p_unit_cell = {"I": 8, "II": 18, "III": 4, "IV": 8, "V": 8}
     # multiplication ratios of the unit cell as n-times a, b, c
     unit_cells_per_supercell = {
-        "I": [12, 3, 3], "II": [2, 2, 13], "III": [8, 5, 4], "IV": [2, 8, 4],
-        "V": [6, 5, 2]}
+        "I": [12, 3, 3],
+        "II": [2, 2, 13],
+        "III": [8, 5, 4],
+        "IV": [2, 8, 4],
+        "V": [6, 5, 2],
+    }
 
     if supercell is True:
-        nmols = (unit_cells_per_supercell[polymorph][0] *
-                 unit_cells_per_supercell[polymorph][1] *
-                 unit_cells_per_supercell[polymorph][2] *
-                 nmols_p_unit_cell[polymorph])
+        nmols = (
+            unit_cells_per_supercell[polymorph][0]
+            * unit_cells_per_supercell[polymorph][1]
+            * unit_cells_per_supercell[polymorph][2]
+            * nmols_p_unit_cell[polymorph]
+        )
         abc = unit_cells_per_supercell[polymorph]
     else:
         nmols = nmols_p_unit_cell[polymorph]
@@ -117,14 +134,14 @@ def norm_by_polymorph(polymorph, keys_and_values, supercell=False):
     return normed_keys_and_values
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("polymorph")
     PARSER.add_argument("-cif", default=None)
     PARSER.add_argument("-lmplogs", nargs="*", default=None)
     PARSER.add_argument("-pw", default=None)
     PARSER.add_argument("-no_normation", action="store_true")
-    #PARSER.add_argument("-iteration", default=None)
+    # PARSER.add_argument("-iteration", default=None)
     ARGS = PARSER.parse_args()
 
     COLUMNS = []
@@ -157,22 +174,24 @@ if __name__ == '__main__':
 
     if ARGS.lmplogs is not None:
         for lmplog in ARGS.lmplogs:
-            ITERATION = re.findall(r'\d+', os.path.basename(lmplog))[0]
-            #COLUMNS.append("gaff-{}".format(ITERATION))
+            ITERATION = re.findall(r"\d+", os.path.basename(lmplog))[0]
+            # COLUMNS.append("gaff-{}".format(ITERATION))
             COLUMNS.append("{}".format(os.path.basename(lmplog).rstrip(".lmplog")))
 
             if ARGS.no_normation is True:
                 RESULTS = get_values(lmplog, "lmplog")
             else:
-                RESULTS = norm_by_polymorph(ARGS.polymorph, get_values(lmplog, "lmplog"), supercell=True)
+                RESULTS = norm_by_polymorph(
+                    ARGS.polymorph, get_values(lmplog, "lmplog"), supercell=True
+                )
 
                 SERIES = pd.Series(RESULTS, index=list(RESULTS.keys()))
 
             print(SERIES)
             LIST_OF_SERIES.append(SERIES)
 
-#
-    pd.options.display.float_format = '{:,.4f}'.format
+    #
+    pd.options.display.float_format = "{:,.4f}".format
     df = pd.DataFrame(LIST_OF_SERIES, index=COLUMNS).transpose()
     print(df)
     df.to_csv("polymorph_{}.csv".format(ARGS.polymorph), sep=",")

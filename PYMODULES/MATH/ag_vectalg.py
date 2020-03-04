@@ -1,16 +1,15 @@
-
 import math
 
 __version__ = "2017-03-30"
 
 
-#* LINEAR ALGEBRA SECTION ******************************************************
+# * LINEAR ALGEBRA SECTION ******************************************************
 def dot(v1, v2):
     """
     Source: https://en.wikipedia.org/wiki/Dot_product
     Dot-Product in pure python
     """
-    return sum(x*y for x, y in zip(v1, v2))
+    return sum(x * y for x, y in zip(v1, v2))
 
 
 def cross(v1, v2):
@@ -20,7 +19,7 @@ def cross(v1, v2):
     """
     a1, a2, a3 = v1
     b1, b2, b3 = v2
-    return (a2*b3 - a3*b2, a3*b1 - a1*b3, a1*b2 - a2*b1)
+    return (a2 * b3 - a3 * b2, a3 * b1 - a1 * b3, a1 * b2 - a2 * b1)
 
 
 def mm_mult(m1, m2):
@@ -31,8 +30,9 @@ def mm_mult(m1, m2):
         m1      array of arrays
         m2      array of arrays
     """
-    result = [[sum(a*b for a, b in zip(X_row, Y_col)) for Y_col in zip(*m2)] for
-              X_row in m1]
+    result = [
+        [sum(a * b for a, b in zip(X_row, Y_col)) for Y_col in zip(*m2)] for X_row in m1
+    ]
     return result
 
 
@@ -53,7 +53,7 @@ def vs_mult(vector, skalar):
     """
     Multiply a vector with a skalar.
     """
-    vt_multiplied = [i*skalar for i in vector]
+    vt_multiplied = [i * skalar for i in vector]
     return vt_multiplied
 
 
@@ -74,12 +74,12 @@ def get_vt(tail, head, direction="head"):
         list
 
     """
-    v_out = [j-i for i, j in zip(tail, head)]
+    v_out = [j - i for i, j in zip(tail, head)]
 
     if direction == "head":
         pass
     elif direction == "tail":
-        v_out = [-1*i for i in v_out]
+        v_out = [-1 * i for i in v_out]
     else:
         raise RuntimeError("{} is not a proper direction".format(direction))
 
@@ -99,7 +99,7 @@ def get_mag(vector, unrooted=False):
     Check magnitude of a vector fast, i.e. not using sqrt (root is slow!)
     Source: http://mathworld.wolfram.com/Norm.html
     """
-    _premagn = [i**2 for i in vector]
+    _premagn = [i ** 2 for i in vector]
     _fastmagn = sum(_premagn)
 
     if not unrooted:
@@ -116,7 +116,7 @@ def get_unit_vt(vector):
     Source: http://mathworld.wolfram.com/UnitVector.html
     """
     _magn = get_mag(vector, unrooted=False)
-    unit_vector = [(1/_magn)*i for i in vector]
+    unit_vector = [(1 / _magn) * i for i in vector]
     return unit_vector
 
 
@@ -136,9 +136,9 @@ def get_ang(v1, v2, deg=False):
             >>> angle_between((1, 0, 0), (-1, 0, 0))
             3.141592653589793 (pi)
     """
-    numerator = sum([i*j for i, j in zip(v1, v2)])
-    denominator = get_mag(v1)*get_mag(v2)
-    gamma = math.acos(numerator/denominator)
+    numerator = sum([i * j for i, j in zip(v1, v2)])
+    denominator = get_mag(v1) * get_mag(v2)
+    gamma = math.acos(numerator / denominator)
 
     # return angle in degrees instead of radians
     if deg:
@@ -167,7 +167,9 @@ def get_plane(vt_1, vt_2, vt_p=[0, 0, 0]):
     Returns:
         a, b, c, d      float;
     """
-    vt_n = get_unit_vt(cross(vt_1, vt_2))  # normal vector (perpendicular to vt_1 and vt_2)
+    vt_n = get_unit_vt(
+        cross(vt_1, vt_2)
+    )  # normal vector (perpendicular to vt_1 and vt_2)
     a, b, c = vt_n
     d = dot(vt_p, vt_n)
     return (a, b, c, d)
@@ -189,6 +191,8 @@ def get_point_plane_dist(p, a, b, c, d, distance_sign_only=False):
     if distance_sign_only is True:
         distance = a * p[0] + b * p[1] + c * p[2] - d
     else:
-        distance = abs(a * p[0] + b * p[1] + c * p[2] - d) / math.sqrt(a**2 + b**2 + c**2)
+        distance = abs(a * p[0] + b * p[1] + c * p[2] - d) / math.sqrt(
+            a ** 2 + b ** 2 + c ** 2
+        )
 
     return distance

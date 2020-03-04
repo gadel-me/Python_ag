@@ -1,4 +1,3 @@
-
 import numpy as np
 import re
 import md_stars as mds
@@ -11,6 +10,7 @@ class MaestroStuff(mdu.Universe):
     """
     Read Schroedinger Maestro's files.
     """
+
     def __init__(self):
         """
         Load universe first.
@@ -29,7 +29,7 @@ class MaestroStuff(mdu.Universe):
                 # find header for atoms-section
                 if "m_atom" in line:
                     cframe = []
-                    num_atms = int(re.findall(r'\d+', line)[0])
+                    num_atms = int(re.findall(r"\d+", line)[0])
 
                     # skip lines until coordinates section is reached
                     while ":::" not in line:
@@ -60,16 +60,15 @@ class MaestroStuff(mdu.Universe):
                                     self.atoms[iid].sitnam = csitnam
 
                         except IndexError:
-                                catm = mds.Atom(atm_id=iid,
-                                                sitnam=csitnam)
-                                self.atoms.append(catm)
+                            catm = mds.Atom(atm_id=iid, sitnam=csitnam)
+                            self.atoms.append(catm)
 
                         cframe.append(ccoords)
                     # append current frame
                     self.ts_coords.append(cframe)
 
                 elif "m_bond" in line:
-                    num_bnds = int(re.findall(r'\d+', line)[0])
+                    num_bnds = int(re.findall(r"\d+", line)[0])
 
                     # skip lines until coordinates section is reached
                     while ":::" not in line:
@@ -79,8 +78,8 @@ class MaestroStuff(mdu.Universe):
                         cbnd = mae_in.next().split()
 
                         # store section
-                        atm_1     = atm_id_old_new[int(cbnd[1])]
-                        atm_2     = atm_id_old_new[int(cbnd[2])]
+                        atm_1 = atm_id_old_new[int(cbnd[1])]
+                        atm_2 = atm_id_old_new[int(cbnd[2])]
                         bnd_order = int(cbnd[3])
 
                         # check if an instance of Bond with index iid already exists;
@@ -108,10 +107,12 @@ class MaestroStuff(mdu.Universe):
                                     self.bonds[iid].bnd_order = bnd_order
 
                         except IndexError:
-                                cbnd = mds.Bond(bnd_id=iid,
-                                                atm_id1=atm_1,
-                                                atm_id2=atm_2,
-                                                bnd_order=bnd_order)
-                                self.bonds.append(cbnd)
+                            cbnd = mds.Bond(
+                                bnd_id=iid,
+                                atm_id1=atm_1,
+                                atm_id2=atm_2,
+                                bnd_order=bnd_order,
+                            )
+                            self.bonds.append(cbnd)
                 else:
                     pass

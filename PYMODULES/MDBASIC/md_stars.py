@@ -1,4 +1,3 @@
-
 import math
 import md_stars_helper as mdsh
 import md_elements as mde
@@ -11,6 +10,7 @@ class IterMixin(object):
     Class to return the attributes with their corresponding values of the
     desired object.
     """
+
     def __iter__(self):
         for attr, value in self.__dict__.items():
             yield attr, value
@@ -30,29 +30,32 @@ class Atom(IterMixin):
     #TODO FOR GAUSSIAN X Y AND Z SHALL BE THE SAME NUMBER
     #TODO A CHECK SHOULD BE DONE TO ASSERT THAT THE INFO FITS THE PROGRAM IT WAS FROM
     """
-    def __init__(self,
-                 atm_id=None,
-                 atm_key=None,
-                 sitnam=None,
-                 weigh=None,
-                 grp_id=None,
-                 chge=None,
-                 coords=None,
-                 res=None,
-                 nrept=None,
-                 ifrz=None,
-                 ifrz_x=None,
-                 ifrz_y=None,
-                 ifrz_z=None,
-                 igrp=None,
-                 r0=None,
-                 sigma=None,
-                 epsilon=None,
-                 energy_unit=None,
-                 comment=None,
-                 force=None,
-                 velocity=None,
-                 pseudopotential=None):
+
+    def __init__(
+        self,
+        atm_id=None,
+        atm_key=None,
+        sitnam=None,
+        weigh=None,
+        grp_id=None,
+        chge=None,
+        coords=None,
+        res=None,
+        nrept=None,
+        ifrz=None,
+        ifrz_x=None,
+        ifrz_y=None,
+        ifrz_z=None,
+        igrp=None,
+        r0=None,
+        sigma=None,
+        epsilon=None,
+        energy_unit=None,
+        comment=None,
+        force=None,
+        velocity=None,
+        pseudopotential=None,
+    ):
         if atm_id is not None:
             self.atm_id = atm_id
 
@@ -98,7 +101,7 @@ class Atom(IterMixin):
 
         if r0 is not None:
             self.r0 = r0
-            self.sigma = r0/(2**(1/6))
+            self.sigma = r0 / (2 ** (1 / 6))
 
         if sigma is not None:
             self.sigma = sigma
@@ -125,8 +128,9 @@ class Atom(IterMixin):
         """
         Convert the energy unit to the one desired.
         """
-        self.epsilon = mdsh.convert_energy_unit(self.epsilon, self.energy_unit,
-                                                unit_out)
+        self.epsilon = mdsh.convert_energy_unit(
+            self.epsilon, self.energy_unit, unit_out
+        )
         self.energy_unit = unit_out
 
     def mix_ij(self, sigma_j, epsilon_j, mix="arithmetic"):
@@ -168,20 +172,23 @@ class Bond(IterMixin):
     prm1 = force constant
     prm2 = optimal distance (minimum distance, r0)
     """
-    def __init__(self,
-                 bnd_id=None,
-                 bnd_key=None,
-                 atm_id1=None,
-                 atm_id2=None,
-                 atm_sitnam_1=None,
-                 atm_sitnam_2=None,
-                 prm1=None,
-                 prm2=None,
-                 prm3=None,
-                 prm4=None,
-                 energy_unit=None,
-                 bnd_order=None,
-                 comment=None):
+
+    def __init__(
+        self,
+        bnd_id=None,
+        bnd_key=None,
+        atm_id1=None,
+        atm_id2=None,
+        atm_sitnam_1=None,
+        atm_sitnam_2=None,
+        prm1=None,
+        prm2=None,
+        prm3=None,
+        prm4=None,
+        energy_unit=None,
+        bnd_order=None,
+        comment=None,
+    ):
         """
         bnd_order   float; bond-order; single (1.0)-, double(2.0)-, triple(2.0)-bond
         """
@@ -213,8 +220,7 @@ class Bond(IterMixin):
         self.comment = comment
 
     def convert_energy_unit(self, unit_out):
-        self.prm1 = mdsh.convert_energy_unit(self.prm1, self.energy_unit,
-                                             unit_out)
+        self.prm1 = mdsh.convert_energy_unit(self.prm1, self.energy_unit, unit_out)
         self.energy_unit = unit_out
 
     def check_bnd_type(self):
@@ -222,7 +228,9 @@ class Bond(IterMixin):
         Check if something is odd with the force-field parameters (currently
         only eV-units are supported).
         """
-        warning_message = "***Warning: Odd bond-type-parameters found. Check if parameter is o.k."
+        warning_message = (
+            "***Warning: Odd bond-type-parameters found. Check if parameter is o.k."
+        )
 
         if self.prm1 > 30 or self.prm2 > 2:
             print(warning_message)
@@ -241,19 +249,22 @@ class Angle(IterMixin):
     prm1 = force constant
     prm2 = minimal angle (optimal angle)
     """
-    def __init__(self,
-                 ang_id=None,
-                 ang_key=None,
-                 atm_id1=None,
-                 atm_id2=None,
-                 atm_id3=None,
-                 prm1=None,
-                 prm2=None,
-                 prm3=None,
-                 prm4=None,
-                 energy_unit=None,
-                 angle_unit=None,
-                 comment=None):
+
+    def __init__(
+        self,
+        ang_id=None,
+        ang_key=None,
+        atm_id1=None,
+        atm_id2=None,
+        atm_id3=None,
+        prm1=None,
+        prm2=None,
+        prm3=None,
+        prm4=None,
+        energy_unit=None,
+        angle_unit=None,
+        comment=None,
+    ):
         if ang_id is not None:
             self.ang_id = ang_id
         if ang_key is not None:
@@ -280,8 +291,7 @@ class Angle(IterMixin):
         self.comment = comment
 
     def convert_energy_unit(self, unit_out):
-        self.prm1 = mdsh.convert_energy_unit(self.prm1, self.energy_unit,
-                                             unit_out)
+        self.prm1 = mdsh.convert_energy_unit(self.prm1, self.energy_unit, unit_out)
         self.energy_unit = unit_out
 
     def convert_angle_unit(self, unit_out):
@@ -296,7 +306,9 @@ class Angle(IterMixin):
         Check if something is odd with the force-field parameters (currently
         only eV-units are supported).
         """
-        warning_message = "***Warning: Odd angle-type-parameter found. Check if parameter is o.k."
+        warning_message = (
+            "***Warning: Odd angle-type-parameter found. Check if parameter is o.k."
+        )
 
         if self.prm1 > 10:
             print(warning_message)
@@ -313,22 +325,25 @@ class Dihedral(IterMixin):
     prm_n:  dihedral periodicity
     prm_d:  dihedral phase
     """
-    def __init__(self,
-                 dih_id=None,
-                 dih_key=None,
-                 atm_id1=None,
-                 atm_id2=None,
-                 atm_id3=None,
-                 atm_id4=None,
-                 prm_k=None,
-                 prm_n=None,
-                 prm_d=None,
-                 weigh_factor=None,
-                 elec_inter_1_4_scale=None,
-                 vdw_inter_1_4_scale=None,
-                 energy_unit=None,
-                 angle_unit=None,
-                 comment=None):
+
+    def __init__(
+        self,
+        dih_id=None,
+        dih_key=None,
+        atm_id1=None,
+        atm_id2=None,
+        atm_id3=None,
+        atm_id4=None,
+        prm_k=None,
+        prm_n=None,
+        prm_d=None,
+        weigh_factor=None,
+        elec_inter_1_4_scale=None,
+        vdw_inter_1_4_scale=None,
+        energy_unit=None,
+        angle_unit=None,
+        comment=None,
+    ):
         if dih_id is not None:
             self.dih_id = dih_id
         if dih_key is not None:
@@ -361,8 +376,7 @@ class Dihedral(IterMixin):
         self.comment = comment
 
     def convert_energy_unit(self, unit_out):
-        self.prm_k = mdsh.convert_energy_unit(self.prm_k, self.energy_unit,
-                                              unit_out)
+        self.prm_k = mdsh.convert_energy_unit(self.prm_k, self.energy_unit, unit_out)
         self.energy_unit = unit_out
 
     def convert_angle_unit(self, unit_out):
@@ -377,7 +391,9 @@ class Dihedral(IterMixin):
         Check if something is odd with the force-field parameters (currently
         only eV-units are supported).
         """
-        warning_message = "***Warning: Odd dihedral-type-parameter found. Check if parameter is o.k."
+        warning_message = (
+            "***Warning: Odd dihedral-type-parameter found. Check if parameter is o.k."
+        )
 
         if self.prm_k > 1:
             print(warning_message)
@@ -423,19 +439,22 @@ class Improper(IterMixin):
     prm_d:   -1 or +1 (= cos(0), cos(pi))
     angle_unit: 'rad'|deg
     """
-    def __init__(self,
-                 imp_id=None,
-                 imp_key=None,
-                 atm_id1=None,
-                 atm_id2=None,
-                 atm_id3=None,
-                 atm_id4=None,
-                 prm_k=None,
-                 prm_d=None,
-                 prm_n=None,
-                 energy_unit=None,
-                 angle_unit=None,
-                 comment=None):
+
+    def __init__(
+        self,
+        imp_id=None,
+        imp_key=None,
+        atm_id1=None,
+        atm_id2=None,
+        atm_id3=None,
+        atm_id4=None,
+        prm_k=None,
+        prm_d=None,
+        prm_n=None,
+        energy_unit=None,
+        angle_unit=None,
+        comment=None,
+    ):
         if imp_id is not None:
             self.imp_id = imp_id
         if imp_key is not None:
@@ -462,8 +481,7 @@ class Improper(IterMixin):
         self.comment = comment
 
     def convert_energy_unit(self, unit_out):
-        self.prm_k = mdsh.convert_energy_unit(self.prm_k, self.energy_unit,
-                                              unit_out)
+        self.prm_k = mdsh.convert_energy_unit(self.prm_k, self.energy_unit, unit_out)
         self.energy_unit = unit_out
 
     def cvff_prm_d(self):
@@ -478,11 +496,11 @@ class Improper(IterMixin):
 
         # round to next negative value if cos < 0 (e.g. -0.9999)
         if tmp_prm_d < 0:
-            #print("Smaller")
+            # print("Smaller")
             tmp_prm_d = math.floor(tmp_prm_d)
         # round to next positive int if cos > 0 (e.g. 0.99999)
         else:
-            #print("bigger")
+            # print("bigger")
             tmp_prm_d = math.ceil(tmp_prm_d)
 
         self.prm_d = int(tmp_prm_d)
@@ -492,7 +510,9 @@ class Improper(IterMixin):
         Check if something is odd with the force-field parameters (currently
         only eV-units are supported).
         """
-        warning_message = "***Warning: Odd improper-type-parameter found. Check if parameter is o.k."
+        warning_message = (
+            "***Warning: Odd improper-type-parameter found. Check if parameter is o.k."
+        )
 
         if self.prm_k > 1 or self.prm_k < 0:
             print(warning_message)
@@ -507,16 +527,19 @@ class LongRange(object):
     sitnam_i, sitnam_j: atom names of atom i and atom j
     #TODO: energy units, distance units
     """
-    def __init__(self,
-                 lr_key=None,
-                 atm_key_i=None,
-                 atm_key_j=None,
-                 sigma_ij=None,
-                 epsilon_ij=None,
-                 acoef=None,
-                 bcoef=None,
-                 pairs=None,
-                 comment=None):
+
+    def __init__(
+        self,
+        lr_key=None,
+        atm_key_i=None,
+        atm_key_j=None,
+        sigma_ij=None,
+        epsilon_ij=None,
+        acoef=None,
+        bcoef=None,
+        pairs=None,
+        comment=None,
+    ):
         """
         pairs:  "ii" or "ij"
         """
@@ -548,13 +571,13 @@ class LongRange(object):
         Sources:    https://en.wikipedia.org/wiki/Lennard-Jones_potential#AB_form
         """
         try:
-            self.sigma_ij = (self.acoef/self.bcoef)**(1/6)
-        except(ZeroDivisionError):
-            self.sigma_ij = 0.00000000E+00
+            self.sigma_ij = (self.acoef / self.bcoef) ** (1 / 6)
+        except (ZeroDivisionError):
+            self.sigma_ij = 0.00000000e00
 
         try:
-            self.epsilon_ij = self.bcoef**2/(4*self.acoef)
-        except(ZeroDivisionError):
-            self.epsilon_ij = 0.00000000E+00
+            self.epsilon_ij = self.bcoef ** 2 / (4 * self.acoef)
+        except (ZeroDivisionError):
+            self.epsilon_ij = 0.00000000e00
 
         return (self.sigma_ij, self.epsilon_ij)

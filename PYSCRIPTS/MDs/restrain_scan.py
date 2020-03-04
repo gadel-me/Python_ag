@@ -17,9 +17,9 @@ import time
 import md_stars as mds
 
 
-#==============================================================================#
+# ==============================================================================#
 # Setup MPI
-#==============================================================================#
+# ==============================================================================#
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
@@ -29,18 +29,18 @@ rank = comm.Get_rank()  # process' id(s) within a communicator
 # specific one
 split = comm.Split(rank, key=0)
 
-#==============================================================================#
+# ==============================================================================#
 # Helping functions
-#==============================================================================#
+# ==============================================================================#
 class bcolors:
-    header = '\033[95m'
-    blue = '\033[94m'
-    green = '\033[92m'
-    yellow = '\033[93m'
-    red = '\033[91m'
-    endc = '\033[0m'
-    bold = '\033[1m'
-    underline = '\033[4m'
+    header = "\033[95m"
+    blue = "\033[94m"
+    green = "\033[92m"
+    yellow = "\033[93m"
+    red = "\033[91m"
+    endc = "\033[0m"
+    bold = "\033[1m"
+    underline = "\033[4m"
 
 
 def get_scanned_geometry(gau_log):
@@ -109,16 +109,18 @@ def compile_restrain_string(indices_and_values, force_constants, hold=0):
     """
     # short check if function is used the right way
     assert hold in (0, 1)
-    #pdb.set_trace()
+    # pdb.set_trace()
 
     restrain_string = "fix REST all restrain "
 
     for index, (key, value) in enumerate(indices_and_values.items()):
-        #pdb.set_trace()
+        # pdb.set_trace()
         k_start = force_constants[index][hold]
         k_stop = force_constants[index][1]
         cur_geometry = get_geometry_by_key(key)
-        restrain_string += "{} {} {} {} {} ".format(cur_geometry, key, k_start, k_stop, value)
+        restrain_string += "{} {} {} {} {} ".format(
+            cur_geometry, key, k_start, k_stop, value
+        )
 
     return restrain_string
 
@@ -169,7 +171,16 @@ def add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0):
     return (cur_geometry, null_coeff_id)
 
 
-def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=True, pair_coeffs=None, settings=None):
+def scan(
+    lmpdat,
+    output,
+    indices_and_values,
+    ks,
+    temps=(600, 0),
+    omit_entity=True,
+    pair_coeffs=None,
+    settings=None,
+):
     """
     Scan a bond, angle or dihedral.
 
@@ -202,13 +213,23 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     # and one without -> important for fitting when using the difference curve)
 
     igeom, icoeff_id = add_dummy_to_lmpdat(lmpdat, indices_and_values, key_index=0)
-    #pdb.set_trace()
+    # pdb.set_trace()
 
     save_step = 50000
     anneal_step = 750000
     quench_step = 500000
-    thermargs = ["step", "temp", "pe", "eangle", "edihed", "eimp", "evdwl",
-                 "ecoul", "ebond", "enthalpy"]
+    thermargs = [
+        "step",
+        "temp",
+        "pe",
+        "eangle",
+        "edihed",
+        "eimp",
+        "evdwl",
+        "ecoul",
+        "ebond",
+        "enthalpy",
+    ]
 
     # split world communicator into n partitions and run lammps only on that specific one
     lmp = lammps(comm=split, cmdargs=["-screen", "lmp_out.txt"])
@@ -247,15 +268,17 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     print(bcolors.red + "Annealing on rank {}: ".format(rank) + output + bcolors.endc)
     ###########################################################################
     # TESTING
-    #indices_and_values = {"25 8 9 10" : 90.0}
-    #indices_and_values = {"11 7 8 25" : -4.0}
-    #indices_and_values = {"25 8 7 11" : 3.1415}
-    #lmp.command("compute 1 entity_atoms property/local dtype datom1 datom2 datom3 datom4")
-    #lmp.command("compute 2 entity_atoms dihedral/local phi")
-    #lmp.command("dump 1 all local 1000 {}.dump index c_2".format(output))
+    # indices_and_values = {"25 8 9 10" : 90.0}
+    # indices_and_values = {"11 7 8 25" : -4.0}
+    # indices_and_values = {"25 8 7 11" : 3.1415}
+    # lmp.command("compute 1 entity_atoms property/local dtype datom1 datom2 datom3 datom4")
+    # lmp.command("compute 2 entity_atoms dihedral/local phi")
+    # lmp.command("dump 1 all local 1000 {}.dump index c_2".format(output))
     ###########################################################################
 
-    lmp.command("velocity all create {} 8675309 mom yes rot yes dist gaussian".format(temps[0]))
+    lmp.command(
+        "velocity all create {} 8675309 mom yes rot yes dist gaussian".format(temps[0])
+    )
     lmp.command("fix NVE all nve")
     lmp.command("fix TFIX all langevin {} {} 100 24601".format(temps[0], temps[1]))
     restrain_anneal = compile_restrain_string(indices_and_values, ks, hold=0)
@@ -263,14 +286,16 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
     lmp.command("fix_modify REST energy yes")
     lmp.command("run {}".format(anneal_step))
 
-    #try:
+    # try:
     #    lmp.command("run {}".format(anneal_step))
-    #except Exception:
+    # except Exception:
     #    print("***Error: Simulation crashed (annealing)! Force constants too high? Pair Coeffs set?")
     #    MPI.COMM_WORLD.Abort()
 
     # quenching
-    print(bcolors.yellow + "Quenching on rank {}: ".format(rank) + output + bcolors.endc)
+    print(
+        bcolors.yellow + "Quenching on rank {}: ".format(rank) + output + bcolors.endc
+    )
     restrain_quench = compile_restrain_string(indices_and_values, ks, hold=1)
     lmp.command("fix TFIX all langevin {} {} 100 24601".format(temps[1], temps[1]))
     lmp.command(restrain_quench)
@@ -283,7 +308,9 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
         MPI.COMM_WORLD.Abort()
 
     # sanity check for convergence
-    print(bcolors.green + "Minimization on rank {}: ".format(rank) + output + bcolors.endc)
+    print(
+        bcolors.green + "Minimization on rank {}: ".format(rank) + output + bcolors.endc
+    )
 
     try:
         lmp.command("minimize 1e-6 1e-9 2000000 100000")
@@ -302,7 +329,9 @@ def scan(lmpdat, output, indices_and_values, ks, temps=(600, 0), omit_entity=Tru
 
     # omit energy contribution of the scanned entity by setting its value to 0.0
     if omit_entity is True:
-        lmp.command("group entity_atoms id {}".format(list(indices_and_values.keys())[0]))
+        lmp.command(
+            "group entity_atoms id {}".format(list(indices_and_values.keys())[0])
+        )
         lmp.command("set group entity_atoms {} {}".format(igeom, icoeff_id))
 
         try:
@@ -323,7 +352,9 @@ def measure_geometry(lmpdat, dcd, atm_ids):
     sys_md = agum.Unification()
     sys_md.read_lmpdat(lmpdat)
     sys_md.import_dcd(dcd)
-    sys_md.read_frames(frame=-2, to_frame=-1, frame_by="index")  # read only the last frame
+    sys_md.read_frames(
+        frame=-2, to_frame=-1, frame_by="index"
+    )  # read only the last frame
     # decrement atom indices since for sys_md they start with 0, whereas
     # for lammps and gaussian they start with 1
     atm_idxs = [i - 1 for i in atm_ids]
@@ -333,19 +364,26 @@ def measure_geometry(lmpdat, dcd, atm_ids):
 
     # bond
     if len(atm_idxs) == 2:
-        geometry_value = np.linalg.norm(sys_md.ts_coords[-1][atm_idxs[0]] -
-                                        sys_md.ts_coords[-1][atm_idxs[1]])
+        geometry_value = np.linalg.norm(
+            sys_md.ts_coords[-1][atm_idxs[0]] - sys_md.ts_coords[-1][atm_idxs[1]]
+        )
     # angle
     elif len(atm_idxs) == 3:
-        geometry_value = agg.get_angle(sys_md.ts_coords[-1][atm_idxs[0]],
-                                       sys_md.ts_coords[-1][atm_idxs[1]],
-                                       sys_md.ts_coords[-1][atm_idxs[2]])
+        geometry_value = agg.get_angle(
+            sys_md.ts_coords[-1][atm_idxs[0]],
+            sys_md.ts_coords[-1][atm_idxs[1]],
+            sys_md.ts_coords[-1][atm_idxs[2]],
+        )
     # dihedral
     elif len(atm_idxs) == 4:
-        geometry_value = agg.new_dihedral([sys_md.ts_coords[-1][atm_idxs[0]],
-                                           sys_md.ts_coords[-1][atm_idxs[1]],
-                                           sys_md.ts_coords[-1][atm_idxs[2]],
-                                           sys_md.ts_coords[-1][atm_idxs[3]]])
+        geometry_value = agg.new_dihedral(
+            [
+                sys_md.ts_coords[-1][atm_idxs[0]],
+                sys_md.ts_coords[-1][atm_idxs[1]],
+                sys_md.ts_coords[-1][atm_idxs[2]],
+                sys_md.ts_coords[-1][atm_idxs[3]],
+            ]
+        )
     else:
         raise IOError("Wrong number of atom ids!")
 
@@ -402,7 +440,9 @@ def write_energies_file_header(filename):
     Write header for energies file.
     """
     with open(filename, "w") as opened_filename:
-        opened_filename.write("{:>20s} {:>20s}\n".format("Angle [Degrees]", "Energy [eV]"))
+        opened_filename.write(
+            "{:>20s} {:>20s}\n".format("Angle [Degrees]", "Energy [eV]")
+        )
 
 
 def guess_k(atom_ids):
@@ -460,11 +500,19 @@ def extract_atm_ids(geometries):
     return atm_ids
 
 
-def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
-                      temps=None, force_constants=None,
-                      energy_file_out="defaultname",
-                      energy_file_wo_entity="defaultname2",
-                      output_idx=0, pc_file=None, settings_file=None):
+def md_from_ab_initio(
+    gau_log,
+    lmpdat,
+    scanned_geom=None,
+    add_geoms=None,
+    temps=None,
+    force_constants=None,
+    energy_file_out="defaultname",
+    energy_file_wo_entity="defaultname2",
+    output_idx=0,
+    pc_file=None,
+    settings_file=None,
+):
     """
     Calculate md energy.
 
@@ -539,7 +587,9 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
     # shift entity value by 180 degrees for dihedrals
     for geom_ids, idx in zip(total_geom_ids, range(len(total_scan_entities))):
         if len(geom_ids) == 4:
-            total_scan_entities[idx] = [round(ti + 180, 6) for ti in total_scan_entities[idx]]
+            total_scan_entities[idx] = [
+                round(ti + 180, 6) for ti in total_scan_entities[idx]
+            ]
 
     for task_id in range(tasks):
         # each rank does its task and skips tasks assigned by other ranks (this
@@ -564,29 +614,45 @@ def md_from_ab_initio(gau_log, lmpdat, scanned_geom=None, add_geoms=None,
             print(output_appendix + ".lmplog" + " already exists!")
             continue
 
-        #pdb.set_trace()
+        # pdb.set_trace()
         # annealing with quenching and minimization using lammps
-        scan(lmpdat, output_appendix, cur_geom_atm_ids_geom_value, force_constants, temps=temps, pair_coeffs=pc_file, settings=settings_file)
+        scan(
+            lmpdat,
+            output_appendix,
+            cur_geom_atm_ids_geom_value,
+            force_constants,
+            temps=temps,
+            pair_coeffs=pc_file,
+            settings=settings_file,
+        )
 
         # since minimized md-structure != minimized ab initio structure,
         # the real value of the geometry of interest must be derived from the
         # last frame of the md simulation
-        current_geom_val = measure_geometry(lmpdat, output_appendix + ".dcd", total_geom_ids[0])
+        current_geom_val = measure_geometry(
+            lmpdat, output_appendix + ".dcd", total_geom_ids[0]
+        )
 
         # pre defined string for each row in results file
         resume_file_row = "{:> 20.4f} {:> 20.8f}\n"
 
         # energy file with entity's energy contribution
-        second_last_pe_value = get_pe_value(output_appendix + ".lmplog", entry_idx=-2, energy_idx=-1)
+        second_last_pe_value = get_pe_value(
+            output_appendix + ".lmplog", entry_idx=-2, energy_idx=-1
+        )
         with open(energy_file_out, "a") as opened_resume_file:
-            opened_resume_file.write(resume_file_row.format(current_geom_val,
-                                                            second_last_pe_value))
+            opened_resume_file.write(
+                resume_file_row.format(current_geom_val, second_last_pe_value)
+            )
 
         # energy file without entity's energy contribution
-        last_pe_value = get_pe_value(output_appendix + ".lmplog", entry_idx=-1, energy_idx=-1)
+        last_pe_value = get_pe_value(
+            output_appendix + ".lmplog", entry_idx=-1, energy_idx=-1
+        )
         with open(energy_file_wo_entity, "a") as opened_resume_file:
-            opened_resume_file.write(resume_file_row.format(current_geom_val,
-                                                            last_pe_value))
+            opened_resume_file.write(
+                resume_file_row.format(current_geom_val, last_pe_value)
+            )
 
 
 def norm_energy(energy_file_in, energy_file_out):
@@ -622,7 +688,7 @@ def norm_energy(energy_file_in, energy_file_out):
     if not os.path.isfile(energy_file_out):
         write_energies_file_header(energy_file_out)
 
-    #with open(energy_file_out, "a") as opened_energy_file:
+    # with open(energy_file_out, "a") as opened_energy_file:
     with open(energy_file_out, "a") as opened_energy_file:
 
         for key, value in keys_and_values.items():
@@ -643,63 +709,81 @@ def add_dummy_entry(lmpdat):
     if md_sys.bnd_types != {}:
         ntypes = len(md_sys.bnd_types)
         if md_sys.bnd_types[ntypes - 1].prm1 > 0:
-            md_sys.bnd_types[ntypes] = mds.Bond(bnd_key=ntypes, prm1=0.0, prm2=0.0, comment=" dummy bond for force field fitting")
+            md_sys.bnd_types[ntypes] = mds.Bond(
+                bnd_key=ntypes,
+                prm1=0.0,
+                prm2=0.0,
+                comment=" dummy bond for force field fitting",
+            )
 
     if md_sys.ang_types != {}:
         ntypes = len(md_sys.ang_types)
         if md_sys.ang_types[ntypes - 1].prm1 > 0:
-            md_sys.ang_types[ntypes] = mds.Angle(ang_key=ntypes, prm1=0.0, prm2=0.0, comment=" dummy bond for force field fitting")
+            md_sys.ang_types[ntypes] = mds.Angle(
+                ang_key=ntypes,
+                prm1=0.0,
+                prm2=0.0,
+                comment=" dummy bond for force field fitting",
+            )
 
     if md_sys.dih_types != {}:
         ntypes = len(md_sys.dih_types)
         if md_sys.dih_types[ntypes - 1].prm_k > 0:
-            md_sys.dih_types[ntypes] = mds.Dihedral(dih_key=ntypes, prm_k=0.0, prm_n=1, prm_d=0, weigh_factor=0, comment=" dummy angle for force field fitting")
+            md_sys.dih_types[ntypes] = mds.Dihedral(
+                dih_key=ntypes,
+                prm_k=0.0,
+                prm_n=1,
+                prm_d=0,
+                weigh_factor=0,
+                comment=" dummy angle for force field fitting",
+            )
 
     md_sys.change_indices(incr=1, mode="increase")
     md_sys.write_lmpdat(lmpdat, frame_id=-1, title="Default Title", cgcmm=True)
     return True
 
 
-#==============================================================================#
+# ==============================================================================#
 # User Input
-#==============================================================================#
+# ==============================================================================#
 if __name__ == "__main__":
     if rank == 0:
         PARSER = argparse.ArgumentParser()
-        PARSER.add_argument("lmpdat",
-                            help="Lammps' data-file")
+        PARSER.add_argument("lmpdat", help="Lammps' data-file")
 
-        PARSER.add_argument("-gau_logs",
-                            nargs="+",
-                            help="Gaussian log-file")
+        PARSER.add_argument("-gau_logs", nargs="+", help="Gaussian log-file")
 
-        PARSER.add_argument("-geom_entity",
-                            default=None,
-                            help="Atom indices, where each string is one set of one geometry")
+        PARSER.add_argument(
+            "-geom_entity",
+            default=None,
+            help="Atom indices, where each string is one set of one geometry",
+        )
 
-        PARSER.add_argument("-add_geom_entities",
-                            default=None,
-                            nargs="*",
-                            help="Geometry to scan by gaussian syntax, e.g. A(2,1,3) A(2,1,4)")
+        PARSER.add_argument(
+            "-add_geom_entities",
+            default=None,
+            nargs="*",
+            help="Geometry to scan by gaussian syntax, e.g. A(2,1,3) A(2,1,4)",
+        )
 
-        PARSER.add_argument("-k",
-                            type=float,
-                            default=None,
-                            nargs="*",
-                            help=("Force Konstant K in eV. If add_geom_entities was chosen, a "
-                                  "force constant for each entity has to be supplied as well. "))
+        PARSER.add_argument(
+            "-k",
+            type=float,
+            default=None,
+            nargs="*",
+            help=(
+                "Force Konstant K in eV. If add_geom_entities was chosen, a "
+                "force constant for each entity has to be supplied as well. "
+            ),
+        )
 
-        PARSER.add_argument("-out",
-                            default="DEFAULTNAME",
-                            help="Name of energy files.")
+        PARSER.add_argument("-out", default="DEFAULTNAME", help="Name of energy files.")
 
-        PARSER.add_argument("-pair_coeffs",
-                            default=None,
-                            help="Name of pair coeff file file.")
+        PARSER.add_argument(
+            "-pair_coeffs", default=None, help="Name of pair coeff file file."
+        )
 
-        PARSER.add_argument("-settings",
-                            default=None,
-                            help="Name of settings file.")
+        PARSER.add_argument("-settings", default=None, help="Name of settings file.")
 
         ARGS = PARSER.parse_args()
 
@@ -721,9 +805,9 @@ if __name__ == "__main__":
 
     ARGS = comm.bcast(ARGS, 0)
 
-    #==============================================================================#
+    # ==============================================================================#
     # do restrained md for geometry scanned in gaussian
-    #==============================================================================#
+    # ==============================================================================#
     # add dummy entry to lammps data where necessary
     if rank == 0:
         ADD_ENTRY = add_dummy_entry(ARGS.lmpdat)
@@ -737,16 +821,19 @@ if __name__ == "__main__":
 
     if not os.path.isfile(OUTPUT_FILE):
         for gau_file_idx, cur_gau_log in enumerate(ARGS.gau_logs):
-            md_from_ab_initio(cur_gau_log, ARGS.lmpdat,
-                              scanned_geom=ARGS.geom_entity,
-                              add_geoms=ARGS.add_geom_entities,
-                              energy_file_out=OUTPUT_FILE,
-                              energy_file_wo_entity=OUTPUT_FILE2,
-                              output_idx=gau_file_idx,
-                              force_constants=ARGS.k,
-                              pc_file=ARGS.pair_coeffs,
-                              settings_file=ARGS.settings,
-                              temps=(600, 0.0))
+            md_from_ab_initio(
+                cur_gau_log,
+                ARGS.lmpdat,
+                scanned_geom=ARGS.geom_entity,
+                add_geoms=ARGS.add_geom_entities,
+                energy_file_out=OUTPUT_FILE,
+                energy_file_wo_entity=OUTPUT_FILE2,
+                output_idx=gau_file_idx,
+                force_constants=ARGS.k,
+                pc_file=ARGS.pair_coeffs,
+                settings_file=ARGS.settings,
+                temps=(600, 0.0),
+            )
 
     # wait for all ranks to finish
     time.sleep(2)

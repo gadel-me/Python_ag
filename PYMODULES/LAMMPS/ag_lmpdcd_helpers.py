@@ -16,19 +16,20 @@ def read_record(dcd_file, debug=False):
         check_open(dcd_file)
 
     # first 4 bytes of entry give length of whole block (bytes)
-    first, = struct.unpack('i', dcd_file.read(4))
+    (first,) = struct.unpack("i", dcd_file.read(4))
     # actual record (of 'first' bytes length)
     record = dcd_file.read(first)
     # last 4 bytes signal end of entry
-    last, = struct.unpack('i', dcd_file.read(4))
+    (last,) = struct.unpack("i", dcd_file.read(4))
 
     if debug:
         print("Length of block in bytes: ", first)
 
     # values of first and last entry should be the same
     if first != last:
-        raise IOError("First ({}) and last ({}) 4 bytes are not the same!".format(
-            first, last))
+        raise IOError(
+            "First ({}) and last ({}) 4 bytes are not the same!".format(first, last)
+        )
 
     return record
 
@@ -58,8 +59,10 @@ def reshape_arguments(sframe, nframes, step, frame_start, frame_stop, key):
     """
     # /// CHECK INPUT
     if frame_start == frame_stop:
-        raise ValueError("Arguments 'frame' and 'to_frame' must not be " +
-                         "the same value (last is always exclusive)!")
+        raise ValueError(
+            "Arguments 'frame' and 'to_frame' must not be "
+            + "the same value (last is always exclusive)!"
+        )
 
     # convert frame numbers to indices (subtract number of first DCD frame)
     if key == "step":
@@ -73,16 +76,18 @@ def reshape_arguments(sframe, nframes, step, frame_start, frame_stop, key):
         fsta = sframe
     elif frame_start < 0:
         # start counting from behind (-1 = last frame, -2 = second last)
-        fsta = (nframes+step) + (frame_start*step)
+        fsta = (nframes + step) + (frame_start * step)
     else:
         fsta = frame_start
 
     # make values < 0 and None available for frame_start
     if frame_stop is None:
-        fsto = nframes + step  # add one step to be exclusive for last frame in read_frames-method
+        fsto = (
+            nframes + step
+        )  # add one step to be exclusive for last frame in read_frames-method
     elif frame_stop < 0:
         # make it possible to count from behind (-1 = last frame, -2 = second last)
-        fsto = (nframes+step) + (frame_stop*step)
+        fsto = (nframes + step) + (frame_stop * step)
     elif frame_stop == "no":
         fsto = fsta + step
     else:
@@ -96,14 +101,14 @@ def reshape_arguments(sframe, nframes, step, frame_start, frame_stop, key):
 
     # convert values to indices
     if frame_start < 0:
-        fsta = int(fsta/step)
+        fsta = int(fsta / step)
     else:
-        fsta = int((frame_start-sframe)/step)
+        fsta = int((frame_start - sframe) / step)
 
     if frame_stop < 0:
-        fsto = int(fsto/step)
+        fsto = int(fsto / step)
     else:
-        fsto  = int((fsto-sframe)/step)
+        fsto = int((fsto - sframe) / step)
 
     return (fsta, fsto)
 
@@ -117,6 +122,7 @@ def check_for_err(sf, nfr, ste, fst):
     """
 
     if not (sf <= fst <= nfr):
-        raise ValueError("{1} not between {0} and {2}! ".format(
-                         sf, fst, nfr) +
-                         "Choose another frame as starting point.")
+        raise ValueError(
+            "{1} not between {0} and {2}! ".format(sf, fst, nfr)
+            + "Choose another frame as starting point."
+        )

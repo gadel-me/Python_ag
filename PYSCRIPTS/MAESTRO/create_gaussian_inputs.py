@@ -11,18 +11,14 @@ parser = argparse.ArgumentParser(
     prog="create_inputs.py",
     formatter_class=argparse.RawTextHelpFormatter,
     description="Converts maestro output-files to amber coordinates and \
-                gaussian-input-files."
+                gaussian-input-files.",
 )
 
-parser.add_argument("jag_folders",
-                    nargs="*",
-                    help="Jaguar input folder."
-                    )
+parser.add_argument("jag_folders", nargs="*", help="Jaguar input folder.")
 
-parser.add_argument("-mdcrd_dir",
-                    default=None,
-                    help="Optional directory for amber coordinate file."
-                    )
+parser.add_argument(
+    "-mdcrd_dir", default=None, help="Optional directory for amber coordinate file."
+)
 
 args = parser.parse_args()
 

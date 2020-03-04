@@ -9,18 +9,19 @@ Convert a gaussian output-/log-file (very last entry) to a xyz-file.
 
 # Argument Parsing -------------------------------------------------------------
 parser = argparse.ArgumentParser(
-    formatter_class=argparse.RawTextHelpFormatter,
-    description=""
+    formatter_class=argparse.RawTextHelpFormatter, description=""
 )
 
-parser.add_argument("gau_out",
-                    metavar="foo.out|foo.log",
-                    help="Gaussian output-/logfile")
+parser.add_argument(
+    "gau_out", metavar="foo.out|foo.log", help="Gaussian output-/logfile"
+)
 
-parser.add_argument("-out",
-                    metavar="bar.mdcrd",
-                    default="bar.mdcrd",
-                    help="Name of mdcrd-file which will be written.")
+parser.add_argument(
+    "-out",
+    metavar="bar.mdcrd",
+    default="bar.mdcrd",
+    help="Name of mdcrd-file which will be written.",
+)
 
 args = parser.parse_args()
 

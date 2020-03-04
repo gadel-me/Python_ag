@@ -14,7 +14,7 @@ import Transformations as cgt
 import pantone_colors
 
 # VMD MODULES
-import atomsel   # Replaces AtomSel and atomselection
+import atomsel  # Replaces AtomSel and atomselection
 import axes
 import color
 import display
@@ -34,13 +34,23 @@ import Molecule
 import VMD
 
 
-#=============================================================================================#
+# =============================================================================================#
 # VMD HELPER FUNCTIONS
-#=============================================================================================#
+# =============================================================================================#
 PANTONE_COLORS = pantone_colors.pantone_colors_hex
 
 
-def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, resolution=200, radius=0.5, drawcolor="blue", cylinder_radius=0.01):
+def vmd_draw_angle(
+    molid,
+    frame,
+    atomids=None,
+    atm_coords=None,
+    canvas=False,
+    resolution=200,
+    radius=0.5,
+    drawcolor="blue",
+    cylinder_radius=0.01,
+):
     """
     Draws part of a circle to visualize the measured angle.
 
@@ -79,15 +89,15 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
 
     graphics.color(graphics_id, drawcolor)
 
-    #pdb.set_trace()
+    # pdb.set_trace()
     # define angle and rotational axis
-    vt1    = atm1Crds - atm2Crds
-    vt2    = atm3Crds - atm2Crds
-    vtRot  = np.cross(vt1, vt2)
+    vt1 = atm1Crds - atm2Crds
+    vt2 = atm3Crds - atm2Crds
+    vtRot = np.cross(vt1, vt2)
 
     # unit vectors for quaternions
-    vt1   /= np.linalg.norm(vt1)
-    vt2   /= np.linalg.norm(vt2)
+    vt1 /= np.linalg.norm(vt1)
+    vt2 /= np.linalg.norm(vt2)
     vtRot /= np.linalg.norm(vtRot)
 
     # define angle offset
@@ -105,28 +115,46 @@ def vmd_draw_angle(molid, frame, atomids=None, atm_coords=None, canvas=False, re
 
         # define quaternion
         q = Quaternion(axis=vtRot, angle=theta)
-        #print(q)
+        # print(q)
 
         # rotate vector
         vt_cur = q.rotate(vt1)
         vt_cur += atm2Crds
 
         if canvas is True and cntr != 0:
-            graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt_cur))
+            graphics.triangle(
+                graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt_cur)
+            )
         else:
-            graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt_cur), radius=cylinder_radius,
-                              resolution=20, filled=1)
+            graphics.cylinder(
+                graphics_id,
+                tuple(vt_pre),
+                tuple(vt_cur),
+                radius=cylinder_radius,
+                resolution=20,
+                filled=1,
+            )
         vt_pre = vt_cur
 
     if canvas is True:
-        graphics.triangle(graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt2 + atm2Crds))
+        graphics.triangle(
+            graphics_id, tuple(vt_pre), tuple(atm2Crds), tuple(vt2 + atm2Crds)
+        )
         graphics.material(graphics_id, "Transparent")
     else:
-        graphics.cylinder(graphics_id, tuple(vt_pre), tuple(vt2 + atm2Crds), radius=cylinder_radius,
-                          resolution=20, filled=1)
+        graphics.cylinder(
+            graphics_id,
+            tuple(vt_pre),
+            tuple(vt2 + atm2Crds),
+            radius=cylinder_radius,
+            resolution=20,
+            filled=1,
+        )
 
 
-def draw_torsion(molid, frame, atomids, canvas=False, resolution=50, radius=0.5, drawcolor="blue"):
+def draw_torsion(
+    molid, frame, atomids, canvas=False, resolution=50, radius=0.5, drawcolor="blue"
+):
     """
     """
     id1, id2, id3, id4 = atomids
@@ -154,27 +182,44 @@ def draw_torsion(molid, frame, atomids, canvas=False, resolution=50, radius=0.5,
     atm3Crds = np.array([x[id3], y[id3], z[id3]])
     atm4Crds = np.array([x[id4], y[id4], z[id4]])
 
-
     # define angle and rotational axis
-    #vt1    = atm1Crds - atm2Crds
-    #vt2    = atm3Crds - atm2Crds
-    #vtRot  = np.cross(vt1, vt2)
+    # vt1    = atm1Crds - atm2Crds
+    # vt2    = atm3Crds - atm2Crds
+    # vtRot  = np.cross(vt1, vt2)
 
     # unit vectors for quaternions
-    #vt1   /= np.linalg.norm(vt1)
-    #vt2   /= np.linalg.norm(vt2)
-    #vtRot /= np.linalg.norm(vtRot)
-    #print(atm1Crds)
-    _, cp1, cp2 = ag_geometry.get_dihedral(atm1Crds, atm2Crds, atm3Crds, atm4Crds, return_cross=True)
+    # vt1   /= np.linalg.norm(vt1)
+    # vt2   /= np.linalg.norm(vt2)
+    # vtRot /= np.linalg.norm(vtRot)
+    # print(atm1Crds)
+    _, cp1, cp2 = ag_geometry.get_dihedral(
+        atm1Crds, atm2Crds, atm3Crds, atm4Crds, return_cross=True
+    )
 
     # draw vectors between id2 and id3, therefor get the relevant vector
     center_pt = atm2Crds + (atm3Crds - atm2Crds) * 0.5
     cp1 += center_pt
     cp2 += center_pt
-    vmd_draw_angle(molid, frame, atm_coords=[cp1, center_pt, cp2], canvas=False, resolution=resolution, radius=radius, drawcolor="blue")
+    vmd_draw_angle(
+        molid,
+        frame,
+        atm_coords=[cp1, center_pt, cp2],
+        canvas=False,
+        resolution=resolution,
+        radius=radius,
+        drawcolor="blue",
+    )
 
 
-def vmd_label(molid, key, selection="all", label_color="white", textsize=1.0, offset=(0.0, 0.0, 0.0), idx_offset=None):
+def vmd_label(
+    molid,
+    key,
+    selection="all",
+    label_color="white",
+    textsize=1.0,
+    offset=(0.0, 0.0, 0.0),
+    idx_offset=None,
+):
     """
     Labels atoms by index, charge, etc.
 
@@ -214,7 +259,11 @@ def vmd_label(molid, key, selection="all", label_color="white", textsize=1.0, of
     graphics.color(molid, label_color)
 
     for atom_idx in atom_idxs:
-        label_pos = (xs[atom_idx] + offset[0], ys[atom_idx] + offset[1], zs[atom_idx] + offset[2])
+        label_pos = (
+            xs[atom_idx] + offset[0],
+            ys[atom_idx] + offset[1],
+            zs[atom_idx] + offset[2],
+        )
 
         if key == "index":
             labelformat = "{}"
@@ -225,9 +274,19 @@ def vmd_label(molid, key, selection="all", label_color="white", textsize=1.0, of
         graphics.text(molid, tuple(label_pos), label_text, textsize)
 
 
-def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
-                   cone_length=0.15, resolution=50, double_arrow=False,
-                   vmd_material="Basic1Pantone", drawcolor="blue", lstyle="solid"):
+def vmd_draw_arrow(
+    molid,
+    start,
+    end,
+    cylinder_radius=0.4,
+    cone_radius=1.0,
+    cone_length=0.15,
+    resolution=50,
+    double_arrow=False,
+    vmd_material="Basic1Pantone",
+    drawcolor="blue",
+    lstyle="solid",
+):
     """
     Draws an arrow from start to end using the arrow color and a certain radius
     for the cylinder and the cone (top).
@@ -257,11 +316,21 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
 
     # shorten vector so there is place for the cone at the ending point
     p_end = start + p_vector * (1 - cone_length)
-    graphics.cone(molid, tuple(p_end), tuple(end), radius=cone_radius, resolution=resolution)
-    graphics.cone(molid, tuple(p_start), tuple(start), radius=cone_radius, resolution=resolution)
+    graphics.cone(
+        molid, tuple(p_end), tuple(end), radius=cone_radius, resolution=resolution
+    )
+    graphics.cone(
+        molid, tuple(p_start), tuple(start), radius=cone_radius, resolution=resolution
+    )
 
     if lstyle == "solid":
-        graphics.cylinder(molid, tuple(p_start), tuple(p_end), radius=cylinder_radius, resolution=resolution)
+        graphics.cylinder(
+            molid,
+            tuple(p_start),
+            tuple(p_end),
+            radius=cylinder_radius,
+            resolution=resolution,
+        )
     elif lstyle == "dashed":
         # length of a single cylinder
         len_cylinder = 0.08
@@ -281,15 +350,23 @@ def vmd_draw_arrow(molid, start, end, cylinder_radius=0.4, cone_radius=1.0,
             inter_end = p_start + p_vector_unit * len_cylinder
 
             if i % 2 == 0:
-                graphics.cylinder(molid, tuple(p_start), tuple(inter_end), radius=cylinder_radius, resolution=resolution)
-                #pdb.set_trace()
+                graphics.cylinder(
+                    molid,
+                    tuple(p_start),
+                    tuple(inter_end),
+                    radius=cylinder_radius,
+                    resolution=resolution,
+                )
+                # pdb.set_trace()
 
             p_start = inter_end
     else:
         pass
 
 
-def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal", frame_idx=0):
+def vmd_render_scene(
+    image_out, image_size=[2000, 2000], renderer="TachyonLOptiXInternal", frame_idx=0
+):
     """
     Render the image using renderer with resolution image_size.
     """
@@ -303,7 +380,7 @@ def vmd_render_scene(image_out, image_size=[2000, 2000], renderer="TachyonLOptiX
     VMD.evaltcl("light 0 on")
     image = Image.open("{}.ppm".format(image_out))
     image.save("{}.png".format(image_out), format="PNG")
-    #display.set(size=disp_default_size)
+    # display.set(size=disp_default_size)
     display.update()
     display.update_ui()
     os.remove("{}.ppm".format(image_out))
@@ -321,9 +398,16 @@ def vmd_prepare_scene():
     display.update_ui()
 
 
-def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
-                      selection="all", scale=1.0, molid=0,
-                      vmd_material="Basic1Pantone", style="CPK 1.000000 0.300000 12.000000 12.000000"):
+def vmd_load_molecule(
+    coordsfile,
+    filetype="lammpsdata",
+    dcd=None,
+    selection="all",
+    scale=1.0,
+    molid=0,
+    vmd_material="Basic1Pantone",
+    style="CPK 1.000000 0.300000 12.000000 12.000000",
+):
     """
     """
     if not molecule.exists(molid):
@@ -334,13 +418,22 @@ def vmd_load_molecule(coordsfile, filetype="lammpsdata", dcd=None,
         else:
             molecule.load(filetype, coordsfile)
 
-        molrep.modrep(molid, 0, style=style, material=vmd_material, color="Name", sel=selection)
-        #trans.scale(scale)
+        molrep.modrep(
+            molid, 0, style=style, material=vmd_material, color="Name", sel=selection
+        )
+        # trans.scale(scale)
         VMD.evaltcl("scale to {}".format(scale))
 
 
-def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", drawcolor="blue",
-                 lstyle="solid", lwidth=1, lfreq=15):
+def vmd_draw_box(
+    lines,
+    molid=0,
+    vmd_material="Basic1Pantone",
+    drawcolor="blue",
+    lstyle="solid",
+    lwidth=1,
+    lfreq=15,
+):
     """
     Draw the unit cell in molid.
 
@@ -366,13 +459,13 @@ def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", drawcolor="blue",
         second line is skipped
 
     """
-    #all_molids = molecule.listall()
+    # all_molids = molecule.listall()
 
     graphics.material(molid, vmd_material)
     graphics.color(molid, drawcolor)
 
     for ucell_line in lines:
-        #print(ucell_line)
+        # print(ucell_line)
 
         # use a more rough dashing than the built-in one
         if lstyle == "--":
@@ -387,19 +480,33 @@ def vmd_draw_box(lines, molid=0, vmd_material="Basic1Pantone", drawcolor="blue",
                 pstop = pstart + subline
 
                 if cntr % 2 == 0:
-                    #print(cntr)
-                    graphics.line(molid, tuple(pstart), tuple(pstop),
-                                  style="solid", width=lwidth)
+                    # print(cntr)
+                    graphics.line(
+                        molid, tuple(pstart), tuple(pstop), style="solid", width=lwidth
+                    )
 
                 pstart = pstop
         else:
-            graphics.line(molid, tuple(ucell_line[0]), tuple(ucell_line[1]),
-                          style=lstyle, width=lwidth)
+            graphics.line(
+                molid,
+                tuple(ucell_line[0]),
+                tuple(ucell_line[1]),
+                style=lstyle,
+                width=lwidth,
+            )
 
 
-def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
-                          molid=0, vmd_material="Basic1Pantone", label_axis=True, textsize=1.0,
-                          offset=(0.0, 0.0, 0.0)):
+def vmd_draw_lattice_axes(
+    ucell_a,
+    ucell_b,
+    ucell_c,
+    origin=(-4, -4, -4),
+    molid=0,
+    vmd_material="Basic1Pantone",
+    label_axis=True,
+    textsize=1.0,
+    offset=(0.0, 0.0, 0.0),
+):
     """
     Draw the arrows that show the coordinate system of the box according to the lattice vectors.
 
@@ -441,21 +548,42 @@ def vmd_draw_lattice_axes(ucell_a, ucell_b, ucell_c, origin=(-4, -4, -4),
     graphics.material(molid, vmd_material)
 
     # axis a
-    vmd_draw_arrow(molid, origin, origin + ucell_a, cylinder_radius=0.4, cone_radius=1.0, drawcolor="red")
+    vmd_draw_arrow(
+        molid,
+        origin,
+        origin + ucell_a,
+        cylinder_radius=0.4,
+        cone_radius=1.0,
+        drawcolor="red",
+    )
     label_pos = origin + ucell_a * 1.05 + offset
 
     if label_axis is True:
         graphics.text(molid, tuple(label_pos), "a", textsize)
 
     # axis a
-    vmd_draw_arrow(molid, origin, origin + ucell_b, cylinder_radius=0.4, cone_radius=1.0, drawcolor="green")
+    vmd_draw_arrow(
+        molid,
+        origin,
+        origin + ucell_b,
+        cylinder_radius=0.4,
+        cone_radius=1.0,
+        drawcolor="green",
+    )
     label_pos = origin + ucell_b * 1.05 + offset
 
     if label_axis is True:
         graphics.text(molid, tuple(label_pos), "b", textsize)
 
     # axis c
-    vmd_draw_arrow(molid, origin, origin + ucell_c, cylinder_radius=0.4, cone_radius=1.0, drawcolor="blue")
+    vmd_draw_arrow(
+        molid,
+        origin,
+        origin + ucell_c,
+        cylinder_radius=0.4,
+        cone_radius=1.0,
+        drawcolor="blue",
+    )
     label_pos = origin + ucell_c * 1.05 + offset
 
     if label_axis is True:
@@ -569,7 +697,15 @@ def ucell_vects(supercell_dcd, fa, fb, fc, frame_id=-1):
     return (ucell_a, ucell_b, ucell_c)
 
 
-def draw_dotted_line(molid, start, end, sradius=0.01, drawcolor="blue", sdist=0.1, vmd_material="Basic1Pantone"):
+def draw_dotted_line(
+    molid,
+    start,
+    end,
+    sradius=0.01,
+    drawcolor="blue",
+    sdist=0.1,
+    vmd_material="Basic1Pantone",
+):
     """
     Draw a dotted line between two pints 'start' and 'end'.
 
@@ -630,7 +766,9 @@ def vmd_coords_numpy_arrays(molid, frame_id, selection="all"):
         return coords
 
 
-def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True, vmd_material="Basic1Pantone"):
+def draw_double_bonds(
+    molid, frame_id, bonds, radius=0.02, filled=True, vmd_material="Basic1Pantone"
+):
     """
     Draw double bonds using cylinders given a dictionary with according bonds.
 
@@ -661,7 +799,7 @@ def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True, vmd_mate
         # get vector which is the bond
         vt1_coords = vmd_coords_numpy_arrays(molid, frame_id, selection_str1)
         vt2_coords = vmd_coords_numpy_arrays(molid, frame_id, selection_str2)
-        #print(vt1_coords)
+        # print(vt1_coords)
         bond = vt2_coords - vt1_coords
 
         # get vector forms the plane with bond vector
@@ -699,16 +837,29 @@ def draw_double_bonds(molid, frame_id, bonds, radius=0.02, filled=True, vmd_mate
 
         # draw double bond - atom 1 to center using corresponding color
         graphics.color(molid, atom1_color)
-        graphics.cylinder(molid, tuple(tail_bond2), tuple(center), radius=radius, filled=filled)
+        graphics.cylinder(
+            molid, tuple(tail_bond2), tuple(center), radius=radius, filled=filled
+        )
 
         # draw double bond - center to atom 2 using corresponding color
         graphics.color(molid, atom2_color)
-        graphics.cylinder(molid, tuple(center), tuple(head_bond2), radius=radius, filled=filled)
+        graphics.cylinder(
+            molid, tuple(center), tuple(head_bond2), radius=radius, filled=filled
+        )
 
 
-def draw_circle(molid, rotaxis, center, angle=360, drawcolor="blue", circle_radius=0.2,
-                vmd_material="Basic1Pantone", cylinder_radius=0.01,
-                cone_radius=0.02, cone_length=10):
+def draw_circle(
+    molid,
+    rotaxis,
+    center,
+    angle=360,
+    drawcolor="blue",
+    circle_radius=0.2,
+    vmd_material="Basic1Pantone",
+    cylinder_radius=0.01,
+    cone_radius=0.02,
+    cone_length=10,
+):
     """
     Draw a circle around center using a rotational axis.
 
@@ -754,24 +905,28 @@ def draw_circle(molid, rotaxis, center, angle=360, drawcolor="blue", circle_radi
     angle *= 2
 
     for cangle in range(angle - cone_length):
-        #print(cangle)
+        # print(cangle)
         # convert angle to radians
         cangle = np.radians(cangle / 2)
-        #print(cangle)
+        # print(cangle)
 
         # define quaternion according to current angle
         quaternion = Quaternion(axis=rotaxis, angle=cangle)
 
         # define end of vector
         vector_end = quaternion.rotate(normal1)
-        #vector_end /= np.linalg.norm(vector_end)
-        #vector_end *= radius
+        # vector_end /= np.linalg.norm(vector_end)
+        # vector_end *= radius
 
-        graphics.cylinder(molid,
-                          tuple(center + vector_start),
-                          tuple(center + vector_end),
-                          radius=cylinder_radius, resolution=20, filled=1)
-        #graphics.sphere(molid, tuple(center + vector_start), radius=0.02)
+        graphics.cylinder(
+            molid,
+            tuple(center + vector_start),
+            tuple(center + vector_end),
+            radius=cylinder_radius,
+            resolution=20,
+            filled=1,
+        )
+        # graphics.sphere(molid, tuple(center + vector_start), radius=0.02)
 
         # new starting point is old ending
         vector_start = vector_end
@@ -782,13 +937,18 @@ def draw_circle(molid, rotaxis, center, angle=360, drawcolor="blue", circle_radi
     quaternion = Quaternion(axis=rotaxis, angle=np.radians(angle / 2 + cone_length))
     vector_end = quaternion.rotate(normal1)
 
-    graphics.cone(molid,
-                  tuple(center + vector_start),
-                  tuple(center + vector_end),
-                  radius=cone_radius, resolution=20)
+    graphics.cone(
+        molid,
+        tuple(center + vector_start),
+        tuple(center + vector_end),
+        radius=cone_radius,
+        resolution=20,
+    )
 
 
-def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, frame_id=-1):
+def get_rotational_matrix(
+    molid, atom_idx1, atom_idx2, axis_start, axis_end, frame_id=-1
+):
     """
     Get the matrix that rotates the bond between atom 1 and atom 2 onto axis.
 
@@ -821,8 +981,12 @@ def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, fra
 
     """
     # get relevant coordinates
-    atom_coords1 = vmd_coords_numpy_arrays(molid, frame_id, selection="index {}".format(atom_idx1))
-    atom_coords2 = vmd_coords_numpy_arrays(molid, frame_id, selection="index {}".format(atom_idx2))
+    atom_coords1 = vmd_coords_numpy_arrays(
+        molid, frame_id, selection="index {}".format(atom_idx1)
+    )
+    atom_coords2 = vmd_coords_numpy_arrays(
+        molid, frame_id, selection="index {}".format(atom_idx2)
+    )
 
     # define both axis
     axis1 = atom_coords2 - atom_coords1
@@ -837,7 +1001,9 @@ def get_rotational_matrix(molid, atom_idx1, atom_idx2, axis_start, axis_end, fra
         pass
 
     # angle alpha between axis1 and axis2 (so we can rotate about it)
-    alpha = np.arccos(np.dot(axis1, axis2) / (np.linalg.norm(axis1) * np.linalg.norm(axis2)))
+    alpha = np.arccos(
+        np.dot(axis1, axis2) / (np.linalg.norm(axis1) * np.linalg.norm(axis2))
+    )
 
     # rotational axis is crossproduct of axis1 and axis2
     rotaxis = np.cross(axis1, axis2)
@@ -870,7 +1036,11 @@ def measure_geometry(selection, molid, frame=-1, geometry_type="BOND"):
 
     geometry_type = geometry_type.upper()
 
-    if geometry_type != "BOND" and geometry_type != "ANGLE" and geometry_type != "DIHEDRAL":
+    if (
+        geometry_type != "BOND"
+        and geometry_type != "ANGLE"
+        and geometry_type != "DIHEDRAL"
+    ):
         raise IOError("{} Unknown geometry type!".format(geometry_type))
 
     geometry_vals = OrderedDict()
@@ -897,7 +1067,9 @@ def measure_geometry(selection, molid, frame=-1, geometry_type="BOND"):
                     # measure angle
                     if geometry_type == "ANGLE":
                         catms = sorted([atom_idx, atom_idx2, atom_idx3])
-                        cvalue = measure.angle(atom_idx, atom_idx2, atom_idx3, molid=molid, frame=frame)[0]
+                        cvalue = measure.angle(
+                            atom_idx, atom_idx2, atom_idx3, molid=molid, frame=frame
+                        )[0]
                         catms = [i + 1 for i in catms]
                         geometry_vals[tuple(catms)] = cvalue
                     else:
@@ -909,7 +1081,14 @@ def measure_geometry(selection, molid, frame=-1, geometry_type="BOND"):
                                 continue
 
                             catms = sorted([atom_idx, atom_idx2, atom_idx3, atom_idx4])
-                            cvalue = measure.dihedral(atom_idx, atom_idx2, atom_idx3, atom_idx4, molid=molid, frame=frame)[0]
+                            cvalue = measure.dihedral(
+                                atom_idx,
+                                atom_idx2,
+                                atom_idx3,
+                                atom_idx4,
+                                molid=molid,
+                                frame=frame,
+                            )[0]
                             catms = [i + 1 for i in catms]
                             geometry_vals[tuple(catms)] = cvalue
 
