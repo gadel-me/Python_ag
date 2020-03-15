@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.stats as stats
@@ -16,7 +15,11 @@ def ask4frame(first_last, num_frames):
     Ask for first or last frame.
     first_last      str; "first" or "last"
     """
-    print("Choose the {} frame of thermodynamic data (frames available: 0 to {})".format(first_last, num_frames))
+    print(
+        "Choose the {} frame of thermodynamic data (frames available: 0 to {})".format(
+            first_last, num_frames
+        )
+    )
     return input("> ")
 
 
@@ -25,7 +28,11 @@ def ask4keyword(xory, keywords):
     Ask for a keyword out of keywords.
     xory    str; "x-values" or "y-values"s
     """
-    print("Choose one thermo-keyword for the {} (keywords available: {}".format(xory, ", ".join(sorted(keywords))))
+    print(
+        "Choose one thermo-keyword for the {} (keywords available: {}".format(
+            xory, ", ".join(sorted(keywords))
+        )
+    )
     return input("> ")
 
 
@@ -47,10 +54,10 @@ def plot_qq(data, key):
     expected distribution.
     """
     data = np.array(data)
-    #pdb.set_trace()
-    qqplot(data, line='s')
+    # pdb.set_trace()
+    qqplot(data, line="s")
     # Set a title for current subplot
-    plt.title("QQ-Plot {}".format(key), fontweight='bold', fontsize=11)
+    plt.title("QQ-Plot {}".format(key), fontweight="bold", fontsize=11)
     plt.show()
 
 
@@ -69,7 +76,7 @@ def plot_histogram(data, key, label=None):
     Plot a histogram using given data
     """
     alpha = 0.05
-    #data = stats.zscore(data)
+    # data = stats.zscore(data)
 
     # Shapiro-Wilk Test (only for ~ 2000 samples)
     if len(data) <= 2000:
@@ -105,9 +112,17 @@ def plot_histogram(data, key, label=None):
         normal_anderson = result_anderson.statistic < cv_anderson
 
         if normal_anderson:
-            print("{:> .3f}: {:> .3f}, data looks normal (fail to reject H0)".format(sl_anderson, cv_anderson))
+            print(
+                "{:> .3f}: {:> .3f}, data looks normal (fail to reject H0)".format(
+                    sl_anderson, cv_anderson
+                )
+            )
         else:
-            print("{:> .3f}: {:> .3f}, data does not look normal (reject H0)".format(sl_anderson, cv_anderson))
+            print(
+                "{:> .3f}: {:> .3f}, data does not look normal (reject H0)".format(
+                    sl_anderson, cv_anderson
+                )
+            )
 
     print("\n")
 
@@ -139,7 +154,7 @@ def plot_histogram(data, key, label=None):
     # /// define mu and sigma
     mu = np.mean(data)  # mean of distribution
     median = np.median(data)
-    sigma = np.std(data)   # standard deviation of distribution
+    sigma = np.std(data)  # standard deviation of distribution
 
     # /// define bins
     num_bins = np.sqrt(len(data))
@@ -154,23 +169,36 @@ def plot_histogram(data, key, label=None):
     x_max = data[-1]
     x_range = np.linspace(x_min, x_max, num_bins)
 
-    plt.xlabel("delta", fontsize=10, fontweight='bold')
-    plt.ylabel("Probability density", fontsize=10, fontweight='bold')
+    plt.xlabel("delta", fontsize=10, fontweight="bold")
+    plt.ylabel("Probability density", fontsize=10, fontweight="bold")
 
     # histogram
-    nhist, bins, patches = plt.hist(data, bins=x_range, density=True, color="#E6E6FA",
-                                    align="mid", cumulative=False)
+    nhist, bins, patches = plt.hist(
+        data, bins=x_range, density=True, color="#E6E6FA", align="mid", cumulative=False
+    )
 
     # define best fit line for given x_range, mu and sigma
     pdf_x_values = bins
     pdf_y_values = mlab.normpdf(pdf_x_values, mu, sigma)
-    #pdb.set_trace()
-    plt.plot(pdf_x_values, pdf_y_values, "g--", linewidth=0.5, alpha=0.5,
-             label="Fitted data - estimated values")
+    # pdb.set_trace()
+    plt.plot(
+        pdf_x_values,
+        pdf_y_values,
+        "g--",
+        linewidth=0.5,
+        alpha=0.5,
+        label="Fitted data - estimated values",
+    )
 
     fitted_x, fitted_y = ags.gnuplot_gaussfit(bins[1:], nhist)
-    plt.plot(fitted_x, fitted_y, "r--", linewidth=0.5, alpha=0.5,
-             label="Fitted data - gnuplot fitting")
+    plt.plot(
+        fitted_x,
+        fitted_y,
+        "r--",
+        linewidth=0.5,
+        alpha=0.5,
+        label="Fitted data - gnuplot fitting",
+    )
 
     # line that goes through mu (=max. of gauss-function)
     plt.axvline(x=mu, linewidth=0.5, color="red", alpha=3.0, label="average")
@@ -183,33 +211,37 @@ def plot_histogram(data, key, label=None):
     coeff_var = (sigma / mu) * 100
 
     # Set a title for current subplot
-    plt.title("Histogram of %r $\mu=%.4f$ $\sigma=%.4f$ $VarCoeff=%.4f$ %%" % (key, mu, sigma, coeff_var),
-              fontweight='bold', fontsize=11)
+    plt.title(
+        "Histogram of %r $\mu=%.4f$ $\sigma=%.4f$ $VarCoeff=%.4f$ %%"
+        % (key, mu, sigma, coeff_var),
+        fontweight="bold",
+        fontsize=11,
+    )
 
     # chi square test to check the quality of the fit
     histo, bin_edges = np.histogram(data, bins=num_bins, normed=False)
     a1, b1 = stats.norm.fit(data)
     cdf = stats.norm.cdf(bin_edges, a1, b1)
-    #scaling_factor = len(data) * (x_max - x_min) / num_bins
+    # scaling_factor = len(data) * (x_max - x_min) / num_bins
     scaling_factor = len(data)
     # expected frequencies (haufigkeiten)
     expected_values = scaling_factor * np.diff(cdf)
     chisquare_results = stats.chisquare(histo, f_exp=expected_values, ddof=2)
     print(chisquare_results, "\n")
-    #pdb.set_trace()
+    # pdb.set_trace()
 
     # Kolmogorov-Smirnov test for goodness of fit
     kstest_results = stats.kstest(data, "norm")
     print(kstest_results, "\n")
 
-    #z_scores = stats.zscore(data)
+    # z_scores = stats.zscore(data)
     # Kolmogorov-Smirnov test for goodness of fit
-    #zscore_kstest_results = stats.kstest(z_scores, "norm")
-    #print(zscore_kstest_results, "\n")
+    # zscore_kstest_results = stats.kstest(z_scores, "norm")
+    # print(zscore_kstest_results, "\n")
 
-    #if kstest_results[1] > 0.05:
+    # if kstest_results[1] > 0.05:
     #    print("{} > 0.05: Normal distribution seems identical to given distribution (failed to reject H0)\n".format(kstest_results[1]))
-    #else:
+    # else:
     #    print("{} < 0.05: Normal distribution is not identical to given distribution (reject H0)\n".format(kstest_results[1]))
 
     plt.legend()
@@ -225,12 +257,18 @@ def plot_xy(xvals, yvals, xkey, ykey, linreg=False):
     # window layout#
     xyfig = plt.figure()
     xyfig.canvas.set_window_title("Scatter-Plot %s vs. %s" % (xkey, ykey))
-    plt.xlabel(xkey, fontsize=12, fontweight='bold')
-    plt.ylabel(ykey, fontsize=12, fontweight='bold')
-    plt.legend(bbox_to_anchor=(0., 1., 1., .1), loc="upper right",
-               borderaxespad=0., frameon=True, shadow=True, numpoints=1,
-               prop={'size': 10})
-    plt.title("Scatter-Plot: %r vs. %r" % (xkey, ykey), fontweight='bold')
+    plt.xlabel(xkey, fontsize=12, fontweight="bold")
+    plt.ylabel(ykey, fontsize=12, fontweight="bold")
+    plt.legend(
+        bbox_to_anchor=(0.0, 1.0, 1.0, 0.1),
+        loc="upper right",
+        borderaxespad=0.0,
+        frameon=True,
+        shadow=True,
+        numpoints=1,
+        prop={"size": 10},
+    )
+    plt.title("Scatter-Plot: %r vs. %r" % (xkey, ykey), fontweight="bold")
 
     if linreg is True:
         slope, intercept, r_value, p_value, std_err = stats.linregress(xvals, yvals)

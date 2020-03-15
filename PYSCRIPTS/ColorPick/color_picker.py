@@ -4,7 +4,7 @@ import imageio
 s, image = sys.argv
 
 im = imageio.imread(image)
-width  = im._meta.EXIF_MAIN.ExifImageWidth
+width = im._meta.EXIF_MAIN.ExifImageWidth
 height = im._meta.EXIF_MAIN.ExifImageHeight
 xi = 25
 x_pixels = [xi]
@@ -39,5 +39,5 @@ for x in x_pixels:
 
         print((x, y, pixel))
 
-#print(pantone_colors)
+# print(pantone_colors)
 print((len(set(pantone_colors))))

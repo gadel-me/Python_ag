@@ -1,4 +1,3 @@
-
 import pdb
 import os
 import numpy as np
@@ -10,7 +9,8 @@ import ag_vectalg as agv
 import struct
 import ag_lmpdcd_helpers as agldh
 from natsort import natsorted
-#import collections
+
+# import collections
 
 __version__ = "2018-10-25"
 
@@ -19,6 +19,7 @@ class LmpStuff(mdu.Universe):
     """
     Lammps-Data-File-Class
     """
+
     def __init__(self):
         """
         Initialize general stuff.
@@ -26,8 +27,14 @@ class LmpStuff(mdu.Universe):
         # generates lists for atom-, bond-, angle-types, etc. pp.
         mdu.Universe.__init__(self)
 
-    def read_lmpdat(self, lmpdat, energy_unit=None, angle_unit=None,
-                    overwrite_data=False, debug=False):
+    def read_lmpdat(
+        self,
+        lmpdat,
+        energy_unit=None,
+        angle_unit=None,
+        overwrite_data=False,
+        debug=False,
+    ):
         """
         energy_unit eV, kCal, kJ
         angle_unit  deg, rad
@@ -49,8 +56,10 @@ class LmpStuff(mdu.Universe):
 
         # check if there are frames existing before data is loaded
         if self.ts_coords:
-            print("***Info Loading coordinates from data-file on top of " +
-                  "already loaded coordinates!")
+            print(
+                "***Info Loading coordinates from data-file on top of "
+                + "already loaded coordinates!"
+            )
 
         lmpdat_box = mdb.Box(boxtype="lammps")
 
@@ -58,8 +67,9 @@ class LmpStuff(mdu.Universe):
             line = lmpdat_in.readline()
 
             if "CGCMM" in line.upper() and debug is True:
-                print("***Info: CGCMM-Style found! " +
-                      "Trying to parse additional data.")
+                print(
+                    "***Info: CGCMM-Style found! " + "Trying to parse additional data."
+                )
 
             for line in lmpdat_in:
                 # /// general stuff ///
@@ -131,7 +141,9 @@ class LmpStuff(mdu.Universe):
                     bnd_tp_old_new = {}
                     for bndcnt in range(total_bndtypes):
                         line = next(lmpdat_in)
-                        line, comment = self._split_line(line)  # split line into data and comment
+                        line, comment = self._split_line(
+                            line
+                        )  # split line into data and comment
                         line = line.split()
 
                         cur_bndtype = mds.Bond()
@@ -193,7 +205,7 @@ class LmpStuff(mdu.Universe):
                         cur_angtype.energy_unit = energy_unit
                         cur_angtype.angle_unit = angle_unit
                         ang_key = int(line[0])
-                        #print(ang_key)
+                        # print(ang_key)
 
                         if len(line) > 2:
                             cur_angtype.prm1 = float(line[1])
@@ -214,7 +226,9 @@ class LmpStuff(mdu.Universe):
                 # /// dihedral types(coeffs) ///
                 elif "Dihedral Coeffs" in line:
                     if debug is True:
-                        print("***Lammps-Data-Info: Only charmm-dihedral-style supported (atm)!")
+                        print(
+                            "***Lammps-Data-Info: Only charmm-dihedral-style supported (atm)!"
+                        )
                     next(lmpdat_in)  # skip empty line
 
                     # parse dihedral-type entries
@@ -246,7 +260,9 @@ class LmpStuff(mdu.Universe):
                 # /// improper types(coeffs) ///
                 elif "Improper Coeffs" in line:
                     if debug is True:
-                        print("***Lammps-Data-Info: Only cvff-improper-style supported (atm)!")
+                        print(
+                            "***Lammps-Data-Info: Only cvff-improper-style supported (atm)!"
+                        )
 
                     next(lmpdat_in)
 
@@ -289,22 +305,22 @@ class LmpStuff(mdu.Universe):
                         line = line.split()
 
                         # atm type, epsilon ii, sigma ii
-                        atm_key_i  = atm_tp_old_new[int(line[0])]
+                        atm_key_i = atm_tp_old_new[int(line[0])]
                         epsilon_ii = float(line[1])
-                        sigma_ii   = float(line[2])
+                        sigma_ii = float(line[2])
 
-                        #cur_pairtype = mds.LongRange(
+                        # cur_pairtype = mds.LongRange(
                         #    atm_key_i=atm_key_i,  # old atom-id to new one
                         #    epsilon_ij=epsilon_ii,
                         #    sigma_ij=sigma_ii,
                         #    pairs="ii"
-                        #)
-                        #self.pair_types.append(cur_pairtype)
+                        # )
+                        # self.pair_types.append(cur_pairtype)
 
                         # also give info to atm_types; decrease atom-index by 1
                         # since internally we are starting at 0
                         self.atm_types[atm_key_i].epsilon = epsilon_ii
-                        self.atm_types[atm_key_i].sigma   = sigma_ii
+                        self.atm_types[atm_key_i].sigma = sigma_ii
 
                     pair_ii = True
 
@@ -313,16 +329,16 @@ class LmpStuff(mdu.Universe):
                         print("***Lmpdat-Info: Parsing PairIJ Coeffs")
 
                     next(lmpdat_in)
-                    total_pairtypes = int(total_atmtypes*(total_atmtypes+1)/2)
+                    total_pairtypes = int(total_atmtypes * (total_atmtypes + 1) / 2)
 
                     for _ in range(total_pairtypes):
                         line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
-                        atm_key_i  = atm_tp_old_new[int(line[0])]
-                        atm_key_j  = atm_tp_old_new[int(line[1])]
+                        atm_key_i = atm_tp_old_new[int(line[0])]
+                        atm_key_j = atm_tp_old_new[int(line[1])]
                         epsilon_ij = float(line[2])
-                        sigma_ij   = float(line[3])
+                        sigma_ij = float(line[3])
 
                         # Still read IJ pair coeffs since they might differ from
                         # IJ mixing procedures
@@ -331,19 +347,19 @@ class LmpStuff(mdu.Universe):
                             atm_key_j=atm_key_j,
                             epsilon_ij=epsilon_ij,
                             sigma_ij=sigma_ij,
-                            pairs="ij"
+                            pairs="ij",
                         )
                         self.pair_types.append(cur_pairtype)
 
                         # get pair coefficients for each atom type (i.e. i == j)
                         if atm_key_i == atm_key_j:
                             self.atm_types[atm_key_i].epsilon = epsilon_ij
-                            self.atm_types[atm_key_i].sigma   = sigma_ij
+                            self.atm_types[atm_key_i].sigma = sigma_ij
 
                 # /// atoms entry ///
                 elif "Atoms" in line:
                     # read whole section first, sort by id, then re-index the atom-ids
-                    #self.atm_idx_id = {}
+                    # self.atm_idx_id = {}
                     atm_id_old_new = {}
                     tmp_ts = []
                     next(lmpdat_in)  # skip empty line
@@ -354,13 +370,15 @@ class LmpStuff(mdu.Universe):
                         line = next(lmpdat_in)
 
                         # divide line in lmpdat- and cgcmm-stuff
-                        #lmpdat_stuff, csitnam, cres = self._parse_cgcmm(line)  #TODO old garbage
+                        # lmpdat_stuff, csitnam, cres = self._parse_cgcmm(line)  #TODO old garbage
                         tmp_atm_lines.append(self._parse_cgcmm(line))
 
                     # sort lines by id
                     if debug is True:
-                        print("***Lammps-Data-Info: Sorting atoms by their id's, " +
-                              "starting with the smallest one from given data file.")
+                        print(
+                            "***Lammps-Data-Info: Sorting atoms by their id's, "
+                            + "starting with the smallest one from given data file."
+                        )
                     tmp_atm_lines = natsorted(tmp_atm_lines)
 
                     for atmcnt, sorted_line in enumerate(tmp_atm_lines):
@@ -368,7 +386,7 @@ class LmpStuff(mdu.Universe):
                         lmpdat_stuff, csitnam, cres = sorted_line
                         # translate original atom-ids to new internal ids
                         atm_id_old_new[int(lmpdat_stuff[0])] = atmcnt
-                        #self.atm_idx_id[atmcnt] = int(lmpdat_stuff[0])
+                        # self.atm_idx_id[atmcnt] = int(lmpdat_stuff[0])
 
                         # check if instance of Atom with id atmcnt already exists
                         # i.e. a data file have had already been loaded
@@ -377,11 +395,11 @@ class LmpStuff(mdu.Universe):
 
                             # overwrite data
                             if overwrite_data is True:
-                                #cur_atm.atm_id  = int(lmpdat_stuff[0])
-                                cur_atm.atm_id  = atmcnt
-                                cur_atm.grp_id  = int(lmpdat_stuff[1])
+                                # cur_atm.atm_id  = int(lmpdat_stuff[0])
+                                cur_atm.atm_id = atmcnt
+                                cur_atm.grp_id = int(lmpdat_stuff[1])
                                 cur_atm.atm_key = atm_tp_old_new[int(lmpdat_stuff[2])]
-                                cur_atm.chge    = float(lmpdat_stuff[3])
+                                cur_atm.chge = float(lmpdat_stuff[3])
 
                                 # parse cgcmm stuff if available
                                 if csitnam is not None:
@@ -393,33 +411,42 @@ class LmpStuff(mdu.Universe):
                             else:  # complement data
 
                                 if not hasattr(self.atoms[atmcnt], "atm_id"):
-                                    #cur_atm.atm_id  = int(lmpdat_stuff[0])
-                                    cur_atm.atm_id  = atmcnt
+                                    # cur_atm.atm_id  = int(lmpdat_stuff[0])
+                                    cur_atm.atm_id = atmcnt
 
                                 if not hasattr(self.atoms[atmcnt], "grp_id"):
-                                    cur_atm.grp_id  = int(lmpdat_stuff[1])
+                                    cur_atm.grp_id = int(lmpdat_stuff[1])
 
                                 if not hasattr(self.atoms[atmcnt], "atm_key"):
-                                    cur_atm.atm_key = atm_tp_old_new[int(lmpdat_stuff[2])]
+                                    cur_atm.atm_key = atm_tp_old_new[
+                                        int(lmpdat_stuff[2])
+                                    ]
 
                                 if not hasattr(self.atoms[atmcnt], "chge"):
-                                    cur_atm.chge    = float(lmpdat_stuff[3])
+                                    cur_atm.chge = float(lmpdat_stuff[3])
 
                                 # parse cgcmm stuff if available
-                                if not hasattr(self.atoms[atmcnt], "sitnam") and csitnam is not None:
+                                if (
+                                    not hasattr(self.atoms[atmcnt], "sitnam")
+                                    and csitnam is not None
+                                ):
                                     cur_atm.sitnam = csitnam
 
-                                if not hasattr(self.atoms[atmcnt], "cres") and cres is not None:
+                                if (
+                                    not hasattr(self.atoms[atmcnt], "cres")
+                                    and cres is not None
+                                ):
                                     cur_atm.res = cres
 
                         # new atom must be created
                         except IndexError:
-                            #atm_id=int(lmpdat_stuff[0])
-                            cur_atm = mds.Atom(atm_id=atmcnt,
-                                               grp_id=int(lmpdat_stuff[1]),
-                                               atm_key=atm_tp_old_new[int(lmpdat_stuff[2])],
-                                               chge=float(lmpdat_stuff[3])
-                                               )
+                            # atm_id=int(lmpdat_stuff[0])
+                            cur_atm = mds.Atom(
+                                atm_id=atmcnt,
+                                grp_id=int(lmpdat_stuff[1]),
+                                atm_key=atm_tp_old_new[int(lmpdat_stuff[2])],
+                                chge=float(lmpdat_stuff[3]),
+                            )
 
                             # # parse cgcmm stuff if available
                             if csitnam is not None:
@@ -448,11 +475,11 @@ class LmpStuff(mdu.Universe):
                         line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
-                        #line = [int(i) for i in line]
+                        # line = [int(i) for i in line]
 
                         cur_bnd = mds.Bond()
-                        #cur_bnd.bnd_id = int(line[0])
-                        cur_bnd.bnd_id  = bndcnt
+                        # cur_bnd.bnd_id = int(line[0])
+                        cur_bnd.bnd_id = bndcnt
                         cur_bnd.bnd_key = bnd_tp_old_new[int(line[1])]
                         # translate original atom-ids
                         cur_bnd.atm_id1 = atm_id_old_new[int(line[2])]
@@ -485,11 +512,11 @@ class LmpStuff(mdu.Universe):
                         line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
-                        #line = [int(i) for i in line]
+                        # line = [int(i) for i in line]
 
                         cur_ang = mds.Angle()
-                        #cur_ang.ang_id = int(line[0])
-                        cur_ang.ang_id  = angcnt
+                        # cur_ang.ang_id = int(line[0])
+                        cur_ang.ang_id = angcnt
                         cur_ang.ang_key = ang_tp_old_new[int(line[1])]
                         cur_ang.atm_id1 = atm_id_old_new[int(line[2])]
                         cur_ang.atm_id2 = atm_id_old_new[int(line[3])]
@@ -506,11 +533,11 @@ class LmpStuff(mdu.Universe):
                         line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
-                        #line = [int(i) for i in line]
+                        # line = [int(i) for i in line]
 
                         cur_dih = mds.Dihedral()
-                        #cur_dih.dih_id = int(line[0])
-                        cur_dih.dih_id  = dihcnt
+                        # cur_dih.dih_id = int(line[0])
+                        cur_dih.dih_id = dihcnt
                         cur_dih.dih_key = dih_tp_old_new[int(line[1])]
                         cur_dih.atm_id1 = atm_id_old_new[int(line[2])]
                         cur_dih.atm_id2 = atm_id_old_new[int(line[3])]
@@ -527,11 +554,11 @@ class LmpStuff(mdu.Universe):
                         line = next(lmpdat_in)
                         line, comment = self._split_line(line)
                         line = line.split()
-                        #line = [int(i) for i in line]
+                        # line = [int(i) for i in line]
 
                         cur_imp = mds.Improper()
-                        #cur_imp.imp_id = int(line[0])
-                        cur_imp.imp_id  = impcnt
+                        # cur_imp.imp_id = int(line[0])
+                        cur_imp.imp_id = impcnt
                         cur_imp.imp_key = imp_tp_old_new[int(line[1])]
                         cur_imp.atm_id1 = atm_id_old_new[int(line[2])]
                         cur_imp.atm_id2 = atm_id_old_new[int(line[3])]
@@ -589,19 +616,19 @@ class LmpStuff(mdu.Universe):
         Helper function for e.g. read_lmpdat to parse additional cgcmm-info
         from current line.
         """
-        cgcmm_info  = None
+        cgcmm_info = None
         lmpdat_info = None
-        sitnam      = None
-        residue     = None
+        sitnam = None
+        residue = None
 
         # check if a comment is in line -> cgcmm-info (should be) in line
         if "#" in cur_line:
             line = cur_line.split("#")  # split by '#'
             lmpdat_info = line[0].split()
-            cgcmm_info  = line[1].split()
+            cgcmm_info = line[1].split()
 
             if len(cgcmm_info) > 0:
-                sitnam  = cgcmm_info[0]
+                sitnam = cgcmm_info[0]
 
             if len(cgcmm_info) >= 2:
                 residue = cgcmm_info[1]
@@ -617,7 +644,7 @@ class LmpStuff(mdu.Universe):
         """
         data, comment = None, None
 
-        if '#' in curline:
+        if "#" in curline:
             line = curline.split("#")
             data = line[0]
             comment = line[1]
@@ -636,7 +663,7 @@ class LmpStuff(mdu.Universe):
         title:      str; title line of data file
         """
         # convert all internal indices back to original
-        #for ccontainer in ("atms", "bnds", "angs", "dihs", "imps"):
+        # for ccontainer in ("atms", "bnds", "angs", "dihs", "imps"):
         #    self._atm_bnd_ang_dih_imp_id_idx(entry=ccontainer, vice_versa=True)
 
         if title is False:
@@ -658,13 +685,15 @@ class LmpStuff(mdu.Universe):
                 pass  # already of lammps' box-type
         except IndexError:
             cbox = None
-            print("***Warning: No box specified - a simulation box must be specified for this file to work!")
+            print(
+                "***Warning: No box specified - a simulation box must be specified for this file to work!"
+            )
 
-        total_atms     = len(self.atoms)
-        total_bnds     = len(self.bonds)
-        total_angs     = len(self.angles)
-        total_dihs     = len(self.dihedrals)
-        total_imps     = len(self.impropers)
+        total_atms = len(self.atoms)
+        total_bnds = len(self.bonds)
+        total_angs = len(self.angles)
+        total_dihs = len(self.dihedrals)
+        total_imps = len(self.impropers)
         total_atmtypes = len(self.atm_types)
         total_bndtypes = len(self.bnd_types)
         total_angtypes = len(self.ang_types)
@@ -703,33 +732,46 @@ class LmpStuff(mdu.Universe):
             # skip if no box was defined in data file
             if cbox is not None:
                 if cbox.lmp_xlo is not None and cbox.lmp_xhi is not None:
-                    lmpdat_out.write("{:> 12.6f} {:> 12.6f}  xlo xhi\n".format(
-                        cbox.lmp_xlo, cbox.lmp_xhi)
+                    lmpdat_out.write(
+                        "{:> 12.6f} {:> 12.6f}  xlo xhi\n".format(
+                            cbox.lmp_xlo, cbox.lmp_xhi
+                        )
                     )
 
                 if cbox.lmp_ylo is not None and cbox.lmp_yhi is not None:
-                    lmpdat_out.write("{:> 12.6f} {:> 12.6f}  ylo yhi\n".format(
-                        cbox.lmp_ylo, cbox.lmp_yhi)
+                    lmpdat_out.write(
+                        "{:> 12.6f} {:> 12.6f}  ylo yhi\n".format(
+                            cbox.lmp_ylo, cbox.lmp_yhi
+                        )
                     )
 
                 if cbox.lmp_zlo is not None and cbox.lmp_zhi is not None:
-                    lmpdat_out.write("{:> 12.6f} {:> 12.6f}  zlo zhi\n".format(
-                        cbox.lmp_zlo, cbox.lmp_zhi)
+                    lmpdat_out.write(
+                        "{:> 12.6f} {:> 12.6f}  zlo zhi\n".format(
+                            cbox.lmp_zlo, cbox.lmp_zhi
+                        )
                     )
 
                 # only write triclinic section, if there box vectors and if they
                 # are bigger than 1e-5; otherwise neglect them
                 # None is always smaller than any number
-                lmp_xy_eval = cbox.lmp_xy > 1e-5
-                lmp_xz_eval = cbox.lmp_xz > 1e-5
-                lmp_yz_eval = cbox.lmp_yz > 1e-5
+                if (
+                    cbox.lmp_xy is not None
+                    or cbox.lmp_xz is not None
+                    or cbox.lmp_yz is not None
+                ):
+                    lmp_xy_eval = cbox.lmp_xy > 1e-5
+                    lmp_xz_eval = cbox.lmp_xz > 1e-5
+                    lmp_yz_eval = cbox.lmp_yz > 1e-5
 
-                if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
-                    lmpdat_out.write("{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
-                        cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz)
-                    )
+                    if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
+                        lmpdat_out.write(
+                            "{:> 12.6f} {:> 12.6f} {:> 12.6f} xy xz yz\n".format(
+                                cbox.lmp_xy, cbox.lmp_xz, cbox.lmp_yz
+                            )
+                        )
 
-                del (lmp_xy_eval, lmp_xz_eval, lmp_yz_eval)
+                    del (lmp_xy_eval, lmp_xz_eval, lmp_yz_eval)
 
                 lmpdat_out.write("\n")
 
@@ -739,14 +781,16 @@ class LmpStuff(mdu.Universe):
                 lmpdat_out.write("\n")
 
                 for iatyp in sorted(self.atm_types):
-                    lmpdat_out.write("{:>8d} {:>12.4f} ".format(
-                        iatyp, self.atm_types[iatyp].weigh)
+                    lmpdat_out.write(
+                        "{:>8d} {:>12.4f} ".format(iatyp, self.atm_types[iatyp].weigh)
                     )
 
                     # write atom-name if existent
                     if cgcmm:
                         try:
-                            lmpdat_out.write("# {}".format(self.atm_types[iatyp].sitnam))
+                            lmpdat_out.write(
+                                "# {}".format(self.atm_types[iatyp].sitnam)
+                            )
                         except AttributeError:
                             pass
 
@@ -759,21 +803,23 @@ class LmpStuff(mdu.Universe):
                 lmpdat_out.write("\n")
 
                 for ibtyp in self.bnd_types:
-                    lmpdat_out.write("{:>8d} {:>12.6f} {:>12.6f}".format(
-                        ibtyp,
-                        self.bnd_types[ibtyp].prm1,
-                        self.bnd_types[ibtyp].prm2)
+                    lmpdat_out.write(
+                        "{:>8d} {:>12.6f} {:>12.6f}".format(
+                            ibtyp,
+                            self.bnd_types[ibtyp].prm1,
+                            self.bnd_types[ibtyp].prm2,
+                        )
                     )
 
                     # write further parameters if existent
                     try:
                         if self.bnd_types[ibtyp].prm3:
-                            lmpdat_out.write("{:>12.6f}".format(
-                                self.bnd_types[ibtyp].prm3)
+                            lmpdat_out.write(
+                                "{:>12.6f}".format(self.bnd_types[ibtyp].prm3)
                             )
                         if self.bnd_types[ibtyp].prm4:
-                            lmpdat_out.write("{:>12.6f}".format(
-                                self.bnd_types[ibtyp].prm4)
+                            lmpdat_out.write(
+                                "{:>12.6f}".format(self.bnd_types[ibtyp].prm4)
                             )
                     except AttributeError:
                         pass
@@ -790,25 +836,31 @@ class LmpStuff(mdu.Universe):
                 lmpdat_out.write("\n")
 
                 for iangtyp in self.ang_types:
-                    lmpdat_out.write("{:>8d} {:>12.6f} {:>12.6f}".format(
-                        iangtyp, self.ang_types[iangtyp].prm1, self.ang_types[iangtyp].prm2)
+                    lmpdat_out.write(
+                        "{:>8d} {:>12.6f} {:>12.6f}".format(
+                            iangtyp,
+                            self.ang_types[iangtyp].prm1,
+                            self.ang_types[iangtyp].prm2,
+                        )
                     )
 
                     # write further parameters if existent
                     try:
                         if self.ang_types[iangtyp].prm3:
-                            lmpdat_out.write("{:>12.6f}".format(
-                                self.ang_types[iangtyp].prm3)
+                            lmpdat_out.write(
+                                "{:>12.6f}".format(self.ang_types[iangtyp].prm3)
                             )
                         if self.ang_types[iangtyp].prm4:
-                            lmpdat_out.write("{:>12.6f}".format(
-                                self.ang_types[iangtyp].prm4)
+                            lmpdat_out.write(
+                                "{:>12.6f}".format(self.ang_types[iangtyp].prm4)
                             )
                     except AttributeError:
                         pass
 
                     if self.ang_types[iangtyp].comment is not None:
-                        lmpdat_out.write("  #{}".format(self.ang_types[iangtyp].comment))
+                        lmpdat_out.write(
+                            "  #{}".format(self.ang_types[iangtyp].comment)
+                        )
 
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
@@ -825,12 +877,14 @@ class LmpStuff(mdu.Universe):
                     except AttributeError:
                         self.dih_types[idtyp].weigh_factor = 0
 
-                    lmpdat_out.write("{:>8d} {:>12.6f} {:>5d} {:>6d} {:>15.6f}".format(
-                        idtyp,
-                        self.dih_types[idtyp].prm_k,
-                        int(self.dih_types[idtyp].prm_n),
-                        int(self.dih_types[idtyp].prm_d),
-                        self.dih_types[idtyp].weigh_factor)
+                    lmpdat_out.write(
+                        "{:>8d} {:>12.6f} {:>5d} {:>6d} {:>15.6f}".format(
+                            idtyp,
+                            self.dih_types[idtyp].prm_k,
+                            int(self.dih_types[idtyp].prm_n),
+                            int(self.dih_types[idtyp].prm_d),
+                            self.dih_types[idtyp].weigh_factor,
+                        )
                     )
 
                     if self.dih_types[idtyp].comment is not None:
@@ -845,11 +899,13 @@ class LmpStuff(mdu.Universe):
                 lmpdat_out.write("\n")
 
                 for iityp in self.imp_types:
-                    lmpdat_out.write("{:>8d} {:>12.6f} {:>5d} {:>6d}".format(
-                        iityp,
-                        self.imp_types[iityp].prm_k,
-                        int(self.imp_types[iityp].prm_d),
-                        int(self.imp_types[iityp].prm_n))
+                    lmpdat_out.write(
+                        "{:>8d} {:>12.6f} {:>5d} {:>6d}".format(
+                            iityp,
+                            self.imp_types[iityp].prm_k,
+                            int(self.imp_types[iityp].prm_d),
+                            int(self.imp_types[iityp].prm_n),
+                        )
                     )
 
                     if self.imp_types[iityp].comment is not None:
@@ -878,16 +934,20 @@ class LmpStuff(mdu.Universe):
                     for prtyp in self.pair_types:
 
                         if prtyp.pairs == "ii":
-                            lmpdat_out.write("{:>8d} {:>12.6f} {:>12.6f}".format(
-                                prtyp.atm_key_i,
-                                prtyp.epsilon_ij,
-                                prtyp.sigma_ij))
+                            lmpdat_out.write(
+                                "{:>8d} {:>12.6f} {:>12.6f}".format(
+                                    prtyp.atm_key_i, prtyp.epsilon_ij, prtyp.sigma_ij
+                                )
+                            )
                         elif prtyp.pairs == "ij":
-                            lmpdat_out.write("{:>8d} {:>8d} {:>12.6f} {:>12.6f}".format(
-                                prtyp.atm_key_i,
-                                prtyp.atm_key_j,
-                                prtyp.epsilon_ij,
-                                prtyp.sigma_ij))
+                            lmpdat_out.write(
+                                "{:>8d} {:>8d} {:>12.6f} {:>12.6f}".format(
+                                    prtyp.atm_key_i,
+                                    prtyp.atm_key_j,
+                                    prtyp.epsilon_ij,
+                                    prtyp.sigma_ij,
+                                )
+                            )
                         else:
                             raise Warning("No type for current pair given!")
 
@@ -914,8 +974,8 @@ class LmpStuff(mdu.Universe):
 
                 for cidx, catm in enumerate(self.atoms):
                     # get atom-index for current atom
-                    #cidx = self.atm_id_idx[catm.atm_id]
-                    #cidx = catm.atm_id
+                    # cidx = self.atm_id_idx[catm.atm_id]
+                    # cidx = catm.atm_id
                     # atom-id
                     if not hasattr(catm, "atm_id"):
                         catm.atm_id = cidx
@@ -929,14 +989,16 @@ class LmpStuff(mdu.Universe):
                     if not hasattr(catm, "chge"):
                         catm.chge = 0.0
 
-                    lmpdat_out.write("{0:<8d} {1:<{width_2}d}      {2:<{width_3}d} {3: >10.6f} {c[0]: >16.6f} {c[1]: >12.6f} {c[2]: >12.6f}".format(
-                        catm.atm_id,
-                        catm.grp_id,
-                        catm.atm_key,
-                        catm.chge,
-                        width_2=longest_grp_id,
-                        width_3=longest_atm_key,
-                        c=self.ts_coords[frame_id][cidx])
+                    lmpdat_out.write(
+                        "{0:<8d} {1:<{width_2}d}      {2:<{width_3}d} {3: >10.6f} {c[0]: >16.6f} {c[1]: >12.6f} {c[2]: >12.6f}".format(
+                            catm.atm_id,
+                            catm.grp_id,
+                            catm.atm_key,
+                            catm.chge,
+                            width_2=longest_grp_id,
+                            width_3=longest_atm_key,
+                            c=self.ts_coords[frame_id][cidx],
+                        )
                     )
 
                     # write cgcmm info (if given)
@@ -958,16 +1020,20 @@ class LmpStuff(mdu.Universe):
                 longest_bnd_key = len(str(len(self.bnd_types)))
 
                 for cbnd in self.bonds:
-                    lmpdat_out.write("{0:<8d} {1:>{width_2}d}      {2:>{width_3}d} {3:>{width_3}d}".format(
-                        cbnd.bnd_id, cbnd.bnd_key, cbnd.atm_id1, cbnd.atm_id2,
-                        width_2=longest_bnd_key,
-                        width_3=longest_atm_id)
+                    lmpdat_out.write(
+                        "{0:<8d} {1:>{width_2}d}      {2:>{width_3}d} {3:>{width_3}d}".format(
+                            cbnd.bnd_id,
+                            cbnd.bnd_key,
+                            cbnd.atm_id1,
+                            cbnd.atm_id2,
+                            width_2=longest_bnd_key,
+                            width_3=longest_atm_id,
+                        )
                     )
 
                     # write bond order as well if given for current bond
                     if hasattr(cbnd, "bnd_order"):
                         lmpdat_out.write(" # {}".format(cbnd.bnd_order))
-
 
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
@@ -979,11 +1045,16 @@ class LmpStuff(mdu.Universe):
                 longest_ang_key = len(str(len(self.ang_types)))
 
                 for cang in self.angles:
-                    lmpdat_out.write("{0:<8d} {1:>{width_2}d}      {2:>{width_3}d} {3:>{width_3}d} {4:>{width_3}d}".format(
-                        cang.ang_id, cang.ang_key,
-                        cang.atm_id1, cang.atm_id2, cang.atm_id3,
-                        width_2=longest_ang_key,
-                        width_3=longest_atm_id)
+                    lmpdat_out.write(
+                        "{0:<8d} {1:>{width_2}d}      {2:>{width_3}d} {3:>{width_3}d} {4:>{width_3}d}".format(
+                            cang.ang_id,
+                            cang.ang_key,
+                            cang.atm_id1,
+                            cang.atm_id2,
+                            cang.atm_id3,
+                            width_2=longest_ang_key,
+                            width_3=longest_atm_id,
+                        )
                     )
 
                     lmpdat_out.write("\n")
@@ -996,11 +1067,17 @@ class LmpStuff(mdu.Universe):
                 longest_dih_key = len(str(len(self.dih_types)))
 
                 for cdih in self.dihedrals:
-                    lmpdat_out.write("{0:<8d} {1:>{width_2}d}      {2:>{width_3}d} {3:>{width_3}d} {4:>{width_3}d} {5:>{width_3}d}".format(
-                        cdih.dih_id, cdih.dih_key,
-                        cdih.atm_id1, cdih.atm_id2, cdih.atm_id3, cdih.atm_id4,
-                        width_2=longest_dih_key,
-                        width_3=longest_atm_id)
+                    lmpdat_out.write(
+                        "{0:<8d} {1:>{width_2}d}      {2:>{width_3}d} {3:>{width_3}d} {4:>{width_3}d} {5:>{width_3}d}".format(
+                            cdih.dih_id,
+                            cdih.dih_key,
+                            cdih.atm_id1,
+                            cdih.atm_id2,
+                            cdih.atm_id3,
+                            cdih.atm_id4,
+                            width_2=longest_dih_key,
+                            width_3=longest_atm_id,
+                        )
                     )
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
@@ -1011,12 +1088,17 @@ class LmpStuff(mdu.Universe):
                 longest_imp_key = len(str(len(self.imp_types)))
 
                 for cimp in self.impropers:
-                    lmpdat_out.write("{0:<8d} {1:>{width_2}d}      {2:>{width_3}d}  {3:>{width_3}d} {4:>{width_3}d} {5:>{width_3}d}".format(
-                        cimp.imp_id,
-                        cimp.imp_key,
-                        cimp.atm_id1, cimp.atm_id2, cimp.atm_id3, cimp.atm_id4,
-                        width_2=longest_imp_key,
-                        width_3=longest_atm_id)
+                    lmpdat_out.write(
+                        "{0:<8d} {1:>{width_2}d}      {2:>{width_3}d}  {3:>{width_3}d} {4:>{width_3}d} {5:>{width_3}d}".format(
+                            cimp.imp_id,
+                            cimp.imp_key,
+                            cimp.atm_id1,
+                            cimp.atm_id2,
+                            cimp.atm_id3,
+                            cimp.atm_id4,
+                            width_2=longest_imp_key,
+                            width_3=longest_atm_id,
+                        )
                     )
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
@@ -1025,9 +1107,10 @@ class LmpStuff(mdu.Universe):
                 lmpdat_out.write("# Forces\n\n")
 
                 for cidx, catm in enumerate(self.atoms):
-                    lmpdat_out.write("# {0:<8d} {c[0]: >16.6f} {c[1]: >12.6f} {c[2]: >12.6f}".format(
-                        catm.atm_id,
-                        c=self.ts_forces[frame_id][cidx])
+                    lmpdat_out.write(
+                        "# {0:<8d} {c[0]: >16.6f} {c[1]: >12.6f} {c[2]: >12.6f}".format(
+                            catm.atm_id, c=self.ts_forces[frame_id][cidx]
+                        )
                     )
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
@@ -1045,7 +1128,7 @@ class LmpStuff(mdu.Universe):
         Open DCD and read the remarks. This function must be called before
         anything else that has to do anything with file reading.
         """
-        self._dcdfile = open(dcd, 'rb')
+        self._dcdfile = open(dcd, "rb")
         self._read_header()
         self._read_title()
         # get position in file (bytes?) after header and title
@@ -1062,16 +1145,16 @@ class LmpStuff(mdu.Universe):
         Read header block.
         """
         self.extra_blck = None  # only if unit cell
-        self.has_4dims  = None  # purpose unknown
-        self.is_charmm  = False
+        self.has_4dims = None  # purpose unknown
+        self.is_charmm = False
 
         # header block
         hdr_blck = agldh.read_record(self._dcdfile)
-        hdr = struct.unpack('4c9if10i', hdr_blck)
+        hdr = struct.unpack("4c9if10i", hdr_blck)
         self.nframes = hdr[4]  # total number of frames
-        self.sframe  = hdr[5]  # number of start frame
-        self.step    = hdr[6]  # number of frames between each frame
-        self.lframe  = hdr[7]  # number of last frame
+        self.sframe = hdr[5]  # number of start frame
+        self.step = hdr[6]  # number of frames between each frame
+        self.lframe = hdr[7]  # number of last frame
 
         # check charmm-formatting
         if hdr[23] != 0:
@@ -1090,11 +1173,14 @@ class LmpStuff(mdu.Universe):
         # 2 title lines
         title_1 = agldh.read_record(self._dcdfile)  # 1st title block
         title_2 = agldh.read_record(self._dcdfile)  # 2nd title block
-        self.natoms, = struct.unpack("i", title_2)
+        (self.natoms,) = struct.unpack("i", title_2)
 
         if debug is True:
-            print("   Remark 1: {}\n   Remark 2: Number of Atoms: {}".format(
-                  title_1, self.natoms))
+            print(
+                "   Remark 1: {}\n   Remark 2: Number of Atoms: {}".format(
+                    title_1, self.natoms
+                )
+            )
 
     def _read_frame(self):
         """
@@ -1110,17 +1196,17 @@ class LmpStuff(mdu.Universe):
         x_coordset = agldh.read_record(self._dcdfile)
         y_coordset = agldh.read_record(self._dcdfile)
         z_coordset = agldh.read_record(self._dcdfile)
-        x = np.fromstring(x_coordset, dtype=np.dtype('f'), count=self.natoms)
-        y = np.fromstring(y_coordset, dtype=np.dtype('f'), count=self.natoms)
-        z = np.fromstring(z_coordset, dtype=np.dtype('f'), count=self.natoms)
+        x = np.fromstring(x_coordset, dtype=np.dtype("f"), count=self.natoms)
+        y = np.fromstring(y_coordset, dtype=np.dtype("f"), count=self.natoms)
+        z = np.fromstring(z_coordset, dtype=np.dtype("f"), count=self.natoms)
 
         # 4th dimension given? (has also to be read)
         if self.has_4dims:
             agldh.read_record(self._dcdfile)
-            #dims_4_blck = agldh.read_record(self._dcdfile)
-            #dunno = struct.unpack(str(self.natoms)+"i", dims_4_blck)
+            # dims_4_blck = agldh.read_record(self._dcdfile)
+            # dunno = struct.unpack(str(self.natoms)+"i", dims_4_blck)
 
-        return(x, y, z, cur_cell)
+        return (x, y, z, cur_cell)
 
     def _skip_frame(self):
         if self.extra_blck:
@@ -1138,13 +1224,17 @@ class LmpStuff(mdu.Universe):
         Sources:    https://github.com/MDAnalysis/mdanalysis/issues/187
         """
         if debug:
-            print("***Verbose: MB already read: {:.2f} MiB".format(self._dcdfile.tell() / 1000000))
+            print(
+                "***Verbose: MB already read: {:.2f} MiB".format(
+                    self._dcdfile.tell() / 1000000
+                )
+            )
 
         M_PI_2 = np.pi / 2
         # convert input to corresponding indices
-        frm, to_frm = agldh.reshape_arguments(self.sframe, self.nframes,
-                                              self.step, frame, to_frame,
-                                              frame_by)
+        frm, to_frm = agldh.reshape_arguments(
+            self.sframe, self.nframes, self.step, frame, to_frame, frame_by
+        )
 
         # preallocate memory for arrays to come
         if to_frame is None:
@@ -1153,7 +1243,11 @@ class LmpStuff(mdu.Universe):
             num_frames = abs(frm - to_frm)  # one frame is always read
 
         if debug is True:
-            print("***Info: Reading: Frame (start): {}, ToFrame (excluded): {}, NumFrames: {}".format(frm, to_frm, num_frames))
+            print(
+                "***Info: Reading: Frame (start): {}, ToFrame (excluded): {}, NumFrames: {}".format(
+                    frm, to_frm, num_frames
+                )
+            )
 
         x_set, y_set, z_set = agldh.deploy_array(num_frames, self.natoms)
         # fill arrays with coordinates
@@ -1170,24 +1264,30 @@ class LmpStuff(mdu.Universe):
                 z_set[ptr] = z
 
                 # create box and append to other boxes of trajectory
-                #TODO: Check if angles are right this way with triclinic cell
-                alpha = np.radians(90.0 - np.arcsin(cur_box[4])*90.0/M_PI_2)  # cosAB
-                beta  = np.radians(90.0 - np.arcsin(cur_box[3])*90.0/M_PI_2)  # cosAC
-                gamma = np.radians(90.0 - np.arcsin(cur_box[1])*90.0/M_PI_2)  # cosBC
-                cur_box = mdb.Box(ltc_alpha=alpha,
-                                  ltc_beta=beta,
-                                  ltc_gamma=gamma,
-                                  ltc_a=cur_box[0],
-                                  ltc_b=cur_box[2],
-                                  ltc_c=cur_box[5],
-                                  boxtype="lattice")
+                # TODO: Check if angles are right this way with triclinic cell
+                alpha = np.radians(
+                    90.0 - np.arcsin(cur_box[4]) * 90.0 / M_PI_2
+                )  # cosAB
+                beta = np.radians(90.0 - np.arcsin(cur_box[3]) * 90.0 / M_PI_2)  # cosAC
+                gamma = np.radians(
+                    90.0 - np.arcsin(cur_box[1]) * 90.0 / M_PI_2
+                )  # cosBC
+                cur_box = mdb.Box(
+                    ltc_alpha=alpha,
+                    ltc_beta=beta,
+                    ltc_gamma=gamma,
+                    ltc_a=cur_box[0],
+                    ltc_b=cur_box[2],
+                    ltc_c=cur_box[5],
+                    boxtype="lattice",
+                )
 
                 # convert lattice-box-type to lammps-box-type
                 cur_box.box_lat2lmp()
                 self.ts_boxes.append(cur_box)
 
                 # get step numbers per frame so we can later access them if wanted
-                #self.ts_steps.append(frame_num*self.step+self.sframe)
+                # self.ts_steps.append(frame_num*self.step+self.sframe)
                 ptr += 1
             elif frame_num > to_frm:
                 break
@@ -1261,6 +1361,7 @@ class LmpStuff(mdu.Universe):
 # Shortcut functions for common procedures
 ################################################################################
 
+
 def read_lmpdat(lmpdat=None, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     """
     Read a lammps data file and optionally a dcd file on top.
@@ -1316,7 +1417,17 @@ def read_lmpdat(lmpdat=None, dcd=None, frame_idx_start=-1, frame_idx_stop=-1):
     return md_sys
 
 
-def write_lmpdat(lmpdat_out, lmpdat_a, lmpdat_b=None, dcd_a=None, dcd_b=None, frame_idx_a=-1, frame_idx_b=-1, pair_coeffs=None, box_from_b=False):
+def write_lmpdat(
+    lmpdat_out,
+    lmpdat_a,
+    lmpdat_b=None,
+    dcd_a=None,
+    dcd_b=None,
+    frame_idx_a=-1,
+    frame_idx_b=-1,
+    pair_coeffs=None,
+    box_from_b=False,
+):
     """
     Write a lammps data file.
 
@@ -1404,7 +1515,9 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1, inverse=True):
         Index of the frame to use from the dcd file.
 
     """
-    md_sys = read_lmpdat(lmpdat, dcd, frame_idx_start=frame_idx - 1, frame_idx_stop=frame_idx)
+    md_sys = read_lmpdat(
+        lmpdat, dcd, frame_idx_start=frame_idx - 1, frame_idx_stop=frame_idx
+    )
 
     # generate planes that describe the box
     cart_box = copy.deepcopy(box)
@@ -1417,12 +1530,20 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1, inverse=True):
     plane_bc = agv.get_plane(cart_box.crt_b, cart_box.crt_c)
 
     # opposite planes to ab, ca and bc
-    plane_ab_c = [-1 * i for i in agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)]
-    plane_ca_b = [-1 * i for i in agv.get_plane(cart_box.crt_c, cart_box.crt_a, cart_box.crt_b)]
-    plane_bc_a = [-1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)]
+    plane_ab_c = [
+        -1 * i for i in agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)
+    ]
+    plane_ca_b = [
+        -1 * i for i in agv.get_plane(cart_box.crt_c, cart_box.crt_a, cart_box.crt_b)
+    ]
+    plane_bc_a = [
+        -1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)
+    ]
 
     # cut plane
-    md_sys.cut_shape(-1, inverse, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
+    md_sys.cut_shape(
+        -1, inverse, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a
+    )
 
     # buffer for box lengths to prevent clashes using pbc
     cart_box.box_cart2lat()
@@ -1444,7 +1565,7 @@ def cut_box(lmpdat_out, lmpdat, box, dcd=None, frame_idx=-1, inverse=True):
     md_sys.write_lmpdat(lmpdat_out, cgcmm=True)
 
 
-#class LmpDihedral(object):
+# class LmpDihedral(object):
 #    """Calculating the energy of the dihedral potential as in the lammps manual.
 #    Source: dihedral_style charmm.
 #    """

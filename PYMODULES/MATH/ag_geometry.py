@@ -1,4 +1,3 @@
-
 import math
 import itertools as it
 import numpy as np
@@ -10,7 +9,7 @@ import pdb
 __version__ = "2017-03-30"
 
 
-#* CENTER OF MASS, DRAW MOLECULAR SYSTEM ***************************************
+# * CENTER OF MASS, DRAW MOLECULAR SYSTEM ***************************************
 def get_coord_sys(vt_x, vt_y):
     """
     Return vector z and vector y', so an orthogonal coordinate system
@@ -32,7 +31,7 @@ def get_coord_sys(vt_x, vt_y):
     vt_e_x = agv.get_unit_vt(vt_x)
     # Projection of x on y
     vt_y_ex_dot = agv.dot(vt_y, vt_e_x)
-    vt_y_ex_dot = [vt_y_ex_dot*i for i in vt_e_x]
+    vt_y_ex_dot = [vt_y_ex_dot * i for i in vt_e_x]
     vt_y_proj = [(j - k) for j, k in it.izip(vt_y, vt_y_ex_dot)]
     # Unit vector of vector y
     vt_e_y = agv.get_unit_vt(vt_y_proj)
@@ -43,8 +42,9 @@ def get_coord_sys(vt_x, vt_y):
     return (vt_e_x, vt_e_y, vt_e_z)
 
 
-def test_coord_sys(vt_ex, vt_ey, vt_ez, precision=10,
-                   coordsys_errorfile="test_coord_sys.err"):
+def test_coord_sys(
+    vt_ex, vt_ey, vt_ez, precision=10, coordsys_errorfile="test_coord_sys.err"
+):
     """
     Test if axis of molecular system made by function 'coord_sys' are orthogonal
     and if each vector is a unit vector.
@@ -67,7 +67,7 @@ def test_coord_sys(vt_ex, vt_ey, vt_ez, precision=10,
     exey = round(agv.get_ang(vt_ex, vt_ey), precision)
     exez = round(agv.get_ang(vt_ex, vt_ez), precision)
     eyez = round(agv.get_ang(vt_ey, vt_ez), precision)
-    ortho = round(math.pi/2, precision)
+    ortho = round(math.pi / 2, precision)
 
     if exey != ortho:
         coordsys_errorfile.write(
@@ -109,23 +109,23 @@ def get_com(atomic_coordinates, atomic_masses):
     """
     # inverse sum of all masses
     # dividing 1 by the sum of masses right away is better for performance
-    inv_sum_masses = 1/sum(atomic_masses)
+    inv_sum_masses = 1 / sum(atomic_masses)
     # multiply each x-, y- and z-coordinate with its corresponding mass
     weighted_coords = []
 
     for cur_atomic_coord, cur_atomic_mass in it.izip(atomic_coordinates, atomic_masses):
-        weighted_coords.append(cur_atomic_coord[0]*cur_atomic_mass)
-        weighted_coords.append(cur_atomic_coord[1]*cur_atomic_mass)
-        weighted_coords.append(cur_atomic_coord[2]*cur_atomic_mass)
+        weighted_coords.append(cur_atomic_coord[0] * cur_atomic_mass)
+        weighted_coords.append(cur_atomic_coord[1] * cur_atomic_mass)
+        weighted_coords.append(cur_atomic_coord[2] * cur_atomic_mass)
 
     # sum all x-, y- and z-coordinates up (axis=0 means sum arrays vertically)
     sum_weight_vt = [
         sum(weighted_coords[0::3]),  # x
         sum(weighted_coords[1::3]),  # y
-        sum(weighted_coords[2::3])   # z
+        sum(weighted_coords[2::3]),  # z
     ]
     # divide summation of coordinates by the sum of all masses
-    center_of_mass = np.array([inv_sum_masses*i for i in sum_weight_vt])
+    center_of_mass = np.array([inv_sum_masses * i for i in sum_weight_vt])
     return center_of_mass
 
 
@@ -139,11 +139,11 @@ def get_cog(atomic_coordinates):
                 https://deparkes.co.uk/2015/02/28/how-to-find-the-centre-of-a-polygon-in-python/
     """
     num_coords = len(atomic_coordinates)
-    center_of_geometry = sum(atomic_coordinates)/num_coords
+    center_of_geometry = sum(atomic_coordinates) / num_coords
     return center_of_geometry
 
 
-#* SPHERE STUFF ****************************************************************
+# * SPHERE STUFF ****************************************************************
 def points_on_sphere(npoints, ndim=3, radius=None):
     """
     From:   http://stackoverflow.com/questions/33976911/generate-a-random-\
@@ -204,7 +204,7 @@ def point_in_sphere(pt_coords, s_radius, s_origin=[0, 0, 0]):
     px, py, pz = pt_coords
     sx, sy, sz = s_origin
 
-    if (px-sx)**2 + (py-sy)**2 + (pz-sz)**2 < s_radius**2:
+    if (px - sx) ** 2 + (py - sy) ** 2 + (pz - sz) ** 2 < s_radius ** 2:
         in_sphere = True
 
     return in_sphere
@@ -219,7 +219,7 @@ def point_in_cylinder(pt_coords, c_radius, c_origin=[0, 0, 0]):
     px, py = pt_coords[:2]
     cx, cy = c_origin[:2]
 
-    if (px-cx)**2 + (py-cy)**2 < c_radius**2:
+    if (px - cx) ** 2 + (py - cy) ** 2 < c_radius ** 2:
         in_cylinder = True
 
     return in_cylinder
@@ -287,7 +287,7 @@ def new_dihedral(p):
     p2 = p[2]
     p3 = p[3]
 
-    b0 = -1.0*(p1 - p0)
+    b0 = -1.0 * (p1 - p0)
     b1 = p2 - p1
     b2 = p3 - p2
 
@@ -300,8 +300,8 @@ def new_dihedral(p):
     #   = b0 minus component that aligns with b1
     # w = projection of b2 onto plane perpendicular to b1
     #   = b2 minus component that aligns with b1
-    v = b0 - np.dot(b0, b1)*b1
-    w = b2 - np.dot(b2, b1)*b1
+    v = b0 - np.dot(b0, b1) * b1
+    w = b2 - np.dot(b2, b1) * b1
 
     # angle between v and w in a plane is the torsion angle
     # v and w may not be normalized but that's fine since tan is y/x
@@ -356,7 +356,7 @@ def dist_plane_point(plane_vt_1, plane_vt_2, pt):
     mag = np.dot(pt, u_normal_vt)
 
     # get the vector normal to the plane through point with shortest magnitude
-    vt_d = u_normal_vt*mag
+    vt_d = u_normal_vt * mag
 
     return (vt_d, abs(mag))
 

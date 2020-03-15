@@ -7,7 +7,7 @@ with open(filename) as f:
     num_atoms = int(next(f))
     next(f)
 
-    for i in range(num_atoms/30):
+    for i in range(num_atoms / 30):
         with open("{}_{}.xyz".format(filename_out, i), "w") as fout:
             fout.write("30")
             fout.write("\n\n")
@@ -15,4 +15,3 @@ with open(filename) as f:
             for j in range(30):
                 line = next(f)
                 fout.write(line)
-

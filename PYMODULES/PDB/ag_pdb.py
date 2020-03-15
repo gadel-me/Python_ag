@@ -1,13 +1,13 @@
-
-
 import numpy as np
-#import copy
+
+# import copy
 import md_box as mdb
 import md_stars as mds
 import md_universe as mdu
-#import struct
-#import ag_lmpdcd_helpers as agldh
-#from natsort import natsorted
+
+# import struct
+# import ag_lmpdcd_helpers as agldh
+# from natsort import natsorted
 
 __version__ = "2019-03-07"
 
@@ -19,6 +19,7 @@ class PdbStuff(mdu.Universe):
 
     Sources: http://www.wwpdb.org/documentation/file-format-content/format33/sect8.html#CRYST1
     """
+
     def __init__(self):
         mdu.Universe.__init__(self)
 
@@ -34,16 +35,14 @@ class PdbStuff(mdu.Universe):
             all_pdb_coords = []
             tmp_bnds = []
 
-            while line != '':
+            while line != "":
                 if line.startswith("HETATM"):
                     atom_line = line.split()
                     atm_id = int(atom_line[1])
                     sitnam = atom_line[2]
                     coords = np.array([float(i) for i in atom_line[3:6]])
                     atm_id_old_new[atm_id] = atm_idx
-                    cur_atm = mds.Atom(
-                        atm_id=atm_idx,
-                        sitnam=sitnam)
+                    cur_atm = mds.Atom(atm_id=atm_idx, sitnam=sitnam)
                     self.atoms.append(cur_atm)
                     all_pdb_coords.append(coords)
                     atm_idx += 1
@@ -64,9 +63,9 @@ class PdbStuff(mdu.Universe):
 
                             if [id_1, id_2] not in tmp_bnds:
                                 tmp_bnds.append([id_1, id_2])
-                                cbnd = mds.Bond(bnd_id=bnd_idx,
-                                                atm_id1=id_1,
-                                                atm_id2=id_2)
+                                cbnd = mds.Bond(
+                                    bnd_id=bnd_idx, atm_id1=id_1, atm_id2=id_2
+                                )
                                 bnd_idx += 1
                                 self.bonds.append(cbnd)
                 elif line.startswith("CRYST1"):
@@ -77,8 +76,14 @@ class PdbStuff(mdu.Universe):
                     beta = float(line[40:47])
                     gamma = float(line[48:55])
                     cbox = mdb.Box(
-                        boxtype="lattice", ltc_a=a, ltc_b=b, ltc_c=c,
-                        ltc_alpha=alpha, ltc_beta=beta, ltc_gamma=gamma)
+                        boxtype="lattice",
+                        ltc_a=a,
+                        ltc_b=b,
+                        ltc_c=c,
+                        ltc_alpha=alpha,
+                        ltc_beta=beta,
+                        ltc_gamma=gamma,
+                    )
                     self.ts_boxes.append(cbox)
                 else:
                     pass
@@ -89,4 +94,4 @@ class PdbStuff(mdu.Universe):
             self.ts_coords.append(all_pdb_coords)
 
         self.fetch_molecules_by_bonds()
-        #self.mols_to_grps()
+        # self.mols_to_grps()

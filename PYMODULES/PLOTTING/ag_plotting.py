@@ -1,4 +1,3 @@
-
 import pdb
 import os
 import collections
@@ -16,7 +15,7 @@ import matplotlib as mpl
 try:
     os.environ["DISPLAY"]
 except KeyError:
-    mpl.use('Agg')
+    mpl.use("Agg")
 
 import matplotlib.pyplot as plt
 
@@ -33,7 +32,7 @@ def gnuplot_gaussfit_plot(data, xlabel=None, output=None):
         Name of the output-file(s)
 
     """
-    fig = plt.figure(figsize=(12, 8), facecolor='1.0')
+    fig = plt.figure(figsize=(12, 8), facecolor="1.0")
     mu = np.mean(data)
     median = np.median(data)
     sigma = np.std(data)
@@ -51,7 +50,9 @@ def gnuplot_gaussfit_plot(data, xlabel=None, output=None):
     x_range = np.linspace(x_min, x_max, num_bins)
 
     # measured histogram
-    nhist, bins, _ = plt.hist(data, bins=x_range, density=True, histtype="step", align="mid")
+    nhist, bins, _ = plt.hist(
+        data, bins=x_range, density=True, histtype="step", align="mid"
+    )
 
     # fitted gaussian curve
     fitted_x, fitted_y = gnuplot_gaussfit(bins[1:], nhist)
@@ -59,7 +60,12 @@ def gnuplot_gaussfit_plot(data, xlabel=None, output=None):
     plt.plot(fitted_x, fitted_y, linewidth=1.0, label="Fitted data")
     plt.xlabel(xlabel, size=12)
     plt.ylabel("Frequency", size=12)
-    plt.title(r"median={} $\mu$={:.3f} $\sigma$={:.3f} VarCoeff={:.3f} %".format(median, mu, sigma, coeff_var), size=16)
+    plt.title(
+        r"median={} $\mu$={:.3f} $\sigma$={:.3f} VarCoeff={:.3f} %".format(
+            median, mu, sigma, coeff_var
+        ),
+        size=16,
+    )
     fig.tight_layout()
     fig.legend(frameon=False)
     plt.savefig("{}.png".format(output), dpi=300)

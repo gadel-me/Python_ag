@@ -18,9 +18,9 @@ import ag_unify_md as agum
 import ag_unify_log as agul
 from restrain_scan import norm_energy
 
-#==============================================================================#
+# ==============================================================================#
 # Setup MPI
-#==============================================================================#
+# ==============================================================================#
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
@@ -69,9 +69,11 @@ def create_lmpdat(lmptop, xyz, output_name="foobar"):
         # replicate topology
         sys_lmptop.add_topology_replicate(int(n - 1), refresh_bonds=True)
     else:
-        raise Warning("Number of atoms in coordinates file is not a multiple of atoms in topology file!")
+        raise Warning(
+            "Number of atoms in coordinates file is not a multiple of atoms in topology file!"
+        )
 
-    #pdb.set_trace()
+    # pdb.set_trace()
     sys_lmptop.change_indices(incr=1, mode="increase")
     sys_lmptop.write_lmpdat(output_name, cgcmm=True)
 
@@ -119,7 +121,17 @@ def get_shift_vector(lmpdat, atoms_cog1, atoms_cog2, dcd=None, frame_id=-1):
 
 
 def minimize(lmpdat, settings_file, lmpcfg=None, output="foobar"):
-    thermargs = ["step", "temp", "pe", "ebond", "eangle", "edihed", "eimp", "evdwl", "ecoul"]
+    thermargs = [
+        "step",
+        "temp",
+        "pe",
+        "ebond",
+        "eangle",
+        "edihed",
+        "eimp",
+        "evdwl",
+        "ecoul",
+    ]
 
     lmp = lammps(cmdargs=["-screen", "lmp_out.txt"])
     lmp.command("log {}.lmplog".format(output))
@@ -140,7 +152,9 @@ def minimize(lmpdat, settings_file, lmpcfg=None, output="foobar"):
         lmp.command("variable E_hbond equal c_hb[2]")
         lmp.command("compute hb all pair hbond/dreiding/lj")
         lmp.command("variable n_hbond equal c_hb[1]")
-        lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
+        lmp.command(
+            "thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond"
+        )
     else:
         lmp.command("thermo_style custom " + " ".join(thermargs))
 
@@ -150,7 +164,7 @@ def minimize(lmpdat, settings_file, lmpcfg=None, output="foobar"):
     lmp.command("dump DUMP all dcd {} {}.dcd".format(10, output))
 
     # perform a minimization of the whole system
-    #lmp.command("min_style {}".format(min_style))
+    # lmp.command("min_style {}".format(min_style))
 
     try:
         lmp.command("minimize 1e-6 1e-9 2000000 1000000")
@@ -161,8 +175,18 @@ def minimize(lmpdat, settings_file, lmpcfg=None, output="foobar"):
     lmp.command("write_restart {}.lmprst".format(output))
 
 
-def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
-                     settings_file, save_step=100000, lmpcfg=None, lmpdat=None, rigid=False):
+def scan_coordinates(
+    lmprst,
+    displace_atoms,
+    frozen_atoms,
+    vt_shift,
+    output,
+    settings_file,
+    save_step=100000,
+    lmpcfg=None,
+    lmpdat=None,
+    rigid=False,
+):
     """
     Move one part of the molecule along a shifting vector with sp calculations.
 
@@ -207,7 +231,17 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
         other atoms
 
     """
-    thermargs = ["step", "temp", "pe", "ebond", "eangle", "edihed", "eimp", "evdwl", "ecoul"]
+    thermargs = [
+        "step",
+        "temp",
+        "pe",
+        "ebond",
+        "eangle",
+        "edihed",
+        "eimp",
+        "evdwl",
+        "ecoul",
+    ]
 
     lmp = lammps(cmdargs=["-screen", "lmp_out.txt"])
     lmp.command("log {}.lmplog".format(output))
@@ -230,7 +264,9 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
         lmp.command("variable E_hbond equal c_hb[2]")
         lmp.command("compute hb all pair hbond/dreiding/lj")
         lmp.command("variable n_hbond equal c_hb[1]")
-        lmp.command("thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond")
+        lmp.command(
+            "thermo_style custom " + " ".join(thermargs) + " v_n_hbond v_E_hbond"
+        )
     else:
         lmp.command("thermo_style custom " + " ".join(thermargs))
 
@@ -265,7 +301,11 @@ def scan_coordinates(lmprst, displace_atoms, frozen_atoms, vt_shift, output,
             # push one part farther away
             vt_add = -0.05 * vt_shift
 
-        lmp.command("displace_atoms displaced move {a[0]} {a[1]} {a[2]} units box".format(a=vt_add))
+        lmp.command(
+            "displace_atoms displaced move {a[0]} {a[1]} {a[2]} units box".format(
+                a=vt_add
+            )
+        )
 
         try:
 
@@ -285,7 +325,7 @@ def calculate_distances(lmpdat, dcd, idxs_atm1, idxs_atm2):
     """
     distances = []
     dimer_sys = read_lmpdat(lmpdat, dcd, frame_idx_start=0)
-    #pdb.set_trace()
+    # pdb.set_trace()
 
     for frame_idx in range(0, len(dimer_sys.ts_coords)):
 
@@ -320,8 +360,12 @@ def get_energies(lmplog):
         pot_energies.append(entry["PotEng"][-1])
         coul_energies.append(entry["E_coul"][-1])
         vdw_energies.append(entry["E_vdwl"][-1])
-        intra_energies.append(entry["E_bond"][-1] + entry["E_angle"][-1] +
-                              entry["E_dihed"][-1] + entry["E_impro"][-1])
+        intra_energies.append(
+            entry["E_bond"][-1]
+            + entry["E_angle"][-1]
+            + entry["E_dihed"][-1]
+            + entry["E_impro"][-1]
+        )
 
     return (pot_energies, coul_energies, vdw_energies, intra_energies)
 
@@ -331,13 +375,18 @@ def write_summary(distances, energies):
     """
     row = "{:> 20.4f} {:> 20.8f} {:> 20.4f} {:> 20.4f} {:> 20.4f}\n"
     with open("md_energies.txt", "w") as opened_file:
-        opened_file.write("{:>20s} {:>20s} {:>20s} {:>20s} {:>20s}\n".format(
-            "Distance [Angstrom]",
-            "PotEng [eV]",
-            "E_coul [eV]",
-            "E_vdwl [eV]",
-            "E_intra [eV]"))
-        for distance, pe, coule, vdwe, intrae in zip(distances, energies[0], energies[1], energies[2], energies[3]):
+        opened_file.write(
+            "{:>20s} {:>20s} {:>20s} {:>20s} {:>20s}\n".format(
+                "Distance [Angstrom]",
+                "PotEng [eV]",
+                "E_coul [eV]",
+                "E_vdwl [eV]",
+                "E_intra [eV]",
+            )
+        )
+        for distance, pe, coule, vdwe, intrae in zip(
+            distances, energies[0], energies[1], energies[2], energies[3]
+        ):
             opened_file.write(row.format(distance, pe, coule, vdwe, intrae))
 
 
@@ -345,9 +394,15 @@ if __name__ == "__main__":
     # force field and settings
     ITERATION = "208"
     DREIDING = "on"
-    SETTINGS_FILE = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/settings_dreiding_{}.lmpcfg".format(DREIDING)
-    FF_FILE = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/CBZ_gaff-{}_dreiding_{}.lmpcfg".format(ITERATION, DREIDING)
-    LMPDAT = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/4.forcefields/CBZ_gaff-{}_novdw.lmpdat".format(ITERATION)
+    SETTINGS_FILE = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/settings_dreiding_{}.lmpcfg".format(
+        DREIDING
+    )
+    FF_FILE = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/CBZ_gaff-{}_dreiding_{}.lmpcfg".format(
+        ITERATION, DREIDING
+    )
+    LMPDAT = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/4.forcefields/CBZ_gaff-{}_novdw.lmpdat".format(
+        ITERATION
+    )
 
     # H0 dimer
     execute_0H_scan = False
@@ -357,8 +412,12 @@ if __name__ == "__main__":
         XYZ_H0 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/0H_anti_opt/1.gaussian09/CBZ_0H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
         # iteration specific force field and settings
         # scan of the H-Bonds of two Carbamazepine molecules
-        EMIN_FOLDER = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/0H_anti_opt/gaff-{}_dreiding_{}/".format(ITERATION, DREIDING)
-        EMIN_OUT = "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_minimized".format(ITERATION, DREIDING)
+        EMIN_FOLDER = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/0H_anti_opt/gaff-{}_dreiding_{}/".format(
+            ITERATION, DREIDING
+        )
+        EMIN_OUT = "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_minimized".format(
+            ITERATION, DREIDING
+        )
 
         # MINIMIZATION
         LMPDAT_H0 = EMIN_FOLDER + EMIN_OUT + ".lmpdat"
@@ -375,7 +434,9 @@ if __name__ == "__main__":
         create_lmpdat(LMPDAT, XYZ_H0, output_name=LMPDAT_H0)
         minimize(LMPDAT_H0, SETTINGS_FILE, FF_FILE, output=EMIN_OUT)
 
-        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/0H_anti_relaxed_scan/1.vertical_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
+        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/0H_anti_relaxed_scan/1.vertical_scan/CBZ_gaff-{}_dreiding_{}".format(
+            ITERATION, DREIDING
+        )
 
         # scan
         try:
@@ -384,17 +445,40 @@ if __name__ == "__main__":
             pass
 
         os.chdir(WORKING_DIR)
-        VT_SHIFT = get_shift_vector(LMPDAT_H0, [14, 15, 16, 18, 20, 22], [44, 45, 46, 48, 50, 52], dcd=EMIN_DCD_H0)
+        VT_SHIFT = get_shift_vector(
+            LMPDAT_H0,
+            [14, 15, 16, 18, 20, 22],
+            [44, 45, 46, 48, 50, 52],
+            dcd=EMIN_DCD_H0,
+        )
         FROZEN_COORDS = [14, 15, 16, 18, 20, 22, 44, 45, 46, 48, 50, 52]
-        #FROZEN_COORDS = range(60)
+        # FROZEN_COORDS = range(60)
 
         scan_coordinates(
             EMIN_LMPRST_H0,
-            list(range(31, 61)), FROZEN_COORDS,
-            VT_SHIFT, "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
-            SETTINGS_FILE, lmpcfg=FF_FILE)
+            list(range(31, 61)),
+            FROZEN_COORDS,
+            VT_SHIFT,
+            "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
+            SETTINGS_FILE,
+            lmpcfg=FF_FILE,
+        )
 
-        write_summary(calculate_distances(LMPDAT_H0, "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan.dcd".format(ITERATION, DREIDING), [14, 15, 16, 18, 20, 22], [44, 45, 46, 48, 50, 52]), get_energies("CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan.lmplog".format(ITERATION, DREIDING)))
+        write_summary(
+            calculate_distances(
+                LMPDAT_H0,
+                "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan.dcd".format(
+                    ITERATION, DREIDING
+                ),
+                [14, 15, 16, 18, 20, 22],
+                [44, 45, 46, 48, 50, 52],
+            ),
+            get_energies(
+                "CBZ_Dimer_anti_0H_gaff-{}_dreiding_{}_scan.lmplog".format(
+                    ITERATION, DREIDING
+                )
+            ),
+        )
         norm_energy("md_energies.txt", "md_energies_normed.txt")
 
     # H2 dimer
@@ -403,8 +487,12 @@ if __name__ == "__main__":
     if execute_2H_scan is True:
         XYZ_H2 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/1.geom_opt/2.dimers/2H_anti_opt/1.gaussian09/CBZ_2H_sp_wB97XD_cc-pVTZ.gau.out.xyz"
         # scan of the H-Bonds of two Carbamazepine molecules
-        EMIN_FOLDER = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/2H_anti_opt/gaff-{}_dreiding_{}/".format(ITERATION, DREIDING)
-        EMIN_OUT = "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_minimized".format(ITERATION, DREIDING)
+        EMIN_FOLDER = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/2.dimers/2H_anti_opt/gaff-{}_dreiding_{}/".format(
+            ITERATION, DREIDING
+        )
+        EMIN_OUT = "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_minimized".format(
+            ITERATION, DREIDING
+        )
 
         # MINIMIZATION
         LMPDAT_H2 = EMIN_FOLDER + EMIN_OUT + ".lmpdat"
@@ -420,7 +508,9 @@ if __name__ == "__main__":
         create_lmpdat(LMPDAT, XYZ_H2, output_name=LMPDAT_H2)
         minimize(LMPDAT_H2, SETTINGS_FILE, FF_FILE, output=EMIN_OUT)
 
-        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/2H_anti_relaxed_scan/1.horizontal_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
+        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/2H_anti_relaxed_scan/1.horizontal_scan/CBZ_gaff-{}_dreiding_{}".format(
+            ITERATION, DREIDING
+        )
 
         # scan
         try:
@@ -433,15 +523,29 @@ if __name__ == "__main__":
 
         scan_coordinates(
             EMIN_LMPRST_H2,
-            list(range(31, 61)), [25, 26, 28, 55, 56, 58],
-            VT_SHIFT, "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
-            SETTINGS_FILE, lmpcfg=FF_FILE)
+            list(range(31, 61)),
+            [25, 26, 28, 55, 56, 58],
+            VT_SHIFT,
+            "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan".format(ITERATION, DREIDING),
+            SETTINGS_FILE,
+            lmpcfg=FF_FILE,
+        )
 
         write_summary(
             calculate_distances(
-                LMPDAT_H2, "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan.dcd".format(ITERATION, DREIDING),
-                [25], [55]),
-            get_energies("CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan.lmplog".format(ITERATION, DREIDING)))
+                LMPDAT_H2,
+                "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan.dcd".format(
+                    ITERATION, DREIDING
+                ),
+                [25],
+                [55],
+            ),
+            get_energies(
+                "CBZ_Dimer_anti_2H_gaff-{}_dreiding_{}_scan.lmplog".format(
+                    ITERATION, DREIDING
+                )
+            ),
+        )
 
         norm_energy("md_energies.txt", "md_energies_normed.txt")
 
@@ -450,7 +554,9 @@ if __name__ == "__main__":
 
     if EXECUTE_CH_O25_SCAN is True:
         XYZ_CH_O26 = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/2.ab_initio/3.scans/1.dimer_scans/CH-O_rigid_scan/2.quantum_espresso/1.rigid_geometry/1.InputFiles/CBZ_Dimer_CH-O.xyz"
-        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/CH-O_rigid_scan/CBZ_gaff-{}_dreiding_{}".format(ITERATION, DREIDING)
+        WORKING_DIR = "/home/gadelmeier/SSHFS/hades/Research.new/carbamazepine/3.1.force_field_gaff/3.scans/2.dimer_scans/CH-O_rigid_scan/CBZ_gaff-{}_dreiding_{}".format(
+            ITERATION, DREIDING
+        )
 
         # scan
         try:
@@ -473,12 +579,23 @@ if __name__ == "__main__":
             lmpcfg=FF_FILE,
             lmpdat=LMPDAT_CH_O25,
             save_step=1,
-            rigid=True)
+            rigid=True,
+        )
 
         write_summary(
             calculate_distances(
-                LMPDAT_CH_O25, "CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan.dcd".format(ITERATION, DREIDING),
-                [13], [56]),
-            get_energies("CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan.lmplog".format(ITERATION, DREIDING)))
+                LMPDAT_CH_O25,
+                "CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan.dcd".format(
+                    ITERATION, DREIDING
+                ),
+                [13],
+                [56],
+            ),
+            get_energies(
+                "CBZ_Dimer_CH-O_gaff-{}_dreiding_{}_scan.lmplog".format(
+                    ITERATION, DREIDING
+                )
+            ),
+        )
 
         norm_energy("md_energies.txt", "md_energies_normed.txt")

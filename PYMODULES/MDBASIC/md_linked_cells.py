@@ -1,4 +1,3 @@
-
 import time
 import math
 import numpy as np
@@ -11,11 +10,18 @@ class LinkedCells(object):
     """
     Create linked cells for the atoms of a simulation box.
     """
-    def __init__(self,
-                 atm_coords,
-                 ltc_a, ltc_b, ltc_c,
-                 ltc_alpha, ltc_beta, ltc_gamma,
-                 coords_type="cartesian"):
+
+    def __init__(
+        self,
+        atm_coords,
+        ltc_a,
+        ltc_b,
+        ltc_c,
+        ltc_alpha,
+        ltc_beta,
+        ltc_gamma,
+        coords_type="cartesian",
+    ):
         """
         In order to create linked cells, the coordinates of the atoms
         and the box are needed.
@@ -26,7 +32,7 @@ class LinkedCells(object):
         self.ltc_b = ltc_b
         self.ltc_c = ltc_c
         self.ltc_alpha = ltc_alpha
-        self.ltc_beta  = ltc_beta
+        self.ltc_beta = ltc_beta
         self.ltc_gamma = ltc_gamma
         self.ra = None
         self.rb = None
@@ -44,14 +50,24 @@ class LinkedCells(object):
         """
         if to_fractional is True:
             # matrix for conversion: cartesian -> fractional
-            M_cf = agc.M_cart2fract(self.ltc_a, self.ltc_b, self.ltc_c,
-                                    self.ltc_alpha, self.ltc_beta,
-                                    self.ltc_gamma)
+            M_cf = agc.M_cart2fract(
+                self.ltc_a,
+                self.ltc_b,
+                self.ltc_c,
+                self.ltc_alpha,
+                self.ltc_beta,
+                self.ltc_gamma,
+            )
         elif to_cartesian is True:
             # matrix for conversion: fractional -> cartesian
-            M_cf = agc.M_fract2cart(self.ltc_a, self.ltc_b, self.ltc_c,
-                                    self.ltc_alpha, self.ltc_beta,
-                                    self.ltc_gamma)
+            M_cf = agc.M_fract2cart(
+                self.ltc_a,
+                self.ltc_b,
+                self.ltc_c,
+                self.ltc_alpha,
+                self.ltc_beta,
+                self.ltc_gamma,
+            )
         else:
             raise ValueError("fractional or cartesian must be True!")
 
@@ -86,21 +102,29 @@ class LinkedCells(object):
             start = time.time()
 
         # cell division-factors
-        self.ra = int(math.ceil(self.ltc_a/rcut_a))
-        self.rb = int(math.ceil(self.ltc_b/rcut_b))
-        self.rc = int(math.ceil(self.ltc_c/rcut_c))
+        self.ra = int(math.ceil(self.ltc_a / rcut_a))
+        self.rb = int(math.ceil(self.ltc_b / rcut_b))
+        self.rc = int(math.ceil(self.ltc_c / rcut_c))
 
         if debug is True:
-            print("***Linked-Cells Info: Box side lengths had to be adjusted to fit box vectors:\n" +
-                  "{:<22s}Side a: {:.3f}, Side b: {:.3f} Side_c: {:.3f}".format(" ",
-                                                                                self.ltc_a/self.ra,
-                                                                                self.ltc_b/self.rb,
-                                                                                self.ltc_c/self.rc))
+            print(
+                "***Linked-Cells Info: Box side lengths had to be adjusted to fit box vectors:\n"
+                + "{:<22s}Side a: {:.3f}, Side b: {:.3f} Side_c: {:.3f}".format(
+                    " ",
+                    self.ltc_a / self.ra,
+                    self.ltc_b / self.rb,
+                    self.ltc_c / self.rc,
+                )
+            )
 
-        avail_max_dist = math.sqrt(rcut_a**2+rcut_b**2+rcut_c**2)
+        avail_max_dist = math.sqrt(rcut_a ** 2 + rcut_b ** 2 + rcut_c ** 2)
 
         if debug is True:
-            print("***Linked-Cells Info: Max distance between two atoms: {}".format(avail_max_dist))
+            print(
+                "***Linked-Cells Info: Max distance between two atoms: {}".format(
+                    avail_max_dist
+                )
+            )
 
         linked_cells = []
 
@@ -123,15 +147,15 @@ class LinkedCells(object):
             linked_cells.append(clst1)
 
         # sub cell fractions
-        rca = 1/self.ra
-        rcb = 1/self.rb
-        rcc = 1/self.rc
+        rca = 1 / self.ra
+        rcb = 1 / self.rb
+        rcc = 1 / self.rc
 
         # get all sub lengths (fractional coordinates) in which the cell is divided
         # (for each box vector)
-        subcell_a = [i*rca for i in range(1, self.ra+1)]  # e.g. 1/3, 2/3, 3/3
-        subcell_b = [i*rcb for i in range(1, self.rb+1)]
-        subcell_c = [i*rcc for i in range(1, self.rc+1)]
+        subcell_a = [i * rca for i in range(1, self.ra + 1)]  # e.g. 1/3, 2/3, 3/3
+        subcell_b = [i * rcb for i in range(1, self.rb + 1)]
+        subcell_c = [i * rcc for i in range(1, self.rc + 1)]
 
         # sub cell-index dictionary
         atm_idx_sub_cell = {}
@@ -175,8 +199,11 @@ class LinkedCells(object):
 
         # some verbose stuff
         end = time.time()
-        total_cells = self.ra*self.rb*self.rc
+        total_cells = self.ra * self.rb * self.rc
 
         if debug is True:
-            print("***Linked-Cells Info: Took {} seconds to build {} linked cells.".format((end - start),
-                  total_cells))
+            print(
+                "***Linked-Cells Info: Took {} seconds to build {} linked cells.".format(
+                    (end - start), total_cells
+                )
+            )

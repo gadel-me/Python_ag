@@ -11,7 +11,7 @@ import ag_vectalg as agv
 import own_vmdfunctions as ovmd
 import ag_unify_md as agum
 
-import atomsel   # Replaces AtomSel and atomselection
+import atomsel  # Replaces AtomSel and atomselection
 import axes
 import color
 import display
@@ -38,13 +38,19 @@ change their representation and take a snapshot of the scene.
 home = os.environ["HOME"]
 
 # structure files
-cbz_gOpt         = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/1.resp_charges/2-geomOpt/CBZ_gau_Opt_log.xyz".format(home)
-#cbz_gaff2_lmpdat = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Iteration_3-2/Iteration-3-2_best.lmpdat".format(home)
-#cbz_gaff2_dcd    = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Iteration_3-2/Iteration-3-2_best_in_vacuo.dcd".format(home)
-#cbz_gaff_lmpdat  = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Standard_gaff/CBZ.lmpdat".format(home)
-#cbz_gaff_dcd     = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Standard_gaff/Standard_gaff_in_vacuo.dcd".format(home)
-cbz_gaff2_lmpdat = "{}/Research/PAPERS/2017_12/CBZ_FF-evaluation/results/average_structures/cbz_gaff2_average.lmpdat".format(home)
-cbz_gaff_lmpdat  = "{}/Research/PAPERS/2017_12/CBZ_FF-evaluation/results/average_structures/cbz_gaff_average.lmpdat".format(home)
+cbz_gOpt = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/1.resp_charges/2-geomOpt/CBZ_gau_Opt_log.xyz".format(
+    home
+)
+# cbz_gaff2_lmpdat = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Iteration_3-2/Iteration-3-2_best.lmpdat".format(home)
+# cbz_gaff2_dcd    = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Iteration_3-2/Iteration-3-2_best_in_vacuo.dcd".format(home)
+# cbz_gaff_lmpdat  = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Standard_gaff/CBZ.lmpdat".format(home)
+# cbz_gaff_dcd     = "{}/Research/FORCE_FIELDS/AMBER/Molecules/CBZ_gaff2/4.2.test_MDs/Standard_gaff/Standard_gaff_in_vacuo.dcd".format(home)
+cbz_gaff2_lmpdat = "{}/Research/PAPERS/2017_12/CBZ_FF-evaluation/results/average_structures/cbz_gaff2_average.lmpdat".format(
+    home
+)
+cbz_gaff_lmpdat = "{}/Research/PAPERS/2017_12/CBZ_FF-evaluation/results/average_structures/cbz_gaff_average.lmpdat".format(
+    home
+)
 
 # change the scene
 VMD.evaltcl("display shadows off")
@@ -56,21 +62,27 @@ display.set(depthcue=0)
 # load mol and change its representation
 # geometry optimized cbz
 licor_style = "Licorice 0.1 50 50"
-sel_no_h    = "not element H"
+sel_no_h = "not element H"
 
 if molecule.exists(0) != 1:
     molecule.load("xyz", cbz_gOpt)
-    molrep.modrep(0, 0, sel=sel_no_h, style=licor_style, material="AOChalky", color="ColorID 7")
+    molrep.modrep(
+        0, 0, sel=sel_no_h, style=licor_style, material="AOChalky", color="ColorID 7"
+    )
 
 if molecule.exists(1) != 1:
-    #molecule.load("lammpsdata", cbz_gaff2_lmpdat, "dcd", cbz_gaff2_dcd)
+    # molecule.load("lammpsdata", cbz_gaff2_lmpdat, "dcd", cbz_gaff2_dcd)
     molecule.load("lammpsdata", cbz_gaff2_lmpdat)
-    molrep.modrep(1, 0, sel=sel_no_h, style=licor_style, material="AOChalky", color="ColorID 0")
+    molrep.modrep(
+        1, 0, sel=sel_no_h, style=licor_style, material="AOChalky", color="ColorID 0"
+    )
 
 if molecule.exists(2) != 1:
-    #molecule.load("lammpsdata", cbz_gaff_lmpdat, "dcd", cbz_gaff_dcd)
+    # molecule.load("lammpsdata", cbz_gaff_lmpdat, "dcd", cbz_gaff_dcd)
     molecule.load("lammpsdata", cbz_gaff_lmpdat)
-    molrep.modrep(2, 0, sel=sel_no_h, style=licor_style, material="AOChalky", color="ColorID 1")
+    molrep.modrep(
+        2, 0, sel=sel_no_h, style=licor_style, material="AOChalky", color="ColorID 1"
+    )
 
 # calculate the average structure of each molecule
 
@@ -95,7 +107,9 @@ render_scene = True  # just for testing stuff
 if render_scene is True:
     disp_default_size = display.get("size")
     display.set(size=[4000, 4000])  # higher resolution
-    image_out = "{}/Research/PAPERS/2017_12/CBZ_FF-evaluation/vmd_scenes/cbz_comparison".format(home)
+    image_out = "{}/Research/PAPERS/2017_12/CBZ_FF-evaluation/vmd_scenes/cbz_comparison".format(
+        home
+    )
     render.render("TachyonLOptiXInternal", "{}.ppm".format(image_out))
     im = Image.open("{}.ppm".format(image_out))
     im.save("{}.png".format(image_out), format="PNG")

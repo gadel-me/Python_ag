@@ -1,4 +1,3 @@
-
 import re
 import math
 import md_stars as mds
@@ -16,7 +15,7 @@ def chunk_list(lst, n):
     """
     Divide a list (listname) into chunks with length n
     """
-    return [lst[i:i + n] for i in range(0, len(lst), n)]
+    return [lst[i : i + n] for i in range(0, len(lst), n)]
 
 
 def parse_section(opened_prmtop, geps, chunksize=None, itype=None):
@@ -28,17 +27,18 @@ def parse_section(opened_prmtop, geps, chunksize=None, itype=None):
     mepl:   max entries per line (entries given by format line in prmtop)
     lps:    lines per section (e.g. AMBER_ATOM_TYPE)
     """
-    line      = next(opened_prmtop)  # line with formatting info
-    mepl, cpe = [int(i) for i in re.findall(r'\d+', line)][:2]
-    lps       = int(math.ceil(geps/mepl))
-    entries   = []
+    line = next(opened_prmtop)  # line with formatting info
+    mepl, cpe = [int(i) for i in re.findall(r"\d+", line)][:2]
+    lps = int(math.ceil(geps / mepl))
+    entries = []
 
     if "20a4" in line:
         # following lines do not necessarily have to have spaces
         for iline in range(lps):
             line = next(opened_prmtop).rstrip("\n")  # remove next line
-            entries.extend([line[i:i+cpe].strip() for i in
-                            range(0, len(line), cpe)])
+            entries.extend(
+                [line[i : i + cpe].strip() for i in range(0, len(line), cpe)]
+            )
     else:
         # following lines definitely have spaces and consist of floats or ints
         for iline in range(lps):
@@ -85,7 +85,7 @@ def check_cvff_compatibility(prm_d, prm_n):
     cos_prm_d = math.cos(prm_d)
 
     # check if difference between cos(prm_d) and -1/+1 is not less than 1e-10
-    if not(cos_prm_d+1 < 1e-10) or not(cos_prm_d-1 < 1e-10):
+    if not (cos_prm_d + 1 < 1e-10) or not (cos_prm_d - 1 < 1e-10):
         print("***Warning: Improper not compatible with lammps improper_style 'cvff'!")
         print("            cos(prm_d) must be -1 or 1, not {:.4f}!".format(cos_prm_d))
     if prm_n not in (1, 2, 3, 4, 6):
@@ -101,10 +101,12 @@ def true_atm_id(prmtop_atm_id):
     """
     # only positive integers
     prmtop_atm_id = abs(prmtop_atm_id)
-    return int(prmtop_atm_id/3 + 1)  # true bond index
+    return int(prmtop_atm_id / 3 + 1)  # true bond index
 
 
-def relocate_parsed(sect_bad_iwh, container, key, dict_key_old_new, dict_atm_id_old_new):
+def relocate_parsed(
+    sect_bad_iwh, container, key, dict_key_old_new, dict_atm_id_old_new
+):
     """
     Sort the parsed data from the sections:
         > bonds (inc/without hydrogen) or
@@ -116,7 +118,7 @@ def relocate_parsed(sect_bad_iwh, container, key, dict_key_old_new, dict_atm_id_
     sect_bad_iwh:  list; section inclusive hydrogens or section without hydrogens
     key:           "bonds", "angles", "dihedrals"
     """
-    #lc = len(container)  # number of elements in container
+    # lc = len(container)  # number of elements in container
 
     # bonds with hydrogens
     for ientry in sect_bad_iwh:
@@ -136,37 +138,55 @@ def relocate_parsed(sect_bad_iwh, container, key, dict_key_old_new, dict_atm_id_
             ientry_3 = dict_atm_id_old_new[ientry_3]
 
         if key == "bonds":
-            container.append(mds.Bond(bnd_id=len(container),
-                                      atm_id1=ientry_0,
-                                      atm_id2=ientry_1,
-                                      bnd_key=dict_key_old_new[ientry[2]]))
+            container.append(
+                mds.Bond(
+                    bnd_id=len(container),
+                    atm_id1=ientry_0,
+                    atm_id2=ientry_1,
+                    bnd_key=dict_key_old_new[ientry[2]],
+                )
+            )
         elif key == "angles":
-            container.append(mds.Angle(ang_id=len(container),
-                                       atm_id1=ientry_0,
-                                       atm_id2=ientry_1,
-                                       atm_id3=ientry_2,
-                                       ang_key=dict_key_old_new[ientry[3]]))
+            container.append(
+                mds.Angle(
+                    ang_id=len(container),
+                    atm_id1=ientry_0,
+                    atm_id2=ientry_1,
+                    atm_id3=ientry_2,
+                    ang_key=dict_key_old_new[ientry[3]],
+                )
+            )
         elif key == "dihedrals":
             # only append non-impropers, which are dihedrals
             if ientry[3] > 0:
-                container.append(mds.Dihedral(dih_id=len(container),
-                                              atm_id1=ientry_0,
-                                              atm_id2=ientry_1,
-                                              atm_id3=ientry_2,
-                                              atm_id4=ientry_3,
-                                              dih_key=dict_key_old_new[ientry[4]]))
+                container.append(
+                    mds.Dihedral(
+                        dih_id=len(container),
+                        atm_id1=ientry_0,
+                        atm_id2=ientry_1,
+                        atm_id3=ientry_2,
+                        atm_id4=ientry_3,
+                        dih_key=dict_key_old_new[ientry[4]],
+                    )
+                )
         elif key == "impropers":
-            #print(ientry_0, ientry_1, ientry_2, ientry_3, ientry[4])
+            # print(ientry_0, ientry_1, ientry_2, ientry_3, ientry[4])
             # if third int of each subcontainer is < 0, amber assumes it is an improper
             if ientry[3] < 0:
-                container.append(mds.Improper(imp_id=len(container),
-                                              atm_id1=ientry_0,
-                                              atm_id2=ientry_1,
-                                              atm_id3=ientry_2,
-                                              atm_id4=ientry_3,
-                                              imp_key=dict_key_old_new[ientry[4]]))
+                container.append(
+                    mds.Improper(
+                        imp_id=len(container),
+                        atm_id1=ientry_0,
+                        atm_id2=ientry_1,
+                        atm_id3=ientry_2,
+                        atm_id4=ientry_3,
+                        imp_key=dict_key_old_new[ientry[4]],
+                    )
+                )
         else:
-            raise RuntimeError("key must be 'bonds', 'angles', 'dihedrals' or 'impropers'!")
+            raise RuntimeError(
+                "key must be 'bonds', 'angles', 'dihedrals' or 'impropers'!"
+            )
 
     return container
 
@@ -211,10 +231,10 @@ def get_AB_ids(ntypes, section_nonbonded_parm_index):
     # 1. get lj-ii-indices for section 'nonbonded_parm_index'
     for i_id in range(ntypes):
         i_id += 1  # counting in prmtop starts with 1 (Fortran code)
-        cur_ii_nonbon_param_id = ntypes*(i_id-1) + i_id
+        cur_ii_nonbon_param_id = ntypes * (i_id - 1) + i_id
         # since we are not using Fortran, counting starts on 0
         # -> substract 1 from index at the end
-        ii_nonbon_param_ids.append(cur_ii_nonbon_param_id-1)
+        ii_nonbon_param_ids.append(cur_ii_nonbon_param_id - 1)
 
     # 2. get lj-ii-indices for sections 'a_coef' and 'b_coef' from section
     #    nonbonded_parm_index
@@ -236,13 +256,13 @@ def sig_eps_from_AB(acoef, bcoef):
     Sources:    https://en.wikipedia.org/wiki/Lennard-Jones_potential#AB_form
     """
     try:
-        sigma = (acoef/bcoef)**(1/6)
-    except(ZeroDivisionError):
-        sigma = 0.00000000E+00
+        sigma = (acoef / bcoef) ** (1 / 6)
+    except (ZeroDivisionError):
+        sigma = 0.00000000e00
 
     try:
-        epsilon = bcoef**2/(4*acoef)
-    except(ZeroDivisionError):
-        epsilon = 0.00000000E+00
+        epsilon = bcoef ** 2 / (4 * acoef)
+    except (ZeroDivisionError):
+        epsilon = 0.00000000e00
 
     return (sigma, epsilon)

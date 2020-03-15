@@ -2,9 +2,9 @@ import os
 import numpy as np
 from mpi4py import MPI
 
-#==============================================================================#
+# ==============================================================================#
 # Setup MPI
-#==============================================================================#
+# ==============================================================================#
 COMM = MPI.COMM_WORLD
 SIZE = COMM.Get_size()  # number of processes in communicator
 RANK = COMM.Get_rank()  # process' id(s) within a communicator
@@ -13,11 +13,55 @@ RANK = COMM.Get_rank()  # process' id(s) within a communicator
 class LmpSim(object):
     """
     """
-    def __init__(self, tstart=None, tstop=None, pstart=None, pstop=None, logsteps=None, runsteps=None, momentum_steps=100, pc_file=None, settings_file=None, input_lmpdat=None, input_lmprst=None, inter_lmprst=None, output_lmprst=None, output_lmplog=None, output_dcd=None, output_lmpdat=None, output_name=None, gpu=False, ncores=None, dielectric=None):
+
+    def __init__(
+        self,
+        tstart=None,
+        tstop=None,
+        pstart=None,
+        pstop=None,
+        logsteps=None,
+        runsteps=None,
+        momentum_steps=100,
+        pc_file=None,
+        settings_file=None,
+        input_lmpdat=None,
+        input_lmprst=None,
+        inter_lmprst=None,
+        output_lmprst=None,
+        output_lmplog=None,
+        output_dcd=None,
+        output_lmpdat=None,
+        output_name=None,
+        gpu=False,
+        ncores=None,
+        dielectric=None,
+    ):
         """
         ncores : list or tuple
         """
-        self.thermargs = ["step", "temp", "press", "vol", "density", "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma", "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp", "enthalpy"]
+        self.thermargs = [
+            "step",
+            "temp",
+            "press",
+            "vol",
+            "density",
+            "cella",
+            "cellb",
+            "cellc",
+            "cellalpha",
+            "cellbeta",
+            "cellgamma",
+            "etotal",
+            "pe",
+            "evdwl",
+            "ecoul",
+            "ebond",
+            "eangle",
+            "edihed",
+            "eimp",
+            "enthalpy",
+        ]
         self.tstart = tstart
         self.tstop = tstop
         self.pstart = pstart
@@ -124,10 +168,16 @@ class LmpSim(object):
             try:
                 lmp.command("group {} delete".format(group))
             except:
-                print(("***Warning: Group {} could not be deleted in lammps!".format(group)))
+                print(
+                    (
+                        "***Warning: Group {} could not be deleted in lammps!".format(
+                            group
+                        )
+                    )
+                )
 
     def thermo(self, lmp, hb_group="all"):
-        #TODO:  hb_group is not necessary since hbonds will only be calculated
+        # TODO:  hb_group is not necessary since hbonds will only be calculated
         #       for the defined atom types
         """
         Log thermodynamic data.
@@ -149,7 +199,7 @@ class LmpSim(object):
 
         lmp.command("thermo_style custom " + " ".join(self.thermargs))
         lmp.command("thermo_modify lost warn flush yes")
-        #lmp.command("thermo_modify line multi format float %g")
+        # lmp.command("thermo_modify line multi format float %g")
         lmp.command("thermo {}".format(self.logsteps))
 
     def dump(self, lmp, ndcd=None, nrst=None, unwrap=False):
@@ -165,7 +215,9 @@ class LmpSim(object):
 
         # trajectory
         lmp.command("dump trajectory all dcd {} {}".format(ndcd, self.output_dcd))
-        lmp.command("restart {} {} {}".format(nrst, self.inter_lmprst, self.inter_lmprst))
+        lmp.command(
+            "restart {} {} {}".format(nrst, self.inter_lmprst, self.inter_lmprst)
+        )
 
         if unwrap is True:
             lmp.command("dump_modify trajectory unwrap yes")
@@ -188,12 +240,22 @@ class LmpSim(object):
         lmp.command("fix integrator {} {}".format(group, integrator))
 
         # nvt
-        if (self.tstart is not None and self.tstop is not None) and (ensemble == "npt" or ensemble == "nvt"):
-            lmp.command("fix thermostat {} temp/berendsen {} {} 0.5".format(group, self.tstart, self.tstop))
+        if (self.tstart is not None and self.tstop is not None) and (
+            ensemble == "npt" or ensemble == "nvt"
+        ):
+            lmp.command(
+                "fix thermostat {} temp/berendsen {} {} 0.5".format(
+                    group, self.tstart, self.tstop
+                )
+            )
 
         # npt
         if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
-            lmp.command("fix barostat {} press/berendsen {} {} {} 50".format(group, keyword, self.pstart, self.pstop))
+            lmp.command(
+                "fix barostat {} press/berendsen {} {} {} 50".format(
+                    group, keyword, self.pstart, self.pstop
+                )
+            )
 
     def fix_langevin(self, lmp, group, ensemble, keyword, integrator="nve"):
         """
@@ -202,17 +264,33 @@ class LmpSim(object):
         lmp.command("fix integrator {} {}".format(group, integrator))
 
         # nvt
-        if (self.tstart is not None and self.tstop is not None) and (ensemble == "npt" or ensemble == "nvt"):
-            lmp.command("fix thermostat {} langevin {} {} 100 {}".format(group, self.tstart, self.tstop, np.random.randint(0, 10000000)))
+        if (self.tstart is not None and self.tstop is not None) and (
+            ensemble == "npt" or ensemble == "nvt"
+        ):
+            lmp.command(
+                "fix thermostat {} langevin {} {} 100 {}".format(
+                    group, self.tstart, self.tstop, np.random.randint(0, 10000000)
+                )
+            )
 
         # npt
         if (self.pstart is not None and self.pstop is not None) and ensemble == "npt":
-            lmp.command("fix barostat {} press/berendsen {} {} {} 50".format(group, keyword, self.pstart, self.pstop))
+            lmp.command(
+                "fix barostat {} press/berendsen {} {} {} 50".format(
+                    group, keyword, self.pstart, self.pstop
+                )
+            )
 
     def fix_hoover(self, lmp, group, ensemble, keyword=None):
-        nvt_section = "fix integrator {} {} temp {} {} 0.5".format(group, ensemble, self.tstart, self.tstop)
+        nvt_section = "fix integrator {} {} temp {} {} 0.5".format(
+            group, ensemble, self.tstart, self.tstop
+        )
 
-        if (self.pstart is not None and self.pstop is not None) and ensemble == "npt" and keyword is not None:
+        if (
+            (self.pstart is not None and self.pstop is not None)
+            and ensemble == "npt"
+            and keyword is not None
+        ):
             npt_section = " {} {} {} 50".format(keyword, self.pstart, self.pstop)
             lmp.command(nvt_section + npt_section)
         elif ensemble == "nph":
@@ -237,7 +315,9 @@ class LmpSim(object):
 
         """
         if keyword is not None:
-            lmp.command("fix box_relax all box/relax {} {}".format(keyword, self.pstart))
+            lmp.command(
+                "fix box_relax all box/relax {} {}".format(keyword, self.pstart)
+            )
 
         lmp.command("min_style {}".format(style))
         lmp.command("min_modify dmax 2.0")

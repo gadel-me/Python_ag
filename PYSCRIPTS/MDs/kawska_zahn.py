@@ -19,7 +19,6 @@ yet.
 """
 
 
-
 import os
 import copy
 import shutil as sl
@@ -30,7 +29,8 @@ import pdb
 import time
 import numpy as np
 from natsort import natsorted
-#import itertools as it
+
+# import itertools as it
 import scipy.stats
 from mpi4py import MPI
 from lammps import lammps, PyLammps
@@ -57,20 +57,38 @@ CAVEAT: DO NOT UNWRAP SOLVENT BOX, IT MUST BE WRAPPED OR OTHERWISE THE DENSITY
 CAVEAT: THE PATTERN STUFF IS ADDED SHOULD BE ACCORDING TO A CERTAIN PROBABILITY.
 """
 
-#TODO When restarting, check if last run equilibrated successfully
+# TODO When restarting, check if last run equilibrated successfully
 
-#==============================================================================#
+# ==============================================================================#
 # Helper functions and variables
-#==============================================================================#
+# ==============================================================================#
 _pwd = os.getcwd()
 # percent of last values from log file to check
 percentage_to_check = 80
 _sqrt_3 = math.sqrt(3)
 
-thermargs = ["step", "temp", "press", "vol", "density",
-             "cella", "cellb", "cellc", "cellalpha", "cellbeta", "cellgamma",
-             "etotal", "pe", "evdwl", "ecoul", "ebond", "eangle", "edihed", "eimp",
-             "enthalpy"]
+thermargs = [
+    "step",
+    "temp",
+    "press",
+    "vol",
+    "density",
+    "cella",
+    "cellb",
+    "cellc",
+    "cellalpha",
+    "cellbeta",
+    "cellgamma",
+    "etotal",
+    "pe",
+    "evdwl",
+    "ecoul",
+    "ebond",
+    "eangle",
+    "edihed",
+    "eimp",
+    "enthalpy",
+]
 
 
 def create_folder(folder):
@@ -107,7 +125,7 @@ def process_data(data_lammps, dcd_lammps=None):
     if dcd_lammps is not None:
         # clean coordinates and boxes (saves memory)
         system.ts_coords = []
-        system.ts_boxes  = []
+        system.ts_boxes = []
         system.import_dcd(dcd_lammps)
         system.read_frames(frame=-2, to_frame=-1)  # read last frame
         system.close_dcd()
@@ -115,10 +133,7 @@ def process_data(data_lammps, dcd_lammps=None):
     return system
 
 
-def check_energy_convergence(logfiles,
-                             keyword="PotEng",
-                             percentage=100,
-                             debug=False):
+def check_energy_convergence(logfiles, keyword="PotEng", percentage=100, debug=False):
     """
     TODO No matter the outcome, save an image of the qq plot with the
     TODO respective data after several attempts to achieve normality.
@@ -181,21 +196,28 @@ def check_energy_convergence(logfiles,
     # gather all values from all logfiles given
     log_data = agul.LogUnification()
     log_data.read_lmplog(*logfiles)
-    data = [value for data_index in range(len(log_data.data)) for value in
-            log_data.data[data_index][keyword]]
+    data = [
+        value
+        for data_index in range(len(log_data.data))
+        for value in log_data.data[data_index][keyword]
+    ]
     num_values = len(data)
     percentage /= 100  # percentage to per cent
-    testdata = data[-int(percentage * num_values):]
+    testdata = data[-int(percentage * num_values) :]
     len_testdata = len(testdata)
     min_value_testdata = min(testdata)
 
     if debug is True:
-        print(("***Info: Smallest value of "
-               "{} % of all measured data is: {}").format(percentage * 100,
-                                                          min_value_testdata))
+        print(
+            ("***Info: Smallest value of " "{} % of all measured data is: {}").format(
+                percentage * 100, min_value_testdata
+            )
+        )
 
     # normality tests
-    p_alpha = 0.05  # alpha helps interpreting the p-value from the normality test at hand
+    p_alpha = (
+        0.05  # alpha helps interpreting the p-value from the normality test at hand
+    )
 
     # Shapiro-Wilk Test (only for ~ 2000 samples)
     normal_shapiro = False
@@ -206,9 +228,17 @@ def check_energy_convergence(logfiles,
         normal_shapiro = p_shapiro > p_alpha
 
         if normal_shapiro:
-            write_to_log("{} > {}: Sample looks Gaussian (fail to reject H0)\n".format(p_shapiro, p_alpha))
+            write_to_log(
+                "{} > {}: Sample looks Gaussian (fail to reject H0)\n".format(
+                    p_shapiro, p_alpha
+                )
+            )
         else:
-            write_to_log("{} < {}: Sample does not look Gaussian (reject H0)\n".format(p_shapiro, p_alpha))
+            write_to_log(
+                "{} < {}: Sample does not look Gaussian (reject H0)\n".format(
+                    p_shapiro, p_alpha
+                )
+            )
 
         write_to_log("\n")
 
@@ -237,9 +267,17 @@ def check_energy_convergence(logfiles,
         normal_anderson = result_anderson.statistic < cv_anderson
 
         if normal_anderson:
-            write_to_log("\t> {:> .3f}: {:> .3f}, data looks normal (fail to reject H0)\n".format(sl_anderson, cv_anderson))
+            write_to_log(
+                "\t> {:> .3f}: {:> .3f}, data looks normal (fail to reject H0)\n".format(
+                    sl_anderson, cv_anderson
+                )
+            )
         else:
-            write_to_log("\t> {:> .3f}: {:> .3f}, data does not look normal (reject H0)\n".format(sl_anderson, cv_anderson))
+            write_to_log(
+                "\t> {:> .3f}: {:> .3f}, data does not look normal (reject H0)\n".format(
+                    sl_anderson, cv_anderson
+                )
+            )
 
         # if H0 is ok at any confidence level, stop further testing
         if normal_anderson is True:
@@ -250,7 +288,9 @@ def check_energy_convergence(logfiles,
     # Compute the skewness of a data set, For normally distributed data,
     # the skewness should be about 0
     skewness = scipy.stats.skew(testdata)
-    write_to_log("Skewness (should be -0.3 < skewness < 0.3): {:> .12f}\n".format(skewness))
+    write_to_log(
+        "Skewness (should be -0.3 < skewness < 0.3): {:> .12f}\n".format(skewness)
+    )
 
     # determine if the skewness is close enough to 0 (statistically speaking)
     stat_skewness, p_skewness = scipy.stats.skewtest(testdata)
@@ -263,11 +303,15 @@ def check_energy_convergence(logfiles,
 
     if len_testdata > 20:
         kurtosis = scipy.stats.kurtosis(testdata)
-        write_to_log("Kurtosis (should be -0.3 < kurtosis < 0.3): {:> .12f}\n".format(kurtosis))
+        write_to_log(
+            "Kurtosis (should be -0.3 < kurtosis < 0.3): {:> .12f}\n".format(kurtosis)
+        )
         stat_kurtosis, p_kurtosis = scipy.stats.kurtosistest(testdata)
         normal_kurtosis = (-0.3 < kurtosis < 0.3) and (p_kurtosis > 0.05)
         write_to_log("Statistic (Kurtosis): {:> 4.12f}\n".format(stat_kurtosis))
-        write_to_log("P-Value (Kurtosis, should be > 0.05): {:> 4.12f}\n".format(p_kurtosis))
+        write_to_log(
+            "P-Value (Kurtosis, should be > 0.05): {:> 4.12f}\n".format(p_kurtosis)
+        )
         write_to_log("\n")
     else:
         write_to_log("Need more than 20 values for Kurtosis-Test!\n")
@@ -279,12 +323,12 @@ def check_energy_convergence(logfiles,
     histo, bin_edges = np.histogram(data, bins=num_bins, normed=False)
     a1, b1 = scipy.stats.norm.fit(data)
     cdf = scipy.stats.norm.cdf(bin_edges, a1, b1)
-    #scaling_factor = len(data) * (x_max - x_min) / num_bins
+    # scaling_factor = len(data) * (x_max - x_min) / num_bins
     scaling_factor = len(data)
     # expected frequencies (haufigkeiten)
     expected_values = scaling_factor * np.diff(cdf)
     chisquare_results = scipy.stats.chisquare(histo, f_exp=expected_values, ddof=2)
-    #write_to_log(chisquare_results[1], "\n")
+    # write_to_log(chisquare_results[1], "\n")
 
     # only use tests that are allowed for the amount of given values for the shape and normality
     if len_testdata > 20:
@@ -294,7 +338,9 @@ def check_energy_convergence(logfiles,
 
     # accept normal distribution if any test states is is normally distributed
     if len_testdata <= 2000:
-        normal_distributed = normal_shape and (normal_shapiro or normal_agostino or normal_anderson)
+        normal_distributed = normal_shape and (
+            normal_shapiro or normal_agostino or normal_anderson
+        )
     else:
         normal_distributed = normal_shape and (normal_agostino or normal_anderson)
 
@@ -350,22 +396,39 @@ def check_aggregate(mdsys, frame_id=-1, atm_atm_dist=4, unwrap=False, debug=Fals
     if debug is True:
         print("***Check Aggregate Info: Cube side {}".format(cube_side))
 
-    mdsys.create_linked_cells(frame_id, rcut_a=cube_side, rcut_b=cube_side,
-                              rcut_c=cube_side)
+    mdsys.create_linked_cells(
+        frame_id, rcut_a=cube_side, rcut_b=cube_side, rcut_c=cube_side
+    )
 
     # include same molecule or it gets missing in our aggregates set
-    close_atoms, aggregates = mdsys.chk_atm_dist(frame_id,
-                                                 min_dist=atm_atm_dist,
-                                                 exclude_same_molecule=False,
-                                                 get_aggregates=True,
-                                                 debug=False)
+    close_atoms, aggregates = mdsys.chk_atm_dist(
+        frame_id,
+        min_dist=atm_atm_dist,
+        exclude_same_molecule=False,
+        get_aggregates=True,
+        debug=False,
+    )
 
     if debug is True:
-        print("***Check Aggregate Info: Number of cubes in direction a {}".format(mdsys.ts_lnk_cls[frame_id].ra))
-        print("***Check Aggregate Info: Number of cubes in direction b {}".format(mdsys.ts_lnk_cls[frame_id].rb))
-        print("***Check Aggregate Info: Number of cubes in direction c {}".format(mdsys.ts_lnk_cls[frame_id].rc))
+        print(
+            "***Check Aggregate Info: Number of cubes in direction a {}".format(
+                mdsys.ts_lnk_cls[frame_id].ra
+            )
+        )
+        print(
+            "***Check Aggregate Info: Number of cubes in direction b {}".format(
+                mdsys.ts_lnk_cls[frame_id].rb
+            )
+        )
+        print(
+            "***Check Aggregate Info: Number of cubes in direction c {}".format(
+                mdsys.ts_lnk_cls[frame_id].rc
+            )
+        )
         print("***Group IDs of all aggregates: {}".format(aggregates))
-        print("***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms])))
+        print(
+            "***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms]))
+        )
 
     # aggregate is only o.k. if all molecules are part of it
     if len(aggregates) == 1 and len(aggregates[0]) == len(mdsys.molecules):
@@ -404,12 +467,20 @@ def cut_solvent_box(solvent_data, box, output_name, dcd_lammps=None):
     plane_bc = agv.get_plane(cart_box.crt_b, cart_box.crt_c)
 
     # opposite planes to ab, ca and bc
-    plane_ab_c = [-1 * i for i in agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)]
-    plane_ca_b = [-1 * i for i in agv.get_plane(cart_box.crt_c, cart_box.crt_a, cart_box.crt_b)]
-    plane_bc_a = [-1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)]
+    plane_ab_c = [
+        -1 * i for i in agv.get_plane(cart_box.crt_a, cart_box.crt_b, cart_box.crt_c)
+    ]
+    plane_ca_b = [
+        -1 * i for i in agv.get_plane(cart_box.crt_c, cart_box.crt_a, cart_box.crt_b)
+    ]
+    plane_bc_a = [
+        -1 * i for i in agv.get_plane(cart_box.crt_b, cart_box.crt_c, cart_box.crt_a)
+    ]
 
     # cut plane
-    solvent.cut_shape(-1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a)
+    solvent.cut_shape(
+        -1, True, plane_ab, plane_ab_c, plane_ca, plane_ca_b, plane_bc, plane_bc_a
+    )
 
     # enlarge box a little so atoms at the edge will not clash due to pbc
     cart_box.box_cart2lat()
@@ -429,224 +500,211 @@ def cut_solvent_box(solvent_data, box, output_name, dcd_lammps=None):
     solvent.change_indices(incr=1, mode="increase")
     solvent.write_lmpdat(output_name, cgcmm=True)
     write_to_log("Box cut!")
-    #return solvent
+    # return solvent
 
-#==============================================================================#
+
+# ==============================================================================#
 # Setup MPI
-#==============================================================================#
+# ==============================================================================#
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()  # number of processes in communicator
 rank = comm.Get_rank()  # process' id(s) within a communicator
 
-#==============================================================================#
+# ==============================================================================#
 # Argument Parsing
-#==============================================================================#
+# ==============================================================================#
 
 parser = argparse.ArgumentParser(
     prog="kawska_zahn.py",
     formatter_class=argparse.RawTextHelpFormatter,
-    description="Kawska-Zahn-Approach for accelerated crystallization simulations.")
+    description="Kawska-Zahn-Approach for accelerated crystallization simulations.",
+)
 
 # exclusive arguments (deprecated?)
-#start = parser.add_mutually_exclusive_group()
+# start = parser.add_mutually_exclusive_group()
 
-#==================#
+# ==================#
 # general arguments
-#==================#
+# ==================#
 
-parser.add_argument("-lmpm",
-                    default=None,
-                    metavar="*.lmpdat",
-                    help="Lammps' data-file of the main system."
-                    )
+parser.add_argument(
+    "-lmpm",
+    default=None,
+    metavar="*.lmpdat",
+    help="Lammps' data-file of the main system.",
+)
 
-parser.add_argument("-lmpa",
-                    default=None,
-                    nargs="*",
-                    metavar="*.lmpdat",
-                    help="Lammps' data-file with atom-cube_sidetypes and coordinates for one single molecule to add to the current system. Atom types have to be defined already by the first data/restart file loaded!"
-                    )
+parser.add_argument(
+    "-lmpa",
+    default=None,
+    nargs="*",
+    metavar="*.lmpdat",
+    help="Lammps' data-file with atom-cube_sidetypes and coordinates for one single molecule to add to the current system. Atom types have to be defined already by the first data/restart file loaded!",
+)
 
-parser.add_argument("-lmps",
-                    default=None,
-                    metavar="*.lmpdat",
-                    help="Create a solvent box for MD-Simulation. Data-file with one single solvent molecule to add."
-                    )
+parser.add_argument(
+    "-lmps",
+    default=None,
+    metavar="*.lmpdat",
+    help="Create a solvent box for MD-Simulation. Data-file with one single solvent molecule to add.",
+)
 
-parser.add_argument("-set",
-                    metavar="*.lmpcfg",
-                    required=True,
-                    help="lammps' input-file/-script with basic simulation " +
-                         "settings"
-                    )
+parser.add_argument(
+    "-set",
+    metavar="*.lmpcfg",
+    required=True,
+    help="lammps' input-file/-script with basic simulation " + "settings",
+)
 
-parser.add_argument("-settings_solvent",
-                    metavar="*.lmpcfg",
-                    help="lammps' input-file/-script with basic simulation " +
-                         "settings for the solvent system")
+parser.add_argument(
+    "-settings_solvent",
+    metavar="*.lmpcfg",
+    help="lammps' input-file/-script with basic simulation "
+    + "settings for the solvent system",
+)
 
-parser.add_argument("-pair_coeffs",
-                    default=None,
-                    metavar="*.lmpcfg",
-                    required=True,
-                    help="lammps'  script with lj, dreiding, etc. parameters")
+parser.add_argument(
+    "-pair_coeffs",
+    default=None,
+    metavar="*.lmpcfg",
+    required=True,
+    help="lammps'  script with lj, dreiding, etc. parameters",
+)
 
 
-parser.add_argument("-solvent_paircoeffs",
-                    default=None,
-                    metavar="*.lmpcfg",
-                    help="lammps'  script with lj, dreiding, etc. parameters " +
-                         "for the solvent")
+parser.add_argument(
+    "-solvent_paircoeffs",
+    default=None,
+    metavar="*.lmpcfg",
+    help="lammps'  script with lj, dreiding, etc. parameters " + "for the solvent",
+)
 
-parser.add_argument("-logsteps",
-                    type=int,
-                    default=1000,
-                    help="log thermodynamic-, steps- and restart-files every" +
-                         "'logsteps' steps"
-                    )
+parser.add_argument(
+    "-logsteps",
+    type=int,
+    default=1000,
+    help="log thermodynamic-, steps- and restart-files every" + "'logsteps' steps",
+)
 
-parser.add_argument("-gpu",
-                    default=False,
-                    action="store_true",
-                    help="utilize lammps' GPU package.",
-                    )
+parser.add_argument(
+    "-gpu", default=False, action="store_true", help="utilize lammps' GPU package.",
+)
 
-parser.add_argument("-cycles",
-                    type=int,
-                    default=5,
-                    help="Number of aggregations.")
+parser.add_argument("-cycles", type=int, default=5, help="Number of aggregations.")
 
-parser.add_argument("-timeout",
-                    metavar="00:01:00",
-                    default="00:00:05",
-                    help="allowed duration of simulation, for resubmitting purposes;  should be < 24h")
+parser.add_argument(
+    "-timeout",
+    metavar="00:01:00",
+    default="00:00:05",
+    help="allowed duration of simulation, for resubmitting purposes;  should be < 24h",
+)
 
-parser.add_argument("-pa",
-                    "-pattern_add",
-                    nargs="*",
-                    default=0,
-                    type=int,
-                    help="The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles")
+parser.add_argument(
+    "-pa",
+    "-pattern_add",
+    nargs="*",
+    default=0,
+    type=int,
+    help="The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles",
+)
 
-#==========#
+# ==========#
 # quenching
-#==========#
+# ==========#
 
-parser.add_argument("-quench_temp_start",
-                    type=int,
-                    default=5)
+parser.add_argument("-quench_temp_start", type=int, default=5)
 
-parser.add_argument("-quench_temp_stop",
-                    type=int,
-                    default=5)
+parser.add_argument("-quench_temp_stop", type=int, default=5)
 
-parser.add_argument("-quench_steps",
-                    type=int,
-                    default=250000)
+parser.add_argument("-quench_steps", type=int, default=250000)
 
-parser.add_argument("-quench_logsteps",
-                    type=int,
-                    default=1000)
+parser.add_argument("-quench_logsteps", type=int, default=1000)
 
-#==========#
+# ==========#
 # annealing
-#==========#
+# ==========#
 
-parser.add_argument("-void_solvent_steps",
-                    type=int,
-                    default=2000)  # 500
+parser.add_argument("-void_solvent_steps", type=int, default=2000)  # 500
 
-parser.add_argument("-start_relax_solvent_temp",
-                    type=int,
-                    default=10)
+parser.add_argument("-start_relax_solvent_temp", type=int, default=10)
 
-parser.add_argument("-stop_relax_solvent_temp",
-                    type=int,
-                    default=10)
+parser.add_argument("-stop_relax_solvent_temp", type=int, default=10)
 
-parser.add_argument("-relax_solvent_steps",
-                    type=int,
-                    default=50000)
+parser.add_argument("-relax_solvent_steps", type=int, default=50000)
 
-parser.add_argument("-start_equil_anneal_temp",
-                    type=int,
-                    default=10)
+parser.add_argument("-start_equil_anneal_temp", type=int, default=10)
 
-parser.add_argument("-stop_equil_anneal_temp",
-                    type=int,
-                    default=300,
-                    help="Temperature at which system shall be annealed")
+parser.add_argument(
+    "-stop_equil_anneal_temp",
+    type=int,
+    default=300,
+    help="Temperature at which system shall be annealed",
+)
 
-parser.add_argument("-equil_anneal_steps",
-                    type=int,
-                    default=500000)
+parser.add_argument("-equil_anneal_steps", type=int, default=500000)
 
-parser.add_argument("-equil_anneal_ensemble",
-                    type=str,
-                    default="npt",
-                    help="nvt or npt")
+parser.add_argument(
+    "-equil_anneal_ensemble", type=str, default="npt", help="nvt or npt"
+)
 
-parser.add_argument("-anneal_steps",
-                    type=int,
-                    default=2000000)
+parser.add_argument("-anneal_steps", type=int, default=2000000)
 
-parser.add_argument("-additional_anneal_steps",
-                    type=int,
-                    default=100000)
+parser.add_argument("-additional_anneal_steps", type=int, default=100000)
 
-parser.add_argument("-anneal_logsteps",
-                    type=int,
-                    default=500)
+parser.add_argument("-anneal_logsteps", type=int, default=500)
 
-parser.add_argument("-requench_steps",
-                    type=int,
-                    default=150000)
+parser.add_argument("-requench_steps", type=int, default=150000)
 
 args = parser.parse_args()
 
-#==============================================================================#
+# ==============================================================================#
 # Remaining cycles and molecule to add pattern
-#==============================================================================#
+# ==============================================================================#
 
 if rank == 0:
-    finished_cycles  = []
-    folders_pwd      = ["{}/{}".format(_pwd, i) for i in
-                        os.listdir(_pwd) if os.path.isdir(i)]
+    finished_cycles = []
+    folders_pwd = [
+        "{}/{}".format(_pwd, i) for i in os.listdir(_pwd) if os.path.isdir(i)
+    ]
 
     # get last cycle from directory
     for folder in folders_pwd:
-        cycle = re.match(r'.*?([0-9]+)$', folder).group(1)
+        cycle = re.match(r".*?([0-9]+)$", folder).group(1)
         cycle = int(cycle)
         # avoid duplicates
         if cycle not in finished_cycles:
             finished_cycles.append(cycle)
 
-    del (folders_pwd)
+    del folders_pwd
 
     # requench_out does not exist -> current cycle has not finished yet
     if len(finished_cycles) >= 1:
         current_cycle = max(finished_cycles)
-        requench_out = _pwd + "/requench_{}/".format(current_cycle) + "requench_{}.dcd".format(current_cycle)
+        requench_out = (
+            _pwd
+            + "/requench_{}/".format(current_cycle)
+            + "requench_{}.dcd".format(current_cycle)
+        )
 
         if os.path.isfile(requench_out) is True:
             next_cycle = current_cycle + 1
         else:
             next_cycle = current_cycle
 
-        #del requench_out
+        # del requench_out
     else:
         next_cycle = 0
 
-    del (finished_cycles)
+    del finished_cycles
 
     total_cycles = list(range(args.cycles))
     idx_next_cycle = total_cycles.index(next_cycle)
-    del (total_cycles)
+    del total_cycles
 
-    #===========================#
+    # ===========================#
     # Molecule to add by pattern
-    #===========================#
+    # ===========================#
 
     id_pattern = 0
     num_patterns = len(args.pa) - 1  # indices start with 0 so one less
@@ -665,27 +723,27 @@ else:
 
 remaining_cycles = comm.bcast(remaining_cycles, 0)
 
-#==============================================================================#
+# ==============================================================================#
 # Kawska Zahn Approach
-#==============================================================================#
+# ==============================================================================#
 
 for curcycle, idx_lmpa in remaining_cycles:
 
-    #==========================================================#
+    # ==========================================================#
     # Define folders and files, retrieve stage of current cycle
-    #==========================================================#
+    # ==========================================================#
 
     if rank == 0:
         write_to_log("Cycle: {:d}\n".format(curcycle))
 
     # declare folder names for each cycle
-    sysprep_dir  = _pwd + "/sysprep_{}/".format(curcycle)
-    quench_dir   = _pwd + "/quench_{}/".format(curcycle)
-    anneal_dir   = _pwd + "/anneal_{}/".format(curcycle)
+    sysprep_dir = _pwd + "/sysprep_{}/".format(curcycle)
+    quench_dir = _pwd + "/quench_{}/".format(curcycle)
+    anneal_dir = _pwd + "/anneal_{}/".format(curcycle)
     requench_dir = _pwd + "/requench_{}/".format(curcycle)
 
     # system preparation
-    sysprep_out  = sysprep_dir + "sysprep_out_{}.lmpdat".format(curcycle)
+    sysprep_out = sysprep_dir + "sysprep_out_{}.lmpdat".format(curcycle)
 
     # quench
     quench_out = quench_dir + "quench_out_{}.lmprst".format(curcycle)
@@ -694,13 +752,13 @@ for curcycle, idx_lmpa in remaining_cycles:
     quench_log = quench_dir + "quench_{}.lmplog".format(curcycle)
 
     # anneal -> solvent
-    cut_solv_out  = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
+    cut_solv_out = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
     void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmpdat"
     void_solv_rst = anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
     void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
     void_solv_log = anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
 
-    relax_solv_in  = anneal_dir + "relax_solv_{}".format(curcycle) + "_in.lmpdat"
+    relax_solv_in = anneal_dir + "relax_solv_{}".format(curcycle) + "_in.lmpdat"
     relax_solv_out = anneal_dir + "relax_solv_{}".format(curcycle) + "_out.lmprst"
     relax_solv_rst = anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
     relax_solv_dcd = anneal_dir + "relax_solv_{}".format(curcycle) + ".dcd"
@@ -717,19 +775,25 @@ for curcycle, idx_lmpa in remaining_cycles:
     solvent_anneal_out = anneal_dir + "anneal_{}".format(curcycle) + "_solvent_out.xyz"
     anneal_rst = anneal_dir + "anneal_{}".format(curcycle) + "_tmp.lmprst"
     anneal_dat = anneal_dir + "anneal_{}".format(curcycle) + ".lmpdat"
-    #anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
+    # anneal_dcd = anneal_dir + "anneal_{}".format(curcycle) + ".dcd"
     anneal_log = anneal_dir + "anneal_{}".format(curcycle) + ".lmplog"
 
     # requench
-    tmp_solvate_anneal_out = requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
-    #requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
+    tmp_solvate_anneal_out = (
+        requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
+    )
+    # requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
     requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
     requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
 
     # important files from previous run
-    pre_sysprep_out        = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(_pwd, curcycle-1)
-    pre_solvent_anneal_out = "{0}/anneal_{1}/anneal_{0}_solvent_out.xyz".format(_pwd, curcycle-1)
-    pre_requench_dcd       = "{0}/requench_{1}/requench_{1}.dcd".format(_pwd, curcycle-1)
+    pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(
+        _pwd, curcycle - 1
+    )
+    pre_solvent_anneal_out = "{0}/anneal_{1}/anneal_{0}_solvent_out.xyz".format(
+        _pwd, curcycle - 1
+    )
+    pre_requench_dcd = "{0}/requench_{1}/requench_{1}.dcd".format(_pwd, curcycle - 1)
 
     if os.path.isfile(quench_out) is True:
         quench_success = True
@@ -741,9 +805,9 @@ for curcycle, idx_lmpa in remaining_cycles:
     else:
         anneal_success = False
 
-    #==========================================================================#
+    # ==========================================================================#
     # Aggregation
-    #==========================================================================#
+    # ==========================================================================#
 
     # define main system
     if os.path.isfile(pre_requench_dcd) is True:
@@ -754,9 +818,9 @@ for curcycle, idx_lmpa in remaining_cycles:
     while anneal_success is False:
         while quench_success is False:
 
-            #==================================================================#
+            # ==================================================================#
             # 1. System Preparation
-            #==================================================================#
+            # ==================================================================#
 
             # very first run or last stage has finished successfully
             if os.path.isfile(sysprep_out) is False:
@@ -765,7 +829,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                     create_folder(sysprep_dir)
                     write_to_log("\tStage: SYS-PREPARATION\n")
 
-                    #TODO ADD NEW SYSTEM ACCORDING TO A CERTAIN PROBABILITY, NOT BY PATTERN
+                    # TODO ADD NEW SYSTEM ACCORDING TO A CERTAIN PROBABILITY, NOT BY PATTERN
                     # define add system(s)
                     add_prep_sys = os.path.abspath(args.lmpa[idx_lmpa])
 
@@ -784,10 +848,14 @@ for curcycle, idx_lmpa in remaining_cycles:
                             main_sys.close_dcd()
 
                         natoms_main_sys = len(main_sys.atoms)
-                        main_sys.transpose_by_cog(0, [0, 0, 0], copy=False)  # relocate main system to origin
+                        main_sys.transpose_by_cog(
+                            0, [0, 0, 0], copy=False
+                        )  # relocate main system to origin
                         # process add system
                         add_sys = process_data(add_prep_sys)
-                        add_sys.transpose_by_cog(0, [0, 0, 0], copy=False)  # relocate add system to origin (for proper placement on sphere)
+                        add_sys.transpose_by_cog(
+                            0, [0, 0, 0], copy=False
+                        )  # relocate add system to origin (for proper placement on sphere)
 
                         # rotate add-system by an arbitrary rotation matrix,
                         # consisting of 3 arbitrary rotations A, B and C
@@ -813,7 +881,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # get kawska-zahn-radius (kwz) (sum of both system's radii)
                         kwz_radius = main_sys_radius + add_sys_radius
                         kwz_radius += 1  # enlarge radius so atoms do not clash
-                        rn_pos = agm.points_on_sphere(npoints=1, ndim=3, radius=kwz_radius)[0]
+                        rn_pos = agm.points_on_sphere(
+                            npoints=1, ndim=3, radius=kwz_radius
+                        )[0]
                         M_trans = cgt.translation_matrix(rn_pos)
                         add_sys.mm_atm_coords(0, M_trans, False, *sys_add_all_atms)
                         del (rn_pos, M_trans, sys_add_all_atms)
@@ -823,7 +893,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                         del add_sys
 
                         # add new orthogonal box
-                        #box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
+                        # box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
                         box_diameter = 2 * (main_sys_radius * 2 + add_sys_radius * 2)
 
                         # add safety distance to box diameter of small molecules
@@ -834,17 +904,34 @@ for curcycle, idx_lmpa in remaining_cycles:
                             a = b = c = box_diameter + 30
 
                         # DEBUGGING NOW
-                        #a = b = c = 400
+                        # a = b = c = 400
 
                         alpha = beta = gamma = math.pi / 2
 
                         main_sys.ts_boxes = []
                         main_sys.ts_boxes.append(
-                            mdb.Box(boxtype="lattice", ltc_a=a, ltc_b=b, ltc_c=c,
-                                    ltc_alpha=alpha, ltc_beta=beta, ltc_gamma=gamma))
+                            mdb.Box(
+                                boxtype="lattice",
+                                ltc_a=a,
+                                ltc_b=b,
+                                ltc_c=c,
+                                ltc_alpha=alpha,
+                                ltc_beta=beta,
+                                ltc_gamma=gamma,
+                            )
+                        )
 
-                        del (main_sys_radius, add_sys_radius, box_diameter,
-                             a, b, c, alpha, beta, gamma)
+                        del (
+                            main_sys_radius,
+                            add_sys_radius,
+                            box_diameter,
+                            a,
+                            b,
+                            c,
+                            alpha,
+                            beta,
+                            gamma,
+                        )
 
                         main_sys.ts_boxes[0].box_lat2lmp(triclinic=False)
 
@@ -863,33 +950,39 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # check if new atoms were placed too near to the main system
                         try:
                             if close_atms[-1] > natoms_main_sys:
-                                print("***Sysprep-Warning: New atoms were placed too near! Rebuilding...")
-                                #break  # DEBUGGING
+                                print(
+                                    "***Sysprep-Warning: New atoms were placed too near! Rebuilding..."
+                                )
+                                # break  # DEBUGGING
                             else:
                                 break
 
                         except IndexError:  # close_atoms is empty array (-> no close atoms)
                             break
 
-                        del (close_atms)
+                        del close_atms
                     else:
                         print("***Sys-Prep-Error: Docking failed!")
 
-                    del (natoms_main_sys)
+                    del natoms_main_sys
 
                     # write new data file
                     main_sys.change_indices(incr=1, mode="increase")
-                    main_sys.write_lmpdat(sysprep_out, frame_id=0, title="System ready" +
-                                          "for docking", cgcmm=True)
+                    main_sys.write_lmpdat(
+                        sysprep_out,
+                        frame_id=0,
+                        title="System ready" + "for docking",
+                        cgcmm=True,
+                    )
 
                     # write successful steps to log file
                     write_to_log("\tSphere-radius: {}\n".format(kwz_radius))
                     write_to_log("\tOutput-File: {}\n\n".format(sysprep_out))
                     del (main_sys, kwz_radius)
 
-            #===================================================================
+            # ===================================================================
             # 2. System Quenching
-            #===================================================================
+            # ===================================================================
 
             if os.path.isfile(quench_out) is False:
                 natoms_main_sys = None
@@ -912,7 +1005,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 # load gpu package
                 if args.gpu:
                     # neighbor list building on gpu (currently) leads to segmentation faults
-                    #quench_lmp.command("package gpu 1 neigh yes")
+                    # quench_lmp.command("package gpu 1 neigh yes")
                     quench_lmp.command("package gpu 1 neigh no")  # DEBUGGING
                     quench_lmp.command("suffix gpu")
 
@@ -931,7 +1024,11 @@ for curcycle, idx_lmpa in remaining_cycles:
                     quench_lmp.command("read_restart {}".format(quench_rst))
                 else:
                     quench_lmp.command("read_data {}".format(sysprep_out))
-                    quench_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(quench_temp_start))
+                    quench_lmp.command(
+                        "velocity all create {} 483806 rot yes dist gaussian".format(
+                            quench_temp_start
+                        )
+                    )
 
                 if args.pair_coeffs is not None:
                     quench_lmp.file(args.pair_coeffs)
@@ -939,45 +1036,58 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_lmp.command("group loose id > {}".format(natoms_main_sys))
 
                 # ice cube prevention
-                #quench_lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(100))
+                # quench_lmp.command("fix ic_prevention all momentum {} linear 1 1 1 angular rescale".format(100))
 
                 # barostatting, thermostatting
-                quench_lmp.command("fix ensemble_quench loose nvt temp {} {} 0.1".format(quench_temp_start,
-                                                                                         quench_temp_stop))
+                quench_lmp.command(
+                    "fix ensemble_quench loose nvt temp {} {} 0.1".format(
+                        quench_temp_start, quench_temp_stop
+                    )
+                )
 
                 # set an additional push to the added atoms that should be docked
                 # towards the origin at (0/0/0)
                 # (prevents losing atoms due to being localized outside the cutoff)
                 if rank == 0:
-                    cog = agm.get_cog(out_quench_sys.ts_coords[-1][natoms_main_sys + 1:])
+                    cog = agm.get_cog(
+                        out_quench_sys.ts_coords[-1][natoms_main_sys + 1 :]
+                    )
                     cog /= np.linalg.norm(cog, axis=0)  # unit vector
                     cog *= -1e-4
                 else:
                     cog = None
 
-                del (natoms_main_sys)
+                del natoms_main_sys
                 cog = comm.bcast(cog, 0)
-                quench_lmp.command(("fix group_loose_addforce "
-                                    "loose addforce {0} {1} {2} every 1").format(*cog))
+                quench_lmp.command(
+                    (
+                        "fix group_loose_addforce " "loose addforce {0} {1} {2} every 1"
+                    ).format(*cog)
+                )
 
                 del (quench_temp_start, quench_temp_stop)
 
                 # logging of thermodynamic data
                 quench_lmp.command("thermo_style custom " + " ".join(thermargs))
                 quench_lmp.command("thermo_modify lost warn flush yes")
-                #quench_lmp.command("thermo_modify line multi format float %g")
+                # quench_lmp.command("thermo_modify line multi format float %g")
                 quench_lmp.command("thermo {}".format(args.quench_logsteps))
 
                 # trajectory
-                quench_lmp.command("dump QUENCH_DUMP all dcd {} {}".format(
-                    args.quench_logsteps, quench_dcd))
+                quench_lmp.command(
+                    "dump QUENCH_DUMP all dcd {} {}".format(
+                        args.quench_logsteps, quench_dcd
+                    )
+                )
                 # unwrap trajectory coordinates
                 quench_lmp.command("dump_modify QUENCH_DUMP unwrap yes")
 
                 # intermediate restart files
-                #tmp1_rst  = quench_dir + "tmp-1-quench_out_{}.lmprst".format(curcycle)
+                # tmp1_rst  = quench_dir + "tmp-1-quench_out_{}.lmprst".format(curcycle)
                 steps_rst = args.quench_logsteps * 10
-                quench_lmp.command("restart {} {} {}".format(steps_rst, quench_rst, quench_rst))
+                quench_lmp.command(
+                    "restart {} {} {}".format(steps_rst, quench_rst, quench_rst)
+                )
 
                 # initial quench run
                 quench_steps = args.quench_steps
@@ -995,8 +1105,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                     out_quench_sys.import_dcd(quench_dcd)
                     out_quench_sys.read_frames(frame=-2, to_frame=-1)
                     out_quench_sys.close_dcd()
-                    quench_success = check_aggregate(out_quench_sys, frame_id=-1,
-                                                     atm_atm_dist=4)
+                    quench_success = check_aggregate(
+                        out_quench_sys, frame_id=-1, atm_atm_dist=4
+                    )
                     del out_quench_sys
 
                 quench_success = comm.bcast(quench_success, root=0)
@@ -1015,7 +1126,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                     sysprep_success = False
 
                     if rank == 0:
-                        print("***Quench-Warning: System did not aggregate! Quenching failed! Removing folders!")
+                        print(
+                            "***Quench-Warning: System did not aggregate! Quenching failed! Removing folders!"
+                        )
                         sl.rmtree(quench_dir)
                         sl.rmtree(sysprep_dir)
                         write_to_log("\tDocking failed\n")
@@ -1034,9 +1147,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                 if rank == 0:
                     print("***Quenching-Info: Quenching done!")
 
-        #======================================================================#
+        # ======================================================================#
         # 3. ANNEALING
-        #======================================================================#
+        # ======================================================================#
 
         if os.path.isfile(solvate_anneal_out) is False:
             if rank == 0:
@@ -1058,41 +1171,41 @@ for curcycle, idx_lmpa in remaining_cycles:
                     solution_sys = solvate_sys
             else:
 
-                #================#
+                # ================#
                 # Prepare solvent
-                #================#
+                # ================#
 
                 # solvent
                 if rank == 0:
                     # cut smaller solvent box from big solvent box, use box vectors
                     # from solvate system
                     if not os.path.isfile(cut_solv_out):
-                        cut_solvent_box(args.lmps, solvate_sys.ts_boxes[-1], cut_solv_out)
+                        cut_solvent_box(
+                            args.lmps, solvate_sys.ts_boxes[-1], cut_solv_out
+                        )
 
                     solvent_sys = process_data(cut_solv_out)
                     natoms_solvent_sys = len(solvent_sys.atoms)
 
                     # read geometry from previous annealing (deprecated since new boxes are cut for each run)
-                    #if os.path.isfile(pre_solvent_anneal_out) is True:
+                    # if os.path.isfile(pre_solvent_anneal_out) is True:
                     #    solvent_sys.ts_coords = []
                     #    solvent_sys.read_xyz(pre_solvent_anneal_out)
 
                     # solute + solvent
                     solution_sys = copy.deepcopy(solvate_sys)
-                    solution_sys.extend_universe(solvent_sys,
-                                                 u1_frame_id=-1,
-                                                 u2_frame_id=-1,
-                                                 mode="merge")
-                    solution_sys.ts_boxes  = []
+                    solution_sys.extend_universe(
+                        solvent_sys, u1_frame_id=-1, u2_frame_id=-1, mode="merge"
+                    )
+                    solution_sys.ts_boxes = []
                     solution_sys.ts_coords = []
-                    solution_sys.mix_pair_types(mode="ii",
-                                                mix_style="arithmetic")
+                    solution_sys.mix_pair_types(mode="ii", mix_style="arithmetic")
                     solution_sys.fetch_molecules_by_bonds()
                     solution_sys.mols_to_grps()
 
-                #========================#
+                # ========================#
                 # solvent void generation
-                #========================#
+                # ========================#
 
                 if os.path.isfile(void_solv_out) is False:
 
@@ -1107,7 +1220,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                             cogs_solvate.append(cog)
 
                         del (sphere, cog, molecule)
-                        num_solvate_molecules  = len(solvate_sys.molecules)
+                        num_solvate_molecules = len(solvate_sys.molecules)
                     else:
                         num_solvate_molecules = None
 
@@ -1116,12 +1229,12 @@ for curcycle, idx_lmpa in remaining_cycles:
                     cogs_solvate = comm.bcast(cogs_solvate, 0)
 
                     # start lammps
-                    void_lmp   = lammps()
+                    void_lmp = lammps()
                     void_pylmp = PyLammps(ptr=void_lmp)
                     void_lmp.command("log {} append".format(void_solv_log))
 
                     if args.gpu is True:
-                        #void_lmp.command("package gpu 1 neigh yes")
+                        # void_lmp.command("package gpu 1 neigh yes")
                         void_lmp.command("package gpu 1 neigh no")  # DEBUGGING
                         void_lmp.command("suffix gpu")
 
@@ -1132,55 +1245,72 @@ for curcycle, idx_lmpa in remaining_cycles:
                         void_lmp.file(args.set)
 
                     # load last void state
-                    if os.path.isfile(void_solv_rst) is True:  # void run was aborted, restart file written; start from here
+                    if (
+                        os.path.isfile(void_solv_rst) is True
+                    ):  # void run was aborted, restart file written; start from here
                         void_lmp.command("read_restart {}".format(void_solv_rst))
-                    #elif os.path.isfile(pre_solvent_anneal_out) is True:  # output from previous run
+                    # elif os.path.isfile(pre_solvent_anneal_out) is True:  # output from previous run
                     #    void_lmp.command("read_data {}".format(void_solv_out))
                     else:  # first run with solvent
-                        #void_lmp.command("read_data {}".format(args.lmps))
-                        #pdb.set_trace()
+                        # void_lmp.command("read_data {}".format(args.lmps))
+                        # pdb.set_trace()
                         void_lmp.command("read_data {}".format(cut_solv_out))
 
-                    #TODO apply a proper fix for creating the voids using the
-                    #TODO right pair coefficients from the right files
+                    # TODO apply a proper fix for creating the voids using the
+                    # TODO right pair coefficients from the right files
                     if args.solvent_paircoeffs is not None:
                         void_lmp.file(args.solvent_paircoeffs)
 
                     # load further lammps settings
-                    #void_lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
+                    # void_lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
                     void_lmp.command("thermo_style custom " + " ".join(thermargs))
                     void_lmp.command("thermo_modify lost warn flush yes")
                     void_lmp.command("thermo {}".format(args.logsteps))
 
                     # write restart, dcd files
-                    void_lmp.command("restart {0} {1} {1}".format(args.logsteps * 50, void_solv_rst))
-                    void_lmp.command("dump void_dcd all dcd {} {}".format(args.logsteps, void_solv_dcd))
+                    void_lmp.command(
+                        "restart {0} {1} {1}".format(args.logsteps * 50, void_solv_rst)
+                    )
+                    void_lmp.command(
+                        "dump void_dcd all dcd {} {}".format(
+                            args.logsteps, void_solv_dcd
+                        )
+                    )
                     void_lmp.command("dump_modify void_dcd unwrap yes")
-                    void_lmp.command(("fix create_void {} npt temp {} {} 0.1 "
-                                      "iso 1.0 1.0 1").format("all", 50, 50))
+                    void_lmp.command(
+                        (
+                            "fix create_void {} npt temp {} {} 0.1 " "iso 1.0 1.0 1"
+                        ).format("all", 50, 50)
+                    )
 
                     void_steps = args.void_solvent_steps
                     # create magnifying voids (reduces risk of entrapped solvent molecules)
-                    molecules_names_void_fix = ["void_indent_molecule_{}".format(index_void_fix) for
-                                                index_void_fix in range(num_solvate_molecules)]
+                    molecules_names_void_fix = [
+                        "void_indent_molecule_{}".format(index_void_fix)
+                        for index_void_fix in range(num_solvate_molecules)
+                    ]
                     del (index_void_fix, num_solvate_molecules)
 
-                    #=============================================#
+                    # =============================================#
                     # initial spheres around all solvate molecules
-                    #=============================================#
+                    # =============================================#
 
                     for molecule_sphere_run in range(1, 12):
 
                         # set fixes for void_indent
-                        for molecule_void_fix_name, molecule_void_sphere, molecule_void_cog in zip(molecules_names_void_fix,
-                                                                                                   radii_sphere,
-                                                                                                   cogs_solvate):
-                            growing_molecule_sphere = (molecule_void_sphere *
-                                                       0.1 * molecule_sphere_run)
+                        for (
+                            molecule_void_fix_name,
+                            molecule_void_sphere,
+                            molecule_void_cog,
+                        ) in zip(molecules_names_void_fix, radii_sphere, cogs_solvate):
+                            growing_molecule_sphere = (
+                                molecule_void_sphere * 0.1 * molecule_sphere_run
+                            )
                             molecule_void_fix = "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out".format(
                                 molecule_void_fix_name,
                                 growing_molecule_sphere,
-                                c=molecule_void_cog)
+                                c=molecule_void_cog,
+                            )
                             void_lmp.command(molecule_void_fix)
 
                         void_lmp.command("run {}".format(void_steps))
@@ -1189,37 +1319,43 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # do not delete them after the last run
                         if molecule_sphere_run < 11:
                             for molecule_void_fix_name in molecules_names_void_fix:
-                                void_lmp.command("unfix {0}".format(molecule_void_fix_name))
+                                void_lmp.command(
+                                    "unfix {0}".format(molecule_void_fix_name)
+                                )
 
-                        del (molecule_void_fix_name, molecule_void_sphere,
-                             molecule_void_cog, growing_molecule_sphere)
+                        del (
+                            molecule_void_fix_name,
+                            molecule_void_sphere,
+                            molecule_void_cog,
+                            growing_molecule_sphere,
+                        )
 
                     del molecule_sphere_run
 
-                    #==============================================#
+                    # ==============================================#
                     # additional spheres around close solvate atoms
-                    #==============================================#
+                    # ==============================================#
 
                     close_atoms_solvate = []
                     addnames_void_fix = []
 
                     atoms_coords_void = []
-                    atoms_radii_void  = []
-                    atoms_fixes_void  = []
+                    atoms_radii_void = []
+                    atoms_fixes_void = []
 
                     # 50 attempts to make stuff grow large enough
                     for _ in range(50):
 
-                        #================================================#
+                        # ================================================#
                         # interatomic distances (solvate - solvent) check
-                        #================================================#
+                        # ================================================#
 
                         # array to test if any atoms still have close contacts
                         current_close_atoms_solvate = []
 
                         if rank == 0:
-                            solution_sys.ts_coords  = []
-                            solution_sys.ts_boxes   = []
+                            solution_sys.ts_coords = []
+                            solution_sys.ts_boxes = []
                             solution_sys.ts_lnk_cls = []
 
                             # read latest solvent coordinates and boxes
@@ -1229,23 +1365,30 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                             # concatenate solute and latest solvent coordinates
                             solution_sys.ts_coords.append(
-                                np.concatenate((solvate_sys.ts_coords[-1], solvent_sys.ts_coords[-1]))
+                                np.concatenate(
+                                    (
+                                        solvate_sys.ts_coords[-1],
+                                        solvent_sys.ts_coords[-1],
+                                    )
+                                )
                             )
                             solution_sys.ts_boxes = solvent_sys.ts_boxes
-                            solution_sys.create_linked_cells(-1,
-                                                             rcut_a=2,
-                                                             rcut_b=2,
-                                                             rcut_c=2)
-                            close_atoms_solution = solution_sys.chk_atm_dist(-1,
-                                                                             min_dist=2.0,
-                                                                             exclude_same_molecule=True)
+                            solution_sys.create_linked_cells(
+                                -1, rcut_a=2, rcut_b=2, rcut_c=2
+                            )
+                            close_atoms_solution = solution_sys.chk_atm_dist(
+                                -1, min_dist=2.0, exclude_same_molecule=True
+                            )
                             solution_sys.ts_lnk_cls = []
-                            solution_sys.ts_coords  = []
-                            solution_sys.ts_boxes   = []
+                            solution_sys.ts_coords = []
+                            solution_sys.ts_boxes = []
 
                             for close_atom in close_atoms_solution:
                                 # append only atoms from current check that are not in close_atoms_solvate already
-                                if (close_atom < natoms_solvate_sys and close_atom not in close_atoms_solvate):
+                                if (
+                                    close_atom < natoms_solvate_sys
+                                    and close_atom not in close_atoms_solvate
+                                ):
                                     close_atoms_solvate.append(close_atom)
 
                                 # append all close atoms from current check
@@ -1254,61 +1397,79 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                             del (close_atom, close_atoms_solution)
 
-                            #==========================================#
+                            # ==========================================#
                             # create additional void fixes if necessary
-                            #==========================================#
+                            # ==========================================#
 
                             for atom_solvate in close_atoms_solvate:
 
-                                #=========#
+                                # =========#
                                 # atom fix
-                                #=========#
+                                # =========#
 
-                                solvate_atom_name_fix = "void_indent_atom_{}".format(atom_solvate)
+                                solvate_atom_name_fix = "void_indent_atom_{}".format(
+                                    atom_solvate
+                                )
 
                                 if solvate_atom_name_fix not in atoms_fixes_void:
                                     atoms_fixes_void.append(solvate_atom_name_fix)
 
-                                    #=================#
+                                    # =================#
                                     # atom coordinates
-                                    #=================#
+                                    # =================#
 
-                                    solvate_atom_coords = solvate_sys.ts_coords[-1][atom_solvate]
+                                    solvate_atom_coords = solvate_sys.ts_coords[-1][
+                                        atom_solvate
+                                    ]
                                     atoms_coords_void.append(solvate_atom_coords)
 
-                                    #===========#
+                                    # ===========#
                                     # atom radii
-                                    #===========#
+                                    # ===========#
 
                                     type_atom = solvate_sys.atoms[atom_solvate].atm_key
-                                    weigh_atom = round(solvate_sys.atm_types[type_atom].weigh, 1)
+                                    weigh_atom = round(
+                                        solvate_sys.atm_types[type_atom].weigh, 1
+                                    )
 
                                     try:
-                                        solvate_atom_radius = mde.elements_mass_radii[weigh_atom]
+                                        solvate_atom_radius = mde.elements_mass_radii[
+                                            weigh_atom
+                                        ]
                                     except KeyError:
                                         solvate_atom_radius = 2.0  # dummy radius if element was not found by mass
 
                                     solvate_atom_radius += 1.5  # buffer
                                     atoms_radii_void.append(solvate_atom_radius)
 
-                        #===============================================#
+                        # ===============================================#
                         # generate additional fixes for additional voids
-                        #===============================================#
+                        # ===============================================#
 
                         close_atoms_solvate = comm.bcast(close_atoms_solvate, 0)
-                        atoms_coords_void   = comm.bcast(atoms_coords_void, 0)
-                        atoms_radii_void    = comm.bcast(atoms_radii_void, 0)
-                        atoms_fixes_void    = comm.bcast(atoms_fixes_void, 0)
-                        current_close_atoms_solvate = comm.bcast(current_close_atoms_solvate, 0)
+                        atoms_coords_void = comm.bcast(atoms_coords_void, 0)
+                        atoms_radii_void = comm.bcast(atoms_radii_void, 0)
+                        atoms_fixes_void = comm.bcast(atoms_fixes_void, 0)
+                        current_close_atoms_solvate = comm.bcast(
+                            current_close_atoms_solvate, 0
+                        )
                         void_pylmp_fixes = []
 
                         # grow spheres (i.e. create additional fixes if necessary, keep old ones, so some MD-runs)
                         if len(current_close_atoms_solvate) > 0:
                             for atom_sphere_run in range(1, 12):
-                                for atom_void_fix_name, atom_void_sphere, atom_void_coords in zip(atoms_fixes_void,
-                                                                                                  atoms_radii_void,
-                                                                                                  atoms_coords_void):
-                                    growing_atom_sphere = atom_void_sphere * 0.1 * atom_sphere_run
+                                for (
+                                    atom_void_fix_name,
+                                    atom_void_sphere,
+                                    atom_void_coords,
+                                ) in zip(
+                                    atoms_fixes_void,
+                                    atoms_radii_void,
+                                    atoms_coords_void,
+                                ):
+                                    growing_atom_sphere = (
+                                        atom_void_sphere * 0.1 * atom_sphere_run
+                                    )
 
                                     # check if additional fix already exists
                                     if rank == 0:
@@ -1319,18 +1480,21 @@ for curcycle, idx_lmpa in remaining_cycles:
                                                 continue
 
                                             # do nothing if indentation already exists
-                                            #if lammps_fix["name"] == atom_void_fix_name:
+                                            # if lammps_fix["name"] == atom_void_fix_name:
                                             #    break
 
                                         else:  # fix not defined in lammps
-                                            atom_void_fix = ("fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out").format(
+                                            atom_void_fix = (
+                                                "fix {0} all indent 1 sphere {c[0]} {c[1]} {c[2]} {1} side out"
+                                            ).format(
                                                 atom_void_fix_name,
                                                 growing_atom_sphere,
-                                                c=atom_void_coords)
+                                                c=atom_void_coords,
+                                            )
                                             void_pylmp_fixes.append(atom_void_fix)
                                             del atom_void_fix
 
-                                        del (lammps_fix)
+                                        del lammps_fix
 
                                 void_pylmp_fixes = comm.bcast(void_pylmp_fixes, 0)
                                 atom_void_fix_name = comm.bcast(atom_void_fix_name, 0)
@@ -1342,23 +1506,29 @@ for curcycle, idx_lmpa in remaining_cycles:
                                 void_pylmp_fixes = []
                                 void_lmp.command("run {}".format(void_steps))
 
-                                #DEBUGGING
-                                #print(void_pylmp.fixes)
-                                #time.sleep(2)
+                                # DEBUGGING
+                                # print(void_pylmp.fixes)
+                                # time.sleep(2)
 
                                 if atom_sphere_run < 11:
-                                    void_lmp.command("unfix {}".format(atom_void_fix_name))
+                                    void_lmp.command(
+                                        "unfix {}".format(atom_void_fix_name)
+                                    )
 
-                            del (atom_void_sphere, atom_void_coords,
-                                 atom_void_fix_name, atom_sphere_run,
-                                 void_pylmp_fixes)
+                            del (
+                                atom_void_sphere,
+                                atom_void_coords,
+                                atom_void_fix_name,
+                                atom_sphere_run,
+                                void_pylmp_fixes,
+                            )
 
                         else:
                             break
 
                     del (close_atoms_solvate, current_close_atoms_solvate)
 
-                    #if rank == 0:
+                    # if rank == 0:
                     #    print(void_pylmp.fixes)
                     #    time.sleep(1)
 
@@ -1379,8 +1549,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                         # merge solvate and solvent with relaxed (i.e. prepared)
                         # solvent coordinates
                         solution_sys.ts_coords.append(
-                            np.concatenate((solvate_sys.ts_coords[-1],
-                                            solvent_sys.ts_coords[-1]))
+                            np.concatenate(
+                                (solvate_sys.ts_coords[-1], solvent_sys.ts_coords[-1])
+                            )
                         )
                         # adapt box from solvent
                         solution_sys.ts_boxes = solvent_sys.ts_boxes
@@ -1388,13 +1559,17 @@ for curcycle, idx_lmpa in remaining_cycles:
                         solution_sys.ts_boxes[-1].lmp_xy = None
                         solution_sys.ts_boxes[-1].lmp_xz = None
                         solution_sys.ts_boxes[-1].lmp_yz = None
-                        solution_sys.write_lmpdat(void_solv_out, -1, cgcmm=True,
-                                                  title="Solvent-Voids with solvate, ready for solvent relaxation.")
+                        solution_sys.write_lmpdat(
+                            void_solv_out,
+                            -1,
+                            cgcmm=True,
+                            title="Solvent-Voids with solvate, ready for solvent relaxation.",
+                        )
                         solution_sys.change_indices(incr=1, mode="decrease")
 
-                #===================#
+                # ===================#
                 # solvent relaxation
-                #===================#
+                # ===================#
 
                 if os.path.isfile(relax_solv_out) is False:
 
@@ -1406,60 +1581,80 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     # load gpu package
                     if args.gpu:
-                        #relax_solvent_lmp.command("package gpu 1 neigh yes")
+                        # relax_solvent_lmp.command("package gpu 1 neigh yes")
                         relax_solvent_lmp.command("package gpu 1 neigh no")
                         relax_solvent_lmp.command("suffix gpu")
 
                     relax_solvent_lmp.file(args.set)
 
                     start_relax_temp = args.start_relax_solvent_temp
-                    stop_relax_temp  = args.stop_relax_solvent_temp
+                    stop_relax_temp = args.stop_relax_solvent_temp
 
                     if os.path.isfile(relax_solv_rst) is True:
-                        #sl.copy2(relax_solv_dcd, relax_solv_dcd + "_pre_run.dcd")
-                        relax_solvent_lmp.command("read_restart {}".format(relax_solv_rst))
+                        # sl.copy2(relax_solv_dcd, relax_solv_dcd + "_pre_run.dcd")
+                        relax_solvent_lmp.command(
+                            "read_restart {}".format(relax_solv_rst)
+                        )
                     else:
                         relax_solvent_lmp.command("read_data {}".format(void_solv_out))
-                        relax_solvent_lmp.command(("velocity all create {} 483806 "
-                                                   "rot yes dist gaussian").format(start_relax_temp))
+                        relax_solvent_lmp.command(
+                            (
+                                "velocity all create {} 483806 " "rot yes dist gaussian"
+                            ).format(start_relax_temp)
+                        )
 
                     if args.pair_coeffs is not None:
                         relax_solvent_lmp.file(args.pair_coeffs)
 
                     # read last temperature  # DEBUGGING not necessary since
                     # this is to relax the solvent before annealing begins
-                    #if os.path.isfile(relax_solv_rst) is True:
+                    # if os.path.isfile(relax_solv_rst) is True:
                     #    relax_log = agul.LogUnification()
                     #    relax_log.read_lmplog(relax_log)
                     #    # reassign starting temperature due to last run
                     #    start_relax_temp = relax_log.data[-1]["Temp"][-1]
 
-                    relax_solvent_lmp.command("thermo_style custom " + " ".join(thermargs))
+                    relax_solvent_lmp.command(
+                        "thermo_style custom " + " ".join(thermargs)
+                    )
                     relax_solvent_lmp.command("thermo_modify lost warn flush yes")
                     relax_solvent_lmp.command("thermo {}".format(args.logsteps))
-                    relax_solvent_lmp.command("dump dump_relax_solvent all dcd {} {}".format(args.logsteps, relax_solv_dcd))
-                    relax_solvent_lmp.command("dump_modify dump_relax_solvent unwrap yes")
+                    relax_solvent_lmp.command(
+                        "dump dump_relax_solvent all dcd {} {}".format(
+                            args.logsteps, relax_solv_dcd
+                        )
+                    )
+                    relax_solvent_lmp.command(
+                        "dump_modify dump_relax_solvent unwrap yes"
+                    )
                     # no ice cube prevention or molecules cannot move away properly
-                    #relax_solvent_lmp.command(("fix ic_prevention all momentum {} "
+                    # relax_solvent_lmp.command(("fix ic_prevention all momentum {} "
                     #                           "linear 1 1 1 angular rescale").format(100))
                     # lammps indices start with 1 -> '<=' number atoms of solvate sys
-                    relax_solvent_lmp.command("group solvate id <= {}".format(natoms_solvate_sys))
-                    relax_solvent_lmp.command("group solvent id > {}".format(natoms_solvate_sys))
-                    relax_solvent_lmp.command("restart {} {} {}".format(args.logsteps * 25,
-                                                                        relax_solv_rst,
-                                                                        relax_solv_rst))
+                    relax_solvent_lmp.command(
+                        "group solvate id <= {}".format(natoms_solvate_sys)
+                    )
+                    relax_solvent_lmp.command(
+                        "group solvent id > {}".format(natoms_solvate_sys)
+                    )
+                    relax_solvent_lmp.command(
+                        "restart {} {} {}".format(
+                            args.logsteps * 25, relax_solv_rst, relax_solv_rst
+                        )
+                    )
 
                     # berendsen thermo- and barostatting
                     integrator = "fix solvent_integrator {} nve"
                     thermostat = "fix thermostat {} temp/berendsen {} {} 0.5"
                     barostat = "fix barostat {} press/berendsen iso 40.0 1.0 50"
                     relax_solvent_lmp.command(integrator.format("solvent"))
-                    relax_solvent_lmp.command(thermostat.format("solvent", start_relax_temp,
-                                                                stop_relax_temp))
+                    relax_solvent_lmp.command(
+                        thermostat.format("solvent", start_relax_temp, stop_relax_temp)
+                    )
                     relax_solvent_lmp.command(barostat.format("solvent"))
 
                     # hoover-nose thermo- and barostatting
-                    #relax_solvent_lmp.command(("fix ensemble_relax_solvent {} "
+                    # relax_solvent_lmp.command(("fix ensemble_relax_solvent {} "
                     #                           "npt temp {} {} 0.5 "
                     #                           "iso 40.0 1.0 5").format("solvent",
                     #                                                   start_relax_temp,
@@ -1469,7 +1664,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                     relax_solvent_lmp.command("run {} upto".format(relaxation_steps))
                     del relaxation_steps
                     relax_solvent_lmp.command("undump dump_relax_solvent")
-                    #relax_solvent_lmp.command("unfix ensemble_relax_solvent")
+                    # relax_solvent_lmp.command("unfix ensemble_relax_solvent")
                     relax_solvent_lmp.command("unfix solvent_integrator")
                     relax_solvent_lmp.command("unfix thermostat")
                     relax_solvent_lmp.command("unfix barostat")
@@ -1479,15 +1674,18 @@ for curcycle, idx_lmpa in remaining_cycles:
                     relax_solvent_lmp.command("clear")
                     relax_solvent_lmp.close()
 
-            #=========================================#
+            # =========================================#
             # annealing (solution) - equilibration run
-            #=========================================#
+            # =========================================#
 
             start_anneal_temp = args.start_equil_anneal_temp
-            stop_anneal_temp  = args.stop_equil_anneal_temp
+            stop_anneal_temp = args.stop_equil_anneal_temp
 
             # read last temperature
-            if os.path.isfile(equil_anneal_rst) is True and os.path.isfile(equil_anneal_log) is True:
+            if (
+                os.path.isfile(equil_anneal_rst) is True
+                and os.path.isfile(equil_anneal_log) is True
+            ):
                 eq_log = agul.LogUnification()
                 eq_log.read_lmplog(equil_anneal_log)
                 # reassign starting temperature due to last run
@@ -1501,7 +1699,7 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # load gpu package
                 if args.gpu:
-                    #equil_anneal_lmp.command("package gpu 1 neigh yes")
+                    # equil_anneal_lmp.command("package gpu 1 neigh yes")
                     equil_anneal_lmp.command("package gpu 1 neigh no")
                     equil_anneal_lmp.command("suffix gpu")
 
@@ -1518,25 +1716,45 @@ for curcycle, idx_lmpa in remaining_cycles:
                 # in solvent; 1st run
                 elif args.lmps is not None:
                     equil_anneal_lmp.command("read_restart {}".format(relax_solv_out))
-                    equil_anneal_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(start_anneal_temp))
+                    equil_anneal_lmp.command(
+                        "velocity all create {} 483806 rot yes dist gaussian".format(
+                            start_anneal_temp
+                        )
+                    )
                 # in vacuo; 1st run
                 else:
                     equil_anneal_lmp.command("read_restart {}".format(quench_out))
-                    equil_anneal_lmp.command("velocity all create {} 483806 rot yes dist gaussian".format(start_anneal_temp))
+                    equil_anneal_lmp.command(
+                        "velocity all create {} 483806 rot yes dist gaussian".format(
+                            start_anneal_temp
+                        )
+                    )
 
                 if args.pair_coeffs is not None:
                     equil_anneal_lmp.file(args.pair_coeffs)
 
-                equil_anneal_lmp.command("group solvate id <= {}".format(natoms_solvate_sys))
-                equil_anneal_lmp.command("fix ic_prevention all momentum " +
-                                         "{} linear 1 1 1 angular rescale".format(100))
+                equil_anneal_lmp.command(
+                    "group solvate id <= {}".format(natoms_solvate_sys)
+                )
+                equil_anneal_lmp.command(
+                    "fix ic_prevention all momentum "
+                    + "{} linear 1 1 1 angular rescale".format(100)
+                )
 
-                #args.logsteps = 50
-                #equil_anneal_lmp.command("timestep 0.00005")
+                # args.logsteps = 50
+                # equil_anneal_lmp.command("timestep 0.00005")
 
-                equil_anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps, equil_anneal_dcd))
+                equil_anneal_lmp.command(
+                    "dump dump_annealing all dcd {} {}".format(
+                        args.logsteps, equil_anneal_dcd
+                    )
+                )
                 equil_anneal_lmp.command("dump_modify dump_annealing unwrap yes")
-                equil_anneal_lmp.command("restart {} {} {}".format(args.logsteps * 25, equil_anneal_rst, equil_anneal_rst))
+                equil_anneal_lmp.command(
+                    "restart {} {} {}".format(
+                        args.logsteps * 25, equil_anneal_rst, equil_anneal_rst
+                    )
+                )
 
                 # thermo output
                 equil_anneal_lmp.command("thermo_style custom " + " ".join(thermargs))
@@ -1544,12 +1762,22 @@ for curcycle, idx_lmpa in remaining_cycles:
                 equil_anneal_lmp.command("thermo {}".format(args.logsteps))
 
                 # choose ensemble
-                equil_anneal_lmp.command(("fix fix_nve_equil_anneal {} nve").format("all"))
-                equil_anneal_lmp.command(("fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.5").format("all", start_anneal_temp, stop_anneal_temp))
+                equil_anneal_lmp.command(
+                    ("fix fix_nve_equil_anneal {} nve").format("all")
+                )
+                equil_anneal_lmp.command(
+                    (
+                        "fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.5"
+                    ).format("all", start_anneal_temp, stop_anneal_temp)
+                )
 
                 if args.lmps is not None:
-                    #equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 100").format("all"))
-                    equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 50").format("all"))
+                    # equil_anneal_lmp.command(("fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 100").format("all"))
+                    equil_anneal_lmp.command(
+                        (
+                            "fix fix_press_berendsen_equil_anneal {} press/berendsen iso 40.0 1.0 50"
+                        ).format("all")
+                    )
 
                 # skip heating run if it is already finished but was restarted
                 if rank == 0:
@@ -1574,7 +1802,11 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 # short run at constant target temperature
                 equil_anneal_lmp.command("unfix fix_temp_berendsen_equil_anneal")
-                equil_anneal_lmp.command(("fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.1").format("all", stop_anneal_temp, stop_anneal_temp))
+                equil_anneal_lmp.command(
+                    (
+                        "fix fix_temp_berendsen_equil_anneal {} temp/berendsen {} {} 0.1"
+                    ).format("all", stop_anneal_temp, stop_anneal_temp)
+                )
 
                 if last_step < equil_steps + (equil_steps // 5):
                     equil_anneal_lmp.command("run {}".format(equil_steps // 5))
@@ -1582,7 +1814,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 del (equil_steps, last_step)
                 equil_anneal_lmp.command("reset_timestep 0")
 
-                #equil_anneal_lmp.command("unfix equilibration_ensemble_annealing")
+                # equil_anneal_lmp.command("unfix equilibration_ensemble_annealing")
                 equil_anneal_lmp.command("unfix fix_nve_equil_anneal")
                 equil_anneal_lmp.command("unfix fix_temp_berendsen_equil_anneal")
 
@@ -1596,9 +1828,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                 if os.path.isfile(equil_anneal_rst) is True and rank == 0:
                     os.remove(equil_anneal_rst)
 
-                #==============================#
+                # ==============================#
                 # equilibration: aggregate check
-                #==============================#
+                # ==============================#
 
                 status_equil_anneal_agg = None
 
@@ -1609,39 +1841,42 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     # refresh last coordinates and boxes
                     if args.lmps is not None:
-                        solvate_sys.ts_coords.append(solution_sys.ts_coords[-1][:natoms_solvate_sys])
+                        solvate_sys.ts_coords.append(
+                            solution_sys.ts_coords[-1][:natoms_solvate_sys]
+                        )
                         solvate_sys.ts_boxes.append(solution_sys.ts_boxes[-1])
 
-                    status_equil_anneal_agg = check_aggregate(solvate_sys,
-                                                              frame_id=-1,
-                                                              atm_atm_dist=4,
-                                                              debug=False)
-                    #time.sleep(5)  # DEBUGGING
+                    status_equil_anneal_agg = check_aggregate(
+                        solvate_sys, frame_id=-1, atm_atm_dist=4, debug=False
+                    )
+                    # time.sleep(5)  # DEBUGGING
 
                 status_equil_anneal_agg = comm.bcast(status_equil_anneal_agg, 0)
 
                 if status_equil_anneal_agg is False:
                     # delete old folders
                     if rank == 0:
-                        print("***Equil-Anneal Warning: Annealing failed! Starting all over.")
+                        print(
+                            "***Equil-Anneal Warning: Annealing failed! Starting all over."
+                        )
                         sl.rmtree(sysprep_dir)
                         sl.rmtree(quench_dir)
                         sl.rmtree(anneal_dir)
 
                     quench_success = False
                     anneal_success = False
-                    #time.sleep(5)  # DEBUGGING
+                    # time.sleep(5)  # DEBUGGING
                     continue
 
                 del status_equil_anneal_agg
 
-            #======================================#
+            # ======================================#
             # annealing (solution) - productive run
-            #======================================#
+            # ======================================#
 
             anneal_steps = args.anneal_steps
             anneal_lmp = lammps()
-            anneal_lmp.command("log {} append".format(anneal_dir+"anneal.lmplog"))
+            anneal_lmp.command("log {} append".format(anneal_dir + "anneal.lmplog"))
 
             if args.gpu:
                 # neighbor list only on cpu or c_pe values are wrong
@@ -1664,15 +1899,17 @@ for curcycle, idx_lmpa in remaining_cycles:
                 anneal_lmp.file(args.pair_coeffs)
 
             anneal_lmp.command("group solvate id <= {}".format(natoms_solvate_sys))
-            anneal_lmp.command("fix ic_prevention all momentum " +
-                               "{} linear 1 1 1 angular rescale".format(100))
+            anneal_lmp.command(
+                "fix ic_prevention all momentum "
+                + "{} linear 1 1 1 angular rescale".format(100)
+            )
 
-            #anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps,
+            # anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps,
             #                                                              anneal_dcd))
-            #anneal_lmp.command("dump_modify dump_annealing unwrap yes")
-            anneal_lmp.command("restart {} {} {}".format(args.logsteps * 25,
-                                                         anneal_rst,
-                                                         anneal_rst))
+            # anneal_lmp.command("dump_modify dump_annealing unwrap yes")
+            anneal_lmp.command(
+                "restart {} {} {}".format(args.logsteps * 25, anneal_rst, anneal_rst)
+            )
 
             # compute potential energy of the solvate (pair, bond, ...)
             # caveat: only possible with neigh no if calculating on the graphics
@@ -1686,35 +1923,48 @@ for curcycle, idx_lmpa in remaining_cycles:
             anneal_lmp.command("thermo {}".format(args.logsteps))
 
             if args.lmps is None or args.equil_anneal_ensemble == "nvt":
-                anneal_lmp.command(("fix productive_ensemble_annealing {} "
-                                    "nvt temp {} {} 0.1").format("all",
-                                                                 stop_anneal_temp,
-                                                                 stop_anneal_temp))
+                anneal_lmp.command(
+                    (
+                        "fix productive_ensemble_annealing {} " "nvt temp {} {} 0.1"
+                    ).format("all", stop_anneal_temp, stop_anneal_temp)
+                )
             else:
                 anneal_lmp.command("group solvent id > {}".format(natoms_solvate_sys))
-                anneal_lmp.command(("fix productive_ensemble_annealing {} "
-                                    "npt temp {} {} 0.1 iso 1.0 1.0 1").format("all",
-                                                                               stop_anneal_temp,
-                                                                               stop_anneal_temp))
+                anneal_lmp.command(
+                    (
+                        "fix productive_ensemble_annealing {} "
+                        "npt temp {} {} 0.1 iso 1.0 1.0 1"
+                    ).format("all", stop_anneal_temp, stop_anneal_temp)
+                )
 
-            #===============#
+            # ===============#
             # productive run
-            #===============#
+            # ===============#
             total_anneal_runs = 5
 
             # get id of the last anneal run, all former dcd- and log-files
             if rank == 0:
-                anneal_dcds = natsorted(["{}{}".format(anneal_dir, dcd_file) for dcd_file in
-                                         os.listdir(anneal_dir) if
-                                         re.match(r'\d+_anneal_\d+.dcd', dcd_file)])
-                anneal_logs = natsorted(["{}{}".format(anneal_dir, log_file) for log_file in
-                                         os.listdir(anneal_dir) if
-                                         re.match(r'\d+_anneal_\d+.lmplog', log_file)])
+                anneal_dcds = natsorted(
+                    [
+                        "{}{}".format(anneal_dir, dcd_file)
+                        for dcd_file in os.listdir(anneal_dir)
+                        if re.match(r"\d+_anneal_\d+.dcd", dcd_file)
+                    ]
+                )
+                anneal_logs = natsorted(
+                    [
+                        "{}{}".format(anneal_dir, log_file)
+                        for log_file in os.listdir(anneal_dir)
+                        if re.match(r"\d+_anneal_\d+.lmplog", log_file)
+                    ]
+                )
                 del (dcd_file, log_file)
 
                 try:
                     # get last run number from file name
-                    last_anneal_run = re.match(r'^\d+', os.path.basename(anneal_dcds[-1])).group(0)
+                    last_anneal_run = re.match(
+                        r"^\d+", os.path.basename(anneal_dcds[-1])
+                    ).group(0)
                     # do not repeat the last run, continue with the next one
                     next_anneal_run = int(last_anneal_run) + 1
                     del last_anneal_run
@@ -1734,19 +1984,27 @@ for curcycle, idx_lmpa in remaining_cycles:
 
             for anneal_run in range(next_anneal_run, total_anneal_runs):
                 # dcd stuff
-                anneal_dcd = anneal_dir + "{}_anneal_{}".format(anneal_run, curcycle) + ".dcd"
-                anneal_lmp.command("dump dump_annealing all dcd {} {}".format(args.logsteps, anneal_dcd))
+                anneal_dcd = (
+                    anneal_dir + "{}_anneal_{}".format(anneal_run, curcycle) + ".dcd"
+                )
+                anneal_lmp.command(
+                    "dump dump_annealing all dcd {} {}".format(
+                        args.logsteps, anneal_dcd
+                    )
+                )
                 anneal_lmp.command("dump_modify dump_annealing unwrap yes")
                 if anneal_dcd not in anneal_dcds:
                     anneal_dcds.append(anneal_dcd)
 
                 # log stuff
-                anneal_log = anneal_dir + "{}_anneal_{}".format(anneal_run, curcycle) + ".lmplog"
+                anneal_log = (
+                    anneal_dir + "{}_anneal_{}".format(anneal_run, curcycle) + ".lmplog"
+                )
                 anneal_lmp.command("log {}".format(anneal_log))
                 if anneal_log not in anneal_logs:
                     anneal_logs.append(anneal_log)
 
-                del (anneal_log)
+                del anneal_log
 
                 # perform current run
                 anneal_lmp.command("run {}".format(anneal_steps))
@@ -1760,9 +2018,9 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                 if rank == 0:
 
-                    #==========================================#
+                    # ==========================================#
                     # productive: check aggregate of last frame
-                    #==========================================#
+                    # ==========================================#
 
                     solution_sys.import_dcd(anneal_dcd)
                     solution_sys.read_frames(frame=-2, to_frame=-1)  # read last frame
@@ -1770,39 +2028,46 @@ for curcycle, idx_lmpa in remaining_cycles:
 
                     # refresh last coordinates and boxes
                     if args.lmps is not None:
-                        solvate_sys.ts_coords.append(solution_sys.ts_coords[-1][:natoms_solvate_sys])
+                        solvate_sys.ts_coords.append(
+                            solution_sys.ts_coords[-1][:natoms_solvate_sys]
+                        )
                         solvate_sys.ts_boxes.append(solution_sys.ts_boxes[-1])
 
-                    status_anneal_agg = check_aggregate(solvate_sys,
-                                                        frame_id=-1,
-                                                        atm_atm_dist=4,
-                                                        debug=False)
+                    status_anneal_agg = check_aggregate(
+                        solvate_sys, frame_id=-1, atm_atm_dist=4, debug=False
+                    )
 
-                    #====================================================#
+                    # ====================================================#
                     # productive: energy check of last 80 % of all frames
-                    #====================================================#
+                    # ====================================================#
 
-                    energy_result = check_energy_convergence(anneal_logs,
-                                                             keyword="c_pe",
-                                                             percentage=percentage_to_check,
-                                                             debug=True)
+                    energy_result = check_energy_convergence(
+                        anneal_logs,
+                        keyword="c_pe",
+                        percentage=percentage_to_check,
+                        debug=True,
+                    )
                     normal_distributed_pe_anneal = energy_result[0]
                     min_pe = energy_result[1]
 
                 del anneal_dcd
                 status_anneal_agg = comm.bcast(status_anneal_agg, 0)
-                normal_distributed_pe_anneal = comm.bcast(normal_distributed_pe_anneal, 0)
+                normal_distributed_pe_anneal = comm.bcast(
+                    normal_distributed_pe_anneal, 0
+                )
 
-                #========================================#
+                # ========================================#
                 # check outcome of last annealing attempt
-                #========================================#
+                # ========================================#
 
-                #DEBUGGING skip extended calculation
-                #anneal_success = True
+                # DEBUGGING skip extended calculation
+                # anneal_success = True
 
                 if status_anneal_agg is False:  # aggregate not ok
                     if rank == 0:
-                        print("***Productive-Anneal Warning: Aggregate got dissolved! Annealing failed!")
+                        print(
+                            "***Productive-Anneal Warning: Aggregate got dissolved! Annealing failed!"
+                        )
                         time.sleep(5)
                     break
                 elif normal_distributed_pe_anneal is True:  # aggregate ok, energy ok
@@ -1816,12 +2081,12 @@ for curcycle, idx_lmpa in remaining_cycles:
             anneal_lmp.close()
             del (status_anneal_agg, anneal_steps)
 
-            #=================================================================#
+            # =================================================================#
             # aftermath: extract frame with lowest pe of the solvate and check
             #            if its aggregate is intact
-            #=================================================================#
+            # =================================================================#
             if anneal_success is True:
-                #status_min_pe_anneal_agg = False
+                # status_min_pe_anneal_agg = False
 
                 if rank == 0:
 
@@ -1846,14 +2111,15 @@ for curcycle, idx_lmpa in remaining_cycles:
                     solution_sys.ts_coords = []
                     solution_sys.import_dcd(anneal_dcds[index_logfile])
                     del index_logfile
-                    solution_sys.read_frames(frame=index_min_pe,
-                                             to_frame=index_min_pe + 1)
+                    solution_sys.read_frames(
+                        frame=index_min_pe, to_frame=index_min_pe + 1
+                    )
                     del index_min_pe
                     solution_sys.close_dcd()
 
-                    #=============================#
+                    # =============================#
                     # separate solute from solvent
-                    #=============================#
+                    # =============================#
 
                     if args.lmps is not None:
                         coords_solvent = solution_sys.ts_coords[-1][natoms_solvate_sys:]
@@ -1866,7 +2132,9 @@ for curcycle, idx_lmpa in remaining_cycles:
                     solvate_sys.ts_coords.append(coords_solvate)
 
                     # final aggregate check (is everything o.k. with this frame?)
-                    status_min_pe_agg = check_aggregate(solvate_sys, frame_id=-1, atm_atm_dist=4)
+                    status_min_pe_agg = check_aggregate(
+                        solvate_sys, frame_id=-1, atm_atm_dist=4
+                    )
 
                     if status_min_pe_agg is True:
                         del coords_solvate
@@ -1882,7 +2150,9 @@ for curcycle, idx_lmpa in remaining_cycles:
             else:
                 # delete old folders
                 if rank == 0:
-                    print("***Anneal-Productive Info: Annealing finally failed! Starting all over.")
+                    print(
+                        "***Anneal-Productive Info: Annealing finally failed! Starting all over."
+                    )
                     sl.rmtree(sysprep_dir)
                     sl.rmtree(quench_dir)
                     sl.rmtree(anneal_dir)
@@ -1890,7 +2160,7 @@ for curcycle, idx_lmpa in remaining_cycles:
                 quench_success = False
                 continue
 
-            #time.sleep(20)
+            # time.sleep(20)
 
         # tidy up
         if rank == 0:
@@ -1898,23 +2168,24 @@ for curcycle, idx_lmpa in remaining_cycles:
                 del solvent_sys
             del (solvate_sys, solution_sys)
 
-    #==========================================================================#
+    # ==========================================================================#
     # 4. REQUENCHING
-    #==========================================================================#
+    # ==========================================================================#
     if os.path.isfile(requench_dcd) is False:
         # solute
         solvate_sys = process_data(sysprep_out, quench_dcd)
         natoms_solvate_sys = len(solvate_sys.atoms)
         create_folder(requench_dir)
 
-        #=========================================================#
+        # =========================================================#
         # read last frame and write temporary data file for lammps
-        #=========================================================#
+        # =========================================================#
         if rank == 0:
             solvate_sys.read_xyz(solvate_anneal_out)
             solvate_sys.change_indices(incr=1, mode="increase")
-            solvate_sys.write_lmpdat(tmp_solvate_anneal_out, -1,
-                                     title="Input for requenching")
+            solvate_sys.write_lmpdat(
+                tmp_solvate_anneal_out, -1, title="Input for requenching"
+            )
             solvate_sys.change_indices(incr=1, mode="decrease")
 
         # perform steepest descent minimization
@@ -1930,14 +2201,15 @@ for curcycle, idx_lmpa in remaining_cycles:
             os.remove(tmp_solvate_anneal_out)
             del tmp_solvate_anneal_out
 
-        #requench_lmp.command("min_style sd")
+        # requench_lmp.command("min_style sd")
         requench_lmp.command("min_style cg")
-        #requench_lmp.command("fix minimize_requench all box/relax iso 1.0")
+        # requench_lmp.command("fix minimize_requench all box/relax iso 1.0")
         requench_lmp.command("thermo_style custom " + " ".join(thermargs))
         requench_lmp.command("thermo_modify lost warn flush yes")
         requench_lmp.command("thermo {}".format(args.logsteps))
-        requench_lmp.command("dump dump_requench all dcd {} {}".format(
-            args.logsteps, requench_dcd))
+        requench_lmp.command(
+            "dump dump_requench all dcd {} {}".format(args.logsteps, requench_dcd)
+        )
         requench_lmp.command("dump_modify dump_requench unwrap yes")
         requench_lmp.command("neigh_modify every 1 delay 0 check yes")
         requench_steps = args.requench_steps

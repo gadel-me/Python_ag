@@ -16,15 +16,17 @@ point energy calculation.
 parser = argparse.ArgumentParser(
     prog="gau_sbatch.py",
     formatter_class=argparse.RawTextHelpFormatter,
-    description="Script to start subscript for executing gaussian calculations.")
+    description="Script to start subscript for executing gaussian calculations.",
+)
 
-parser.add_argument("gau_folder",
-                    help="Folder in which the gaussian input-files (*.gau) " +
-                         "are stored.")
+parser.add_argument(
+    "gau_folder",
+    help="Folder in which the gaussian input-files (*.gau) " + "are stored.",
+)
 
-parser.add_argument("-gau_run",
-                    metavar="gau_run.py",
-                    help="Script to start the actual calculation")
+parser.add_argument(
+    "-gau_run", metavar="gau_run.py", help="Script to start the actual calculation"
+)
 
 args = parser.parse_args()
 
@@ -38,11 +40,12 @@ for gau_in in gau_input_files:
     # get full path of input file
     gau_in = "{}/{}".format(args.gau_folder, gau_in)
 
-    subprocess.run(["sbatch", "--job-name", gau_in.lstrip("./"),
-               args.gau_run, gau_in], bufsize=-1)
+    subprocess.run(
+        ["sbatch", "--job-name", gau_in.lstrip("./"), args.gau_run, gau_in], bufsize=-1
+    )
 
     # debugging
-    #python = "/home/gadelmeier/anaconda2/bin/python"
-    #subprocess.run([python, args.gau_run, gau_in], bufsize=-1)
-    #break
+    # python = "/home/gadelmeier/anaconda2/bin/python"
+    # subprocess.run([python, args.gau_run, gau_in], bufsize=-1)
+    # break
     time.sleep(0.1)

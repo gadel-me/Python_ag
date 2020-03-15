@@ -25,14 +25,15 @@ import md_linked_cells as mdlc
 import md_universe_helper_functions as mduh
 import networkx
 from networkx.algorithms.components.connected import connected_components
-#import rmsd
+
+# import rmsd
 import pdb
 
 __version__ = "2019-09-26"
 
-#=================
+# =================
 # Helper Functions
-#=================
+# =================
 
 
 def to_graph(l):
@@ -66,35 +67,36 @@ class Universe(object):
         > angle-types
         > dihedral-types
     """
+
     def __init__(self):
         """
         Initialize all containers which will later be needed (maybe).
         """
         # atom-property section
-        self.atm_types   = {}  # instances of Atom(); force field stuff
-        self.atoms       = []  # instances of Atom(); general stuff
+        self.atm_types = {}  # instances of Atom(); force field stuff
+        self.atoms = []  # instances of Atom(); general stuff
         # molecular topology sections
-        self.bonds       = []  # instances of Bond()
-        self.angles      = []  # instances of Angle()
-        self.dihedrals   = []  # instances of Dihedral()
-        self.impropers   = []  # instances of Improper()
-        self.molecules   = []  # containing lists with idxs of atoms that form a molecule
+        self.bonds = []  # instances of Bond()
+        self.angles = []  # instances of Angle()
+        self.dihedrals = []  # instances of Dihedral()
+        self.impropers = []  # instances of Improper()
+        self.molecules = []  # containing lists with idxs of atoms that form a molecule
         # force field sections
-        self.bnd_types   = {}  # instances of Bond(); force field stuff
-        self.ang_types   = {}  # instances of Angle(); force field stuff
-        self.dih_types   = {}  # instances of Dihedral(); force field stuff
-        self.imp_types   = {}  # instances of Improper(); force field stuff
-        self.pair_types  = []  # holds all pair-coefficients
+        self.bnd_types = {}  # instances of Bond(); force field stuff
+        self.ang_types = {}  # instances of Angle(); force field stuff
+        self.dih_types = {}  # instances of Dihedral(); force field stuff
+        self.imp_types = {}  # instances of Improper(); force field stuff
+        self.pair_types = []  # holds all pair-coefficients
         # coordinate and box sections
-        self.ts_coords   = []  # all coordinates of all frames
-        self.ts_forces   = []  # all forces of all frames
-        #self.ts_velocs   = []  # all velocities of all frames
-        self.ts_boxes    = []  # instances of Box() of each frame
-        self.ts_lnk_cls  = []  # instances of LinkedCells() of each frame
+        self.ts_coords = []  # all coordinates of all frames
+        self.ts_forces = []  # all forces of all frames
+        # self.ts_velocs   = []  # all velocities of all frames
+        self.ts_boxes = []  # instances of Box() of each frame
+        self.ts_lnk_cls = []  # instances of LinkedCells() of each frame
 
     # COMMON-STUFF -------------------------------------------------------------------
     def _sort(self, keyword, atm_keyword=None):
-        #TODO: SORT BONDS ALSO BY DIFFERENT PARAMETERS LIKE BOND-KEY, ATOM-ID2
+        # TODO: SORT BONDS ALSO BY DIFFERENT PARAMETERS LIKE BOND-KEY, ATOM-ID2
         """
         Sort
             > atoms by id, key, charge, x-, y- or z-coordinates
@@ -162,7 +164,7 @@ class Universe(object):
             iang.atm_id1 = assigned_atm_ids[iang.atm_id1]
             iang.atm_id2 = assigned_atm_ids[iang.atm_id2]
             iang.atm_id3 = assigned_atm_ids[iang.atm_id3]
-            iang.ang_id  = cang_id
+            iang.ang_id = cang_id
 
         # /// refresh dihedrals ///
         self._sort("dihedrals")
@@ -172,7 +174,7 @@ class Universe(object):
             idih.atm_id2 = assigned_atm_ids[idih.atm_id2]
             idih.atm_id3 = assigned_atm_ids[idih.atm_id3]
             idih.atm_id4 = assigned_atm_ids[idih.atm_id4]
-            idih.dih_id  = cdih_id
+            idih.dih_id = cdih_id
 
         # /// refresh impropers
         self._sort("impropers")
@@ -211,28 +213,43 @@ class Universe(object):
 
         # /// delete entries
         for frame_id in range(len(self.ts_coords)):
-            self.ts_coords[frame_id] = [coord for coord_idx, coord in enumerate(self.ts_coords[frame_id]) if
-                                        coord_idx not in atoms2delete]
+            self.ts_coords[frame_id] = [
+                coord
+                for coord_idx, coord in enumerate(self.ts_coords[frame_id])
+                if coord_idx not in atoms2delete
+            ]
 
-        self.atoms     = [atm for idx, atm in enumerate(self.atoms) if
-                          idx not in atoms2delete]
-        self.bonds     = [bnd for bnd in self.bonds if
-                          bnd.atm_id1 not in atoms2delete and
-                          bnd.atm_id2 not in atoms2delete]
-        self.angles    = [ang for ang in self.angles if
-                          ang.atm_id1 not in atoms2delete and
-                          ang.atm_id2 not in atoms2delete and
-                          ang.atm_id3 not in atoms2delete]
-        self.dihedrals = [dih for dih in self.dihedrals if
-                          dih.atm_id1 not in atoms2delete and
-                          dih.atm_id2 not in atoms2delete and
-                          dih.atm_id3 not in atoms2delete and
-                          dih.atm_id4 not in atoms2delete]
-        self.impropers = [imp for imp in self.impropers if
-                          imp.atm_id1 not in atoms2delete and
-                          imp.atm_id2 not in atoms2delete and
-                          imp.atm_id3 not in atoms2delete and
-                          imp.atm_id4 not in atoms2delete]
+        self.atoms = [
+            atm for idx, atm in enumerate(self.atoms) if idx not in atoms2delete
+        ]
+        self.bonds = [
+            bnd
+            for bnd in self.bonds
+            if bnd.atm_id1 not in atoms2delete and bnd.atm_id2 not in atoms2delete
+        ]
+        self.angles = [
+            ang
+            for ang in self.angles
+            if ang.atm_id1 not in atoms2delete
+            and ang.atm_id2 not in atoms2delete
+            and ang.atm_id3 not in atoms2delete
+        ]
+        self.dihedrals = [
+            dih
+            for dih in self.dihedrals
+            if dih.atm_id1 not in atoms2delete
+            and dih.atm_id2 not in atoms2delete
+            and dih.atm_id3 not in atoms2delete
+            and dih.atm_id4 not in atoms2delete
+        ]
+        self.impropers = [
+            imp
+            for imp in self.impropers
+            if imp.atm_id1 not in atoms2delete
+            and imp.atm_id2 not in atoms2delete
+            and imp.atm_id3 not in atoms2delete
+            and imp.atm_id4 not in atoms2delete
+        ]
 
         # delete molecules
         for molecule_idx, molecule in enumerate(self.molecules):
@@ -243,8 +260,9 @@ class Universe(object):
 
         self.molecules = mduh._del_nones(self.molecules)
 
-    def ui_convert_units(self, energy_unit_out='eV', ang_unit_out=False,
-                         cvff_style=False):
+    def ui_convert_units(
+        self, energy_unit_out="eV", ang_unit_out=False, cvff_style=False
+    ):
         """
         Convert read units of force constants, angles, charges to given format.
         Standard AMBER-Units are kcal/mol*A**-2 (force constants)
@@ -283,10 +301,14 @@ class Universe(object):
                     self.imp_types[cur_imptype].cvff_prm_d()
 
         if self.pair_types:
-            print("***UI-Convert-Warning: Conversion for pair_types not implemented yet (but for atoms it is)!")
+            print(
+                "***UI-Convert-Warning: Conversion for pair_types not implemented yet (but for atoms it is)!"
+            )
             pass
 
-    def mix_pair_types(self, mode="ii", mix_style="arithmetic", to_file=None, debug=False):
+    def mix_pair_types(
+        self, mode="ii", mix_style="arithmetic", to_file=None, debug=False
+    ):
         """
         Calculate sigma_ij and epsilon_ij by utilizing the Lorentz-Berthelot rules
         Sources:    https://en.wikipedia.org/wiki/Combining_rules
@@ -316,66 +338,83 @@ class Universe(object):
                 # define current atom-type
                 atm_i = self.atm_types[i]
 
-                if hasattr(atm_i, "sigma")and hasattr(atm_i, "epsilon"):
+                if hasattr(atm_i, "sigma") and hasattr(atm_i, "epsilon"):
                     # mix vdw of current atom-type with itself
-                    sigma_ii, epsilon_ii = atm_i.mix_ij(atm_i.sigma,
-                                                        atm_i.epsilon,
-                                                        mix=mix_style)
+                    sigma_ii, epsilon_ii = atm_i.mix_ij(
+                        atm_i.sigma, atm_i.epsilon, mix=mix_style
+                    )
                     # create instance of LongRange()
-                    cii = mds.LongRange(lr_key="lj",
-                                        atm_key_i=i,
-                                        atm_key_j=i,
-                                        sigma_ij=sigma_ii,
-                                        epsilon_ij=epsilon_ii,
-                                        pairs="ii"
-                                        )
+                    cii = mds.LongRange(
+                        lr_key="lj",
+                        atm_key_i=i,
+                        atm_key_j=i,
+                        sigma_ij=sigma_ii,
+                        epsilon_ij=epsilon_ii,
+                        pairs="ii",
+                    )
 
                     # write results to file
                     if to_file is not None:
                         with open(to_file, "a") as pair_file:
-                            pair_file.write("{:<5}{:<5}{:>10}{:>10}\n".format(cij.atm_key_i, cij.atm_key_j, cij.sigma_ij, cij.epsilon_ij))
+                            pair_file.write(
+                                "{:<5}{:<5}{:>10}{:>10}\n".format(
+                                    cij.atm_key_i,
+                                    cij.atm_key_j,
+                                    cij.sigma_ij,
+                                    cij.epsilon_ij,
+                                )
+                            )
                     else:
                         self.pair_types.append(cii)
 
         elif mode == "ij":
-            #TODO Mix and do not overwrite existing styles, i.e. i and j must be
-            #TODO renamed when appending takes place between different files
+            # TODO Mix and do not overwrite existing styles, i.e. i and j must be
+            # TODO renamed when appending takes place between different files
 
             for i, j in it.combinations_with_replacement(self.atm_types, 2):
                 atm_i = self.atm_types[i]
                 atm_j = self.atm_types[j]
 
-                if hasattr(atm_i, "sigma")and hasattr(atm_i, "epsilon") \
-                   and hasattr(atm_j, "sigma")and hasattr(atm_j, "epsilon"):
-                    sigma_ij, epsilon_ij = atm_i.mix_ij(atm_j.sigma,
-                                                        atm_j.epsilon,
-                                                        mix=mix_style)
+                if (
+                    hasattr(atm_i, "sigma")
+                    and hasattr(atm_i, "epsilon")
+                    and hasattr(atm_j, "sigma")
+                    and hasattr(atm_j, "epsilon")
+                ):
+                    sigma_ij, epsilon_ij = atm_i.mix_ij(
+                        atm_j.sigma, atm_j.epsilon, mix=mix_style
+                    )
                     # create instance of LongRange()
-                    cij = mds.LongRange(lr_key="lj",
-                                        atm_key_i=i,
-                                        atm_key_j=j,
-                                        sigma_ij=sigma_ij,
-                                        epsilon_ij=epsilon_ij,
-                                        pairs="ij")
+                    cij = mds.LongRange(
+                        lr_key="lj",
+                        atm_key_i=i,
+                        atm_key_j=j,
+                        sigma_ij=sigma_ij,
+                        epsilon_ij=epsilon_ij,
+                        pairs="ij",
+                    )
 
                     # write results to file
                     if to_file is not None:
                         with open(to_file, "a") as pair_file:
-                            pair_file.write("{:<5}{:<5}{:<20}{:<20}\n".format(cij.atm_key_i, cij.atm_key_j, cij.epsilon_ij, cij.sigma_ij))
+                            pair_file.write(
+                                "{:<5}{:<5}{:<20}{:<20}\n".format(
+                                    cij.atm_key_i,
+                                    cij.atm_key_j,
+                                    cij.epsilon_ij,
+                                    cij.sigma_ij,
+                                )
+                            )
                     else:
                         self.pair_types.append(cij)
 
         else:
             raise IOError("Wrong mode. Allowed: ii|ij")
 
-    def extend_universe(self,
-                        universe2,
-                        u1_frame_id=0,
-                        u2_frame_id=0,
-                        mode="merge"):
-        #TODO adapt box from 1 or 2 argument
-        #TODO ATTN THIS STUFF HERE NEEDS REVISION TO STAY IN LINE WITH THE OTHER
-        #TODO METHODS. EVERYTHING SHOULD BE DONE IN A MUCH CLEARER WAY!
+    def extend_universe(self, universe2, u1_frame_id=0, u2_frame_id=0, mode="merge"):
+        # TODO adapt box from 1 or 2 argument
+        # TODO ATTN THIS STUFF HERE NEEDS REVISION TO STAY IN LINE WITH THE OTHER
+        # TODO METHODS. EVERYTHING SHOULD BE DONE IN A MUCH CLEARER WAY!
         """
         Combine the data if two instances (self, universe2_copy) in different modes
         such as append, complement or overwrite.
@@ -387,7 +426,7 @@ class Universe(object):
             > mode          str; 'merge', 'append' or 'complement'
                             The way how the given instance shall be extended
         """
-        #TODO write pair coeffs with right parameters (ii is enough, in lammps fix mix paircoeffs arithmetic)
+        # TODO write pair coeffs with right parameters (ii is enough, in lammps fix mix paircoeffs arithmetic)
         # appending mode (do not replace existing entries, append everything
         # from universe 2)
         # make a copy since we do not want to alter the original universe_2
@@ -451,11 +490,15 @@ class Universe(object):
                     combined_ffe_vals = u1_ffe_vals + u2_ffe_vals
 
                     # translate between old and new entry-keys (universe 1)
-                    u1_ffe_keys_old_new = list(zip(u1_ffe_keys, combined_ffe_keys[:u1_len_ffe_keys]))
+                    u1_ffe_keys_old_new = list(
+                        zip(u1_ffe_keys, combined_ffe_keys[:u1_len_ffe_keys])
+                    )
                     u1_ffe_keys_old_new = dict(u1_ffe_keys_old_new)
 
                     # translate between old and new entry-keys (universe 2)
-                    u2_ffe_keys_old_new = list(zip(u2_ffe_keys, combined_ffe_keys[u1_len_ffe_keys:]))
+                    u2_ffe_keys_old_new = list(
+                        zip(u2_ffe_keys, combined_ffe_keys[u1_len_ffe_keys:])
+                    )
                     u2_ffe_keys_old_new = dict(u2_ffe_keys_old_new)
 
                 # merge universe 1 and universe 2 (where possible)
@@ -494,7 +537,7 @@ class Universe(object):
                                 same = False
 
                         if same is False:
-                            combined_ffe_keys.append(len(combined_ffe_keys)+1)
+                            combined_ffe_keys.append(len(combined_ffe_keys) + 1)
                             combined_ffe_vals.append(u2_cvalue)
                             u2_ffe_keys_old_new[u2_cffe_key] = len(combined_ffe_keys)
                         else:
@@ -512,7 +555,9 @@ class Universe(object):
 
                     # dict to translate between old u2-ff-keys and new ones
                     for ckey in u2_ffe_keys_old_new:
-                        u2_ffe_keys_old_new[ckey] = combined_ffe_keys_tmp[u2_ffe_keys_old_new[ckey]]
+                        u2_ffe_keys_old_new[ckey] = combined_ffe_keys_tmp[
+                            u2_ffe_keys_old_new[ckey]
+                        ]
 
                     # redefine keys for force field entry to start with 0
                     combined_ffe_keys = list(range(len(combined_ffe_keys)))
@@ -678,14 +723,20 @@ class Universe(object):
             else:  # mode is complement; mostly for merging two lammps files; does not work yet
                 # let us check if the user knows what he is doing
                 if u1_len_ce != u2_len_ce and (u1_len_ce != 0 and u2_len_ce != 0):
-                    raise Warning("Entries of both universes have different sizes! No way to complement this")
+                    raise Warning(
+                        "Entries of both universes have different sizes! No way to complement this"
+                    )
 
-                if u1_len_ffe_keys != u1_len_ffe_keys and (u1_len_ffe_keys != 0 and u1_len_ffe_keys != 0):
-                    raise Warning("Force Field entries of both universes have different sizes! No way to complement this")
+                if u1_len_ffe_keys != u1_len_ffe_keys and (
+                    u1_len_ffe_keys != 0 and u1_len_ffe_keys != 0
+                ):
+                    raise Warning(
+                        "Force Field entries of both universes have different sizes! No way to complement this"
+                    )
 
                     # attributes of class instances of force-field-entry from u2
                     # as dictionary
-                    #for u1_cffe_key, u1_cvalue, u2_cffe_key, u2_cvalue in zip(
+                    # for u1_cffe_key, u1_cvalue, u2_cffe_key, u2_cvalue in zip(
                     #        zip(u2_ffe_keys, u2_ffe_vals), zip(u1_ffe_keys, u1_ffe_vals)):
                     #    # dictionary with attributes and their values
                     #    u1_cattr = dict(u1_cvalue.__iter__())
@@ -708,12 +759,14 @@ class Universe(object):
 
                 # adjust atom-ids of molecules from universe 1
                 if cmol_idx < u1_len_molecules:
-                    self.molecules[cmol_idx] = [u1_atm_id_old_new[i] for i in
-                                                self.molecules[cmol_idx]]
+                    self.molecules[cmol_idx] = [
+                        u1_atm_id_old_new[i] for i in self.molecules[cmol_idx]
+                    ]
                 # adjust atom-ids of molecules from universe 2
                 else:
-                    self.molecules[cmol_idx] = [u2_atm_id_old_new[i] for i in
-                                                self.molecules[cmol_idx]]
+                    self.molecules[cmol_idx] = [
+                        u2_atm_id_old_new[i] for i in self.molecules[cmol_idx]
+                    ]
 
             # append coordinates
             if universe2_copy.ts_coords != []:
@@ -722,11 +775,15 @@ class Universe(object):
                     self.ts_coords = np.array(self.ts_coords)
 
                 self.ts_coords[u1_frame_id] = np.concatenate(
-                    (self.ts_coords[u1_frame_id], universe2_copy.ts_coords[u2_frame_id]),
-                    axis=0)
+                    (
+                        self.ts_coords[u1_frame_id],
+                        universe2_copy.ts_coords[u2_frame_id],
+                    ),
+                    axis=0,
+                )
 
-        #TODO merge stuff here needs urgent revision since it was coded quickly and dirty
-        #TODO this here is just a temporary fix for pair types stuff
+        # TODO merge stuff here needs urgent revision since it was coded quickly and dirty
+        # TODO this here is just a temporary fix for pair types stuff
         self.pair_types = []  # erase all old pair coefficients
         self.mix_pair_types(mode="ii", mix_style="arithmetic", debug=False)
 
@@ -737,8 +794,9 @@ class Universe(object):
         """
         num_atms = len(self.ts_coords[frame_id])
         filling_ones = np.ones((num_atms, 1))
-        self.ts_coords[frame_id] = np.concatenate((self.ts_coords[frame_id],
-                                                   filling_ones), axis=1)
+        self.ts_coords[frame_id] = np.concatenate(
+            (self.ts_coords[frame_id], filling_ones), axis=1
+        )
 
     def mm_atm_coords(self, frame_id, Mx, copy, *atom_ids):
         """
@@ -791,7 +849,7 @@ class Universe(object):
         # translate atom-id to atom-index (if atm_idx is False)
         for cidx in atom_ids:
             # get mass of current atom
-            ckey  = self.atoms[cidx].atm_key
+            ckey = self.atoms[cidx].atm_key
             cmass = self.atm_types[ckey].weigh
             masses.append(cmass)
 
@@ -871,13 +929,15 @@ class Universe(object):
                 cb += addition[1]
                 cc += addition[2]
 
-            cbox = mdb.Box(boxtype="lattice",
-                           ltc_a=ca,
-                           ltc_b=cb,
-                           ltc_c=cc,
-                           ltc_alpha=np.radians(90),
-                           ltc_beta=np.radians(90),
-                           ltc_gamma=np.radians(90))
+            cbox = mdb.Box(
+                boxtype="lattice",
+                ltc_a=ca,
+                ltc_b=cb,
+                ltc_c=cc,
+                ltc_alpha=np.radians(90),
+                ltc_beta=np.radians(90),
+                ltc_gamma=np.radians(90),
+            )
 
             if boxtype == "cartesian":
                 cbox.box_lat2cart()
@@ -969,25 +1029,29 @@ class Universe(object):
             this_coords_type = "lattice"
 
         # do some init magic (convert cartesian coordinates, etc.)
-        linked_cells = mdlc.LinkedCells(self.ts_coords[frame_id],
-                                        tmp_copy_box.ltc_a,
-                                        tmp_copy_box.ltc_b,
-                                        tmp_copy_box.ltc_c,
-                                        tmp_copy_box.ltc_alpha,
-                                        tmp_copy_box.ltc_beta,
-                                        tmp_copy_box.ltc_gamma,
-                                        coords_type=this_coords_type)
+        linked_cells = mdlc.LinkedCells(
+            self.ts_coords[frame_id],
+            tmp_copy_box.ltc_a,
+            tmp_copy_box.ltc_b,
+            tmp_copy_box.ltc_c,
+            tmp_copy_box.ltc_alpha,
+            tmp_copy_box.ltc_beta,
+            tmp_copy_box.ltc_gamma,
+            coords_type=this_coords_type,
+        )
 
         linked_cells.create_lnk_cells(rcut_a, rcut_b, rcut_c)
         self.ts_lnk_cls.append(linked_cells)
 
-    def chk_atm_dist(self,
-                     frame_id=-1,
-                     min_dist=0.80,
-                     exclude_same_molecule=True,
-                     excluded_atm_idxs=None,
-                     get_aggregates=False,
-                     debug=False):
+    def chk_atm_dist(
+        self,
+        frame_id=-1,
+        min_dist=0.80,
+        exclude_same_molecule=True,
+        excluded_atm_idxs=None,
+        get_aggregates=False,
+        debug=False,
+    ):
         """
         Check the inter atomic distances inside the sub cells and between
         atoms of neighboring sub cells. Each sub cell has 26 neighbor cells.
@@ -1006,8 +1070,10 @@ class Universe(object):
         """
         if debug is True:
             # not sure if that is the case - i think this works with wrapped cells
-            print("***Info: Atom distance check only works with unwrapped cells! " +
-                  "Unwrap cells if necessary.")
+            print(
+                "***Info: Atom distance check only works with unwrapped cells! "
+                + "Unwrap cells if necessary."
+            )
 
         if excluded_atm_idxs is None:
             excluded_atm_idxs = []
@@ -1030,9 +1096,11 @@ class Universe(object):
             pass
 
         if exclude_same_molecule is True and debug is True:
-            print("***Info: 'exclude_same_molecule' chosen. " +
-                  "Groups should be assigned by molecule affiliation " +
-                  "or this will fail!")
+            print(
+                "***Info: 'exclude_same_molecule' chosen. "
+                + "Groups should be assigned by molecule affiliation "
+                + "or this will fail!"
+            )
 
         # get maximum possible number of aggregates
         if get_aggregates is True:
@@ -1055,12 +1123,14 @@ class Universe(object):
             start = time.time()
 
         # matrix cartesian to fractional (inverse of fractional matrix)
-        M_fc = agc.M_fract2cart(linked_cells.ltc_a,
-                                linked_cells.ltc_b,
-                                linked_cells.ltc_c,
-                                linked_cells.ltc_alpha,
-                                linked_cells.ltc_beta,
-                                linked_cells.ltc_gamma)
+        M_fc = agc.M_fract2cart(
+            linked_cells.ltc_a,
+            linked_cells.ltc_b,
+            linked_cells.ltc_c,
+            linked_cells.ltc_alpha,
+            linked_cells.ltc_beta,
+            linked_cells.ltc_gamma,
+        )
 
         for cra in range(ra):
             # check from a along box vector b
@@ -1114,48 +1184,75 @@ class Universe(object):
                                     crc_idx = 0
 
                                 # check coordinates of current cell vs coordinates of cur_neighbor_cell
-                                cur_neighbor_cell = linked_cells.linked_cells[cra_idx][crb_idx][crc_idx]
+                                cur_neighbor_cell = linked_cells.linked_cells[cra_idx][
+                                    crb_idx
+                                ][crc_idx]
 
                                 if debug is True:
-                                    print("Checking neighbor cell: ", cra_idx, crb_idx, crc_idx)
+                                    print(
+                                        "Checking neighbor cell: ",
+                                        cra_idx,
+                                        crb_idx,
+                                        crc_idx,
+                                    )
 
                                 for cidx_a in current_cell:
                                     for cidx_b in cur_neighbor_cell:
                                         # make a temporary copy of the current
                                         # coordinates since we do not want to
                                         # alter them permanently
-                                        tmp_coords_cidx_b = np.copy(linked_cells.atm_coords[cidx_b])
+                                        tmp_coords_cidx_b = np.copy(
+                                            linked_cells.atm_coords[cidx_b]
+                                        )
 
                                         # skip atoms which are part of the same molecule (i.e. same grp_id) or if they are in the exclusion list (excluded_atm_idxs)
-                                        if exclude_same_molecule is True and (self.atoms[cidx_a].grp_id == self.atoms[cidx_b].grp_id):
+                                        if exclude_same_molecule is True and (
+                                            self.atoms[cidx_a].grp_id
+                                            == self.atoms[cidx_b].grp_id
+                                        ):
                                             continue
 
                                         # skip all excluded atoms
                                         if excluded_atm_idxs != []:
-                                            if cidx_a in excluded_atm_idxs or cidx_b in excluded_atm_idxs:
+                                            if (
+                                                cidx_a in excluded_atm_idxs
+                                                or cidx_b in excluded_atm_idxs
+                                            ):
                                                 continue
 
                                         # comparing first with last, therefor we have to shift
                                         # the coordinates of the last back towards the first cell
                                         if cra_idx == -1:
-                                            tmp_coords_cidx_b[0] = linked_cells.atm_coords[cidx_b][0] - 1
+                                            tmp_coords_cidx_b[0] = (
+                                                linked_cells.atm_coords[cidx_b][0] - 1
+                                            )
 
                                         if crb_idx == -1:
-                                            tmp_coords_cidx_b[1] = linked_cells.atm_coords[cidx_b][1] - 1
+                                            tmp_coords_cidx_b[1] = (
+                                                linked_cells.atm_coords[cidx_b][1] - 1
+                                            )
 
                                         if crc_idx == -1:
-                                            tmp_coords_cidx_b[2] = linked_cells.atm_coords[cidx_b][2] - 1
+                                            tmp_coords_cidx_b[2] = (
+                                                linked_cells.atm_coords[cidx_b][2] - 1
+                                            )
 
                                         # comparing last with first, therefor we have to shift
                                         # the coordinates from the first to the end
                                         if shift_cell_ra_0 is True:
-                                            tmp_coords_cidx_b[0] = linked_cells.atm_coords[cidx_b][0] + 1
+                                            tmp_coords_cidx_b[0] = (
+                                                linked_cells.atm_coords[cidx_b][0] + 1
+                                            )
 
                                         if shift_cell_rb_0 is True:
-                                            tmp_coords_cidx_b[1] = linked_cells.atm_coords[cidx_b][1] + 1
+                                            tmp_coords_cidx_b[1] = (
+                                                linked_cells.atm_coords[cidx_b][1] + 1
+                                            )
 
                                         if shift_cell_rc_0 is True:
-                                            tmp_coords_cidx_b[2] = linked_cells.atm_coords[cidx_b][2] + 1
+                                            tmp_coords_cidx_b[2] = (
+                                                linked_cells.atm_coords[cidx_b][2] + 1
+                                            )
 
                                         # get distance vector
                                         vt_a = linked_cells.atm_coords[cidx_a]
@@ -1173,12 +1270,24 @@ class Universe(object):
 
                                             # add group id, but only if this combination is not already present
                                             if get_aggregates is True:
-                                                if [self.atoms[cidx_a].grp_id, self.atoms[cidx_b].grp_id] not in connected_groups:
-                                                    connected_groups.append([self.atoms[cidx_a].grp_id, self.atoms[cidx_b].grp_id])
+                                                if [
+                                                    self.atoms[cidx_a].grp_id,
+                                                    self.atoms[cidx_b].grp_id,
+                                                ] not in connected_groups:
+                                                    connected_groups.append(
+                                                        [
+                                                            self.atoms[cidx_a].grp_id,
+                                                            self.atoms[cidx_b].grp_id,
+                                                        ]
+                                                    )
 
                                         elif cdist == 0 and (cidx_a != cidx_b):
                                             if debug is True:
-                                                print("***Warning: Distance between {} and {} is 0!".format(cidx_a, cidx_b))
+                                                print(
+                                                    "***Warning: Distance between {} and {} is 0!".format(
+                                                        cidx_a, cidx_b
+                                                    )
+                                                )
                                             close_contacts.append(cidx_a)
                                             close_contacts.append(cidx_b)
                                         else:
@@ -1186,12 +1295,16 @@ class Universe(object):
 
         if debug is True:
             end = time.time()
-            print("***Info: Distance search finished after: {} seconds.".format(end - start))
+            print(
+                "***Info: Distance search finished after: {} seconds.".format(
+                    end - start
+                )
+            )
 
         # remove duplicates
         close_contacts = set(close_contacts)
 
-        #if get_aggregates is True:
+        # if get_aggregates is True:
         #    print("***Info: Connected groups: ", connected_groups)
 
         # ==============================#
@@ -1202,7 +1315,7 @@ class Universe(object):
             connections = to_graph(connected_groups)
             aggregates = connected_components(connections)
             aggregates = [i for i in aggregates]  # generator to list
-            #print(aggregates)
+            # print(aggregates)
             return (close_contacts, aggregates)
 
         return close_contacts
@@ -1218,6 +1331,7 @@ class Universe(object):
         frame_id : {number}, optional
             [description] (the default is -1, which [default_description])
         """
+
         def _shift_necessary(atm_idx):
             """Needs to be overhauled!
 
@@ -1291,7 +1405,6 @@ class Universe(object):
                 for idx_shft in idxs_to_shift:
                     _shift_necessary(idxs_to_shift)
 
-
     def unwrap_cell(self, frame_id=-1):
         """
         Unwrap the unit cell, i.e. move all atoms to the quadrant that is positive
@@ -1316,9 +1429,14 @@ class Universe(object):
             pass
 
         # convert coordinates: cartesian -> fractional
-        M_cf = agc.M_cart2fract(cp_box.ltc_a, cp_box.ltc_b, cp_box.ltc_c,
-                                cp_box.ltc_alpha, cp_box.ltc_beta,
-                                cp_box.ltc_gamma)
+        M_cf = agc.M_cart2fract(
+            cp_box.ltc_a,
+            cp_box.ltc_b,
+            cp_box.ltc_c,
+            cp_box.ltc_alpha,
+            cp_box.ltc_beta,
+            cp_box.ltc_gamma,
+        )
 
         # transpose coords for 3x3-matrix multiplication
         ts_coords_T = np.transpose(self.ts_coords[frame_id])
@@ -1342,9 +1460,14 @@ class Universe(object):
                 self.ts_coords[frame_id][idx][2] += 1
 
         # convert coordinates: fractional -> cartesian
-        M_cf = agc.M_fract2cart(cp_box.ltc_a, cp_box.ltc_b, cp_box.ltc_c,
-                                cp_box.ltc_alpha, cp_box.ltc_beta,
-                                cp_box.ltc_gamma)
+        M_cf = agc.M_fract2cart(
+            cp_box.ltc_a,
+            cp_box.ltc_b,
+            cp_box.ltc_c,
+            cp_box.ltc_alpha,
+            cp_box.ltc_beta,
+            cp_box.ltc_gamma,
+        )
 
         # transpose coords for 3x3-matrix multiplication
         ts_coords_T = np.transpose(self.ts_coords[frame_id])
@@ -1352,7 +1475,9 @@ class Universe(object):
         # transpose back
         self.ts_coords[frame_id] = np.transpose(matmul_coords_T)
 
-    def replicate_cell(self, n_start=0, n_stop=0, direction="a", frame_id=-1, adjust_box=True):
+    def replicate_cell(
+        self, n_start=0, n_stop=0, direction="a", frame_id=-1, adjust_box=True
+    ):
         """
         Replicate the given cell n-times in direction of the crystallographic
         box-vectors a, b or c.
@@ -1360,7 +1485,7 @@ class Universe(object):
         if n_stop - n_start != 0:
             print("***Info: Replicating cell")
             # replicate topology
-            self.add_topology_replicate(abs(n_stop-n_start))
+            self.add_topology_replicate(abs(n_stop - n_start))
 
             # get box vectors
             # PBC - get cartesian box vectors
@@ -1389,9 +1514,9 @@ class Universe(object):
             # only translation in positive direction -> starting from next unit
             # cell after current one
             if n_start == 0:
-                scope = list(range(n_start+1, n_stop+1))
+                scope = list(range(n_start + 1, n_stop + 1))
             else:
-                scope = list(range(n_start, n_stop+1))
+                scope = list(range(n_start, n_stop + 1))
 
             for replica_id in scope:
 
@@ -1416,17 +1541,25 @@ class Universe(object):
                 cur_shifted_coords = np.transpose(cur_shifted_coords)
                 cur_shifted_coords = np.delete(cur_shifted_coords, 3, axis=1)
                 # add coordinates to existing ones
-                self.ts_coords[frame_id] = np.vstack([self.ts_coords[frame_id], cur_shifted_coords])
+                self.ts_coords[frame_id] = np.vstack(
+                    [self.ts_coords[frame_id], cur_shifted_coords]
+                )
 
             # adjust the box-size according to the multiplication of the vectors
             if adjust_box is True:
                 # calculate the vector to shift the coordinates
                 if direction == "a":
-                    cp_box.crt_a = np.array(cp_box.crt_a) * abs(n_stop - n_start) + np.array(cp_box.crt_a)
+                    cp_box.crt_a = np.array(cp_box.crt_a) * abs(
+                        n_stop - n_start
+                    ) + np.array(cp_box.crt_a)
                 elif direction == "b":
-                    cp_box.crt_b = np.array(cp_box.crt_b) * abs(n_stop - n_start) + np.array(cp_box.crt_b)
+                    cp_box.crt_b = np.array(cp_box.crt_b) * abs(
+                        n_stop - n_start
+                    ) + np.array(cp_box.crt_b)
                 else:
-                    cp_box.crt_c = np.array(cp_box.crt_c) * abs(n_stop - n_start) + np.array(cp_box.crt_c)
+                    cp_box.crt_c = np.array(cp_box.crt_c) * abs(
+                        n_stop - n_start
+                    ) + np.array(cp_box.crt_c)
 
                 # convert (the copy) of the current box-type to a fractional box-type
                 if this_boxtype == "lammps":
@@ -1473,7 +1606,7 @@ class Universe(object):
                             # get mass from atm_types-dictionary
                             mass = round(self.atm_types[ckey].weigh, 1)
                             cur_atom.sitnam = mde.elements[mass]
-                            #cur_atom.sitnam = "{}{}".format(mde.elements[mass], idx)
+                            # cur_atom.sitnam = "{}{}".format(mde.elements[mass], idx)
 
         # guess name by cgcmm-info from 'Masses'-section
         elif by_typename:
@@ -1582,7 +1715,9 @@ class Universe(object):
         can be especially helpful for lammps or faster atom-by-molecule search.
         """
         if debug is True:
-            print("***Info: Assigning group-attribute of atoms to corresponding molecule indices.")
+            print(
+                "***Info: Assigning group-attribute of atoms to corresponding molecule indices."
+            )
 
         for cidx, cmol in enumerate(self.molecules):
             for catm_id in cmol:
@@ -1642,7 +1777,7 @@ class Universe(object):
             last_bnd_id = len(self.bonds)
             for cbnd in self.bonds[:bnds_old_length]:
                 cbnd = copy.copy(cbnd)
-                cbnd.bnd_id  += last_bnd_id
+                cbnd.bnd_id += last_bnd_id
                 cbnd.atm_id1 += last_atm_id
                 cbnd.atm_id2 += last_atm_id
                 self.bonds.append(cbnd)
@@ -1650,7 +1785,7 @@ class Universe(object):
             last_ang_id = len(self.angles)
             for cang in self.angles[:angs_old_length]:
                 cang = copy.copy(cang)
-                cang.ang_id  += last_ang_id
+                cang.ang_id += last_ang_id
                 cang.atm_id1 += last_atm_id
                 cang.atm_id2 += last_atm_id
                 cang.atm_id3 += last_atm_id
@@ -1659,7 +1794,7 @@ class Universe(object):
             last_dih_id = len(self.dihedrals)
             for cdih in self.dihedrals[:dihs_old_length]:
                 cdih = copy.copy(cdih)
-                cdih.dih_id  += last_dih_id
+                cdih.dih_id += last_dih_id
                 cdih.atm_id1 += last_atm_id
                 cdih.atm_id2 += last_atm_id
                 cdih.atm_id3 += last_atm_id
@@ -1669,7 +1804,7 @@ class Universe(object):
             last_imp_id = len(self.impropers)
             for cimp in self.impropers[:imps_old_length]:
                 cimp = copy.copy(cimp)
-                cimp.imp_id  += last_imp_id
+                cimp.imp_id += last_imp_id
                 cimp.atm_id1 += last_atm_id
                 cimp.atm_id2 += last_atm_id
                 cimp.atm_id3 += last_atm_id
@@ -1680,7 +1815,9 @@ class Universe(object):
             self.fetch_molecules_by_bonds()
             self.mols_to_grps()
 
-    def change_indices(self, incr=1, mode="increase", entries="atm_id, atm_grp_id, atm_key, sitnam, "):
+    def change_indices(
+        self, incr=1, mode="increase", entries="atm_id, atm_grp_id, atm_key, sitnam, "
+    ):
         """
         Programs, such as lammps, need (why so ever) to have the integers in
         data-files to run from 1-N. Since other programs (like VMD) have starting
@@ -1693,11 +1830,21 @@ class Universe(object):
         if mode == "increase":
             mod = incr
         elif mode == "decrease":
-            mod = -1*incr
+            mod = -1 * incr
         else:
-            raise Warning("***Error: Unknown mode '{}'. 'increase' or 'decrease only!'".format(mode))
+            raise Warning(
+                "***Error: Unknown mode '{}'. 'increase' or 'decrease only!'".format(
+                    mode
+                )
+            )
 
-        for tmp_entry in ["atm_types", "bnd_types", "ang_types", "dih_types", "imp_types"]:
+        for tmp_entry in [
+            "atm_types",
+            "bnd_types",
+            "ang_types",
+            "dih_types",
+            "imp_types",
+        ]:
             tmp_dict = {}
 
             # simplify (saves us repeating the same stuff over and over)
@@ -1716,7 +1863,7 @@ class Universe(object):
 
             # convert keys
             for cid in cet:
-                tmp_dict[cid+mod] = cet[cid]
+                tmp_dict[cid + mod] = cet[cid]
 
             if tmp_entry == "atm_types":
                 self.atm_types = tmp_dict
@@ -1732,22 +1879,22 @@ class Universe(object):
         # pair types
         for idx in range(len(self.pair_types)):
             self.pair_types[idx].atm_key_i += mod
-            #if hasattr(self.pair_types, "atm_key_j"):
+            # if hasattr(self.pair_types, "atm_key_j"):
             #    self.pair_types[idx].atm_key_j += 1
             self.pair_types[idx].atm_key_j += mod
 
         # atoms
         for idx in range(len(self.atoms)):
             if hasattr(self.atoms[idx], "atm_id") and "atm_id" in entries:
-                self.atoms[idx].atm_id  += mod
+                self.atoms[idx].atm_id += mod
 
             if hasattr(self.atoms[idx], "grp_id"):
-                self.atoms[idx].grp_id  += mod
+                self.atoms[idx].grp_id += mod
 
             if hasattr(self.atoms[idx], "atm_key"):
                 self.atoms[idx].atm_key += mod
 
-            #if hasattr(self.atoms[idx], "sitnam") and "sitnam" in entries:
+            # if hasattr(self.atoms[idx], "sitnam") and "sitnam" in entries:
             #    sitnam_idx = re.findall(r"\d+", self.atoms[idx].sitnam)
             #
             #    if sitnam_idx != []:
@@ -1758,7 +1905,7 @@ class Universe(object):
         # bonds
         for idx in range(len(self.bonds)):
             if hasattr(self.bonds[idx], "bnd_id"):
-                self.bonds[idx].bnd_id  += mod
+                self.bonds[idx].bnd_id += mod
             if hasattr(self.bonds[idx], "bnd_key"):
                 self.bonds[idx].bnd_key += mod
             if hasattr(self.bonds[idx], "atm_id1"):
@@ -1769,20 +1916,20 @@ class Universe(object):
         # angles
         for idx in range(len(self.angles)):
             if hasattr(self.angles[idx], "ang_id"):
-                self.angles[idx].ang_id   += mod
+                self.angles[idx].ang_id += mod
             if hasattr(self.angles[idx], "ang_key"):
-                self.angles[idx].ang_key  += mod
+                self.angles[idx].ang_key += mod
             if hasattr(self.angles[idx], "atm_id1"):
-                self.angles[idx].atm_id1  += mod
+                self.angles[idx].atm_id1 += mod
             if hasattr(self.angles[idx], "atm_id2"):
-                self.angles[idx].atm_id2  += mod
+                self.angles[idx].atm_id2 += mod
             if hasattr(self.angles[idx], "atm_id3"):
-                self.angles[idx].atm_id3  += mod
+                self.angles[idx].atm_id3 += mod
 
         # dihedrals
         for idx in range(len(self.dihedrals)):
             if hasattr(self.dihedrals[idx], "dih_id"):
-                self.dihedrals[idx].dih_id  += mod
+                self.dihedrals[idx].dih_id += mod
             if hasattr(self.dihedrals[idx], "dih_key"):
                 self.dihedrals[idx].dih_key += mod
             if hasattr(self.dihedrals[idx], "atm_id1"):
@@ -1797,7 +1944,7 @@ class Universe(object):
         # impropers
         for idx in range(len(self.impropers)):
             if hasattr(self.impropers[idx], "imp_id"):
-                self.impropers[idx].imp_id  += mod
+                self.impropers[idx].imp_id += mod
             if hasattr(self.impropers[idx], "imp_key"):
                 self.impropers[idx].imp_key += mod
             if hasattr(self.impropers[idx], "atm_id1"):
@@ -1811,16 +1958,19 @@ class Universe(object):
 
         # molecules
         for idx in range(len(self.molecules)):
-            self.molecules[idx] = [i+mod for i in self.molecules[idx]]
+            self.molecules[idx] = [i + mod for i in self.molecules[idx]]
 
         # linked cells
         for frame in range(len(self.ts_lnk_cls)):
             for idx_i, i in enumerate(self.ts_lnk_cls[frame].linked_cells):
                 for idx_j, j in enumerate(i):
                     for idx_k, k in enumerate(j):
-                        #print(idx_i, idx_j, idx_k)
+                        # print(idx_i, idx_j, idx_k)
                         self.ts_lnk_cls[frame].linked_cells[idx_i][idx_j][idx_k] = [
-                            atm_idx+mod for atm_idx in self.ts_lnk_cls[frame].linked_cells[idx_i][idx_j][idx_k]
+                            atm_idx + mod
+                            for atm_idx in self.ts_lnk_cls[frame].linked_cells[idx_i][
+                                idx_j
+                            ][idx_k]
                         ]
 
     def transpose_by_cog(self, frame_id=0, destination=(0, 0, 0), copy=True):
@@ -1907,8 +2057,9 @@ class Universe(object):
         for atm_idx, ccoord in enumerate(self.ts_coords[frame_id]):
             for box_face in shape_surfaces:
                 # calculate a simple distance (just interested in the sign)
-                distance = agv.get_point_plane_dist(ccoord, *box_face,
-                                                    distance_sign_only=True)
+                distance = agv.get_point_plane_dist(
+                    ccoord, *box_face, distance_sign_only=True
+                )
                 # atom is outside the box -> stop checking the other surfaces
                 if distance < 0.0:
                     break
@@ -1968,15 +2119,21 @@ class Universe(object):
         """
         atom_ids = []
 
-        #TODO add index or catm.atm_id?
+        # TODO add index or catm.atm_id?
         for idx, catm in enumerate(self.atoms):
             if catm.resname in resnames:
                 atom_ids.append(idx)
 
         return atom_ids
 
-    def check_aggregate(self, frame_id=-1, atm_atm_dist=4, excluded_atm_idxs=None,
-                        unwrap=False, debug=False):
+    def check_aggregate(
+        self,
+        frame_id=-1,
+        atm_atm_dist=4,
+        excluded_atm_idxs=None,
+        unwrap=False,
+        debug=False,
+    ):
         """
         Check if several molecules form an aggregate.
 
@@ -2010,7 +2167,9 @@ class Universe(object):
         if debug is True:
             print("***Check Aggregate Info: Cube side {}".format(cube_side))
 
-        self.create_linked_cells(frame_id, rcut_a=cube_side, rcut_b=cube_side, rcut_c=cube_side)
+        self.create_linked_cells(
+            frame_id, rcut_a=cube_side, rcut_b=cube_side, rcut_c=cube_side
+        )
 
         if excluded_atm_idxs is None:
             excluded_atm_idxs = []
@@ -2037,7 +2196,14 @@ class Universe(object):
                 exclude_molecule = False
 
         # include same molecule or it gets missing in our aggregates set
-        close_atoms, aggregates = self.chk_atm_dist(frame_id, min_dist=atm_atm_dist, exclude_same_molecule=True, get_aggregates=True, excluded_atm_idxs=excluded_atm_idxs, debug=False)
+        close_atoms, aggregates = self.chk_atm_dist(
+            frame_id,
+            min_dist=atm_atm_dist,
+            exclude_same_molecule=True,
+            get_aggregates=True,
+            excluded_atm_idxs=excluded_atm_idxs,
+            debug=False,
+        )
 
         if debug is True:
             debug_str = "***Check Aggregate Info: Number of cubes in direction"
@@ -2045,12 +2211,16 @@ class Universe(object):
             print("{} b {}".format(debug_str, self.ts_lnk_cls[frame_id].rb))
             print("{} c {}".format(debug_str, self.ts_lnk_cls[frame_id].rc))
             print("***Group IDs of all aggregates: {}".format(aggregates))
-            print("***IDs of close atoms: {}".format(" ".join([str(i) for i in close_atoms])))
+            print(
+                "***IDs of close atoms: {}".format(
+                    " ".join([str(i) for i in close_atoms])
+                )
+            )
 
-        #print(len(aggregates))
-        #print(len(aggregates[0]))
-        #print(len(not_excluded_molecules))
-        #pdb.set_trace()
+        # print(len(aggregates))
+        # print(len(aggregates[0]))
+        # print(len(not_excluded_molecules))
+        # pdb.set_trace()
 
         # aggregate is only o.k. if all molecules are part of it
         if len(aggregates) == 1 and (len(aggregates[0]) == len(not_excluded_molecules)):
@@ -2059,10 +2229,14 @@ class Universe(object):
             if debug is True:
                 print("***Check Aggregate Info: Aggregate looks fine!")
         else:
-            print("***Error: Aggregate of frame {} looks (partially) dissolved :(".format(frame_id))
+            print(
+                "***Error: Aggregate of frame {} looks (partially) dissolved :(".format(
+                    frame_id
+                )
+            )
             aggregate_ok = False
 
-        #pdb.set_trace()
+        # pdb.set_trace()
         return aggregate_ok
 
     def calculate_total_mass(self):
@@ -2082,7 +2256,7 @@ class Universe(object):
         total_molar_mass = sum(atom_masses)
 
         # avogadro number
-        n_a = 6.022140857e+23
+        n_a = 6.022140857e23
         return total_molar_mass / n_a
 
     def calculate_density(self, frame_id=-1):
@@ -2117,6 +2291,7 @@ class Universe(object):
 # Shortcut functions for common procedures
 ################################################################################
 
+
 def merge_systems(systems, frame_idxs=None, pair_coeffs=None):
     """
     Merge two systems into a new one.
@@ -2144,6 +2319,7 @@ def merge_systems(systems, frame_idxs=None, pair_coeffs=None):
         the merged systems (box a will be overwritten with box from system b)
 
     """
+
     def get_frame_idx(idx):
         """
         Return -1 as default frame index for each frame not given in the list of frame indices.
@@ -2169,7 +2345,12 @@ def merge_systems(systems, frame_idxs=None, pair_coeffs=None):
             continue
 
         # always take last frame from merged system
-        sys_merged.extend_universe(systems[sys_add_idx], u1_frame_id=-1, u2_frame_id=get_frame_idx(sys_add_idx), mode="merge")
+        sys_merged.extend_universe(
+            systems[sys_add_idx],
+            u1_frame_id=-1,
+            u2_frame_id=get_frame_idx(sys_add_idx),
+            mode="merge",
+        )
 
         if pair_coeffs:
             sys_merged.mix_pair_types(mode=pair_coeffs, mix_style="arithmetic")

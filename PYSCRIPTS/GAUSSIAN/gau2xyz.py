@@ -9,22 +9,25 @@ Convert a gaussian output-/log-file (very last entry) to a xyz-file.
 
 # Argument Parsing -------------------------------------------------------------
 parser = argparse.ArgumentParser(
-    formatter_class=argparse.RawTextHelpFormatter,
-    description=""
+    formatter_class=argparse.RawTextHelpFormatter, description=""
 )
 
-parser.add_argument("gau_out",
-                    metavar="foo.out|foo.log",
-                    help="Gaussian output-/logfile")
+parser.add_argument(
+    "gau_out", metavar="foo.out|foo.log", help="Gaussian output-/logfile"
+)
 
-parser.add_argument("-out",
-                    metavar="bar.xyz",
-                    default="bar.xyz",
-                    help="Name of xyz-file which will be written.")
+parser.add_argument(
+    "-out",
+    metavar="bar.xyz",
+    default="bar.xyz",
+    help="Name of xyz-file which will be written.",
+)
 
 args = parser.parse_args()
 
 # read gaussian log file
-gau_output  = agum.Unification()
+gau_output = agum.Unification()
 gau_output.read_gau_log(args.gau_out)
-gau_output.write_xyz(args.out, args.gau_out, False, *list(range(len(gau_output.ts_coords))))
+gau_output.write_xyz(
+    args.out, args.gau_out, False, *list(range(len(gau_output.ts_coords)))
+)

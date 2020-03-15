@@ -1,25 +1,27 @@
-
 import ag_amber as agambr
 import ag_gaussian as aggau
 import ag_lammps as aglmps
 import ag_mae as agmae
-import ag_xyz as agxyz
 import ag_pdb as agpdb
 import ag_pw as agpw
+import ag_xyz as agxyz
 
 __version__ = "2018-03-20"
 
 
-class Unification(agambr.AmberStuff,
-                  aggau.GauStuff,
-                  aglmps.LmpStuff,
-                  agmae.MaestroStuff,
-                  agxyz.XYZ,
-                  agpdb.PdbStuff,
-                  agpw.PwStuff):
+class Unification(
+    agambr.AmberStuff,
+    aggau.GauStuff,
+    aglmps.LmpStuff,
+    agmae.MaestroStuff,
+    agxyz.XYZ,
+    agpdb.PdbStuff,
+    agpw.PwStuff,
+):
     """
     Unify all classes to read/write different file formats.
     """
+
     def __init__(self):
         """
         """

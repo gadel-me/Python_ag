@@ -48,7 +48,7 @@ class ResultGetter(ag_fileio.FileHandler):
         # find files according to name_pattern
         if directory is not None and name_pattern is not None:
             self.find_files(directory, name_pattern)
-            #self.files = [os.path.abspath(i) for i in self.files]
+            # self.files = [os.path.abspath(i) for i in self.files]
 
         # list of results
         self.energy_unit = "eV"
@@ -150,18 +150,22 @@ class ResultGetter(ag_fileio.FileHandler):
         Get the energies and distances from a list of pw or gaussian output files.
         """
         widgets = [
-            'Processed: ',
+            "Processed: ",
             progressbar.Counter(),
-            ' files (', progressbar.Timer(),
-            ')', progressbar.Bar()
+            " files (",
+            progressbar.Timer(),
+            ")",
+            progressbar.Bar(),
         ]
         pbar = progressbar.ProgressBar(widgets=widgets)
 
         for cfile in pbar(self.files):
-            cresult = self._dist_and_energy_single_geom(cfile, idxs1, idxs2, filetype=filetype)
+            cresult = self._dist_and_energy_single_geom(
+                cfile, idxs1, idxs2, filetype=filetype
+            )
             self.results.append(cresult)
 
-        #pbar.finish()
+        # pbar.finish()
         self._norm_results()
 
     def ev_to_kcal_mol(self):

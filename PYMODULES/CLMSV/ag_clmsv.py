@@ -8,6 +8,7 @@ class Clmsv(logu.LogUniverse):
     '***'-filled lines as separators for different entries (e.g. Several runs
     during one simulation or input from different log-files).
     """
+
     def __init__(self):
         logu.LogUniverse.__init__(self)
 
@@ -25,15 +26,17 @@ class Clmsv(logu.LogUniverse):
                         continue
 
                     keys = line.split()
-                    cdata = collections.OrderedDict(list(zip(keys, [[] for i in range(len(keys))])))
+                    cdata = collections.OrderedDict(
+                        list(zip(keys, [[] for i in range(len(keys))]))
+                    )
 
                     while 1:
                         # check if end of file, append current data
                         try:
                             line = next(f_in)
                         except StopIteration:
-                                self.data.append(cdata)
-                                break
+                            self.data.append(cdata)
+                            break
 
                         # check if end of entry, append current data
                         if line == "\n":

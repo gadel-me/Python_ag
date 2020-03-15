@@ -69,7 +69,9 @@ class FileHandler(object):
         self.files = natsorted(self.files)
 
 
-def files_to_xyz(path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz_settings=None):
+def files_to_xyz(
+    path, file_extension, settings=None, xyz_out="DEFAULT.xyz", xyz_settings=None
+):
     """Find and read gaussian or pw files from a given path.
 
     Read gaussian in- and output files and pw in- and output files.

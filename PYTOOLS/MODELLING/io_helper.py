@@ -6,12 +6,11 @@ is what this module tries to achieve.
 """
 
 
-
 from collections import OrderedDict
 
-#==============================================================================#
+# ==============================================================================#
 # Helping functions
-#==============================================================================#
+# ==============================================================================#
 
 
 def get_scanned_geometry(gau_log):
@@ -45,8 +44,9 @@ def write_energies(filename):
     Write header for energies file.
     """
     with open(filename, "w") as opened_filename:
-        opened_filename.write("{:>20s} {:>20s}\n".format("Angle [Degrees]",
-                                                         "Energy [eV]"))
+        opened_filename.write(
+            "{:>20s} {:>20s}\n".format("Angle [Degrees]", "Energy [eV]")
+        )
 
 
 def norm_energy(energy_file_in, energy_file_out):
@@ -108,7 +108,7 @@ def read_data(data_file):
             y_values.append(split_line[1])
             line = opened_data_file.readline()
 
-    return(x_values, y_values)
+    return (x_values, y_values)
 
 
 def shift_data(data_points, value):

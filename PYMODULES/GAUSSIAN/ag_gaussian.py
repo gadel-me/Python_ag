@@ -1,4 +1,3 @@
-
 import re
 import numpy as np
 import scipy.constants
@@ -6,7 +5,8 @@ import pdb
 import md_stars as mds
 import md_universe as mdu
 import md_elements as mde
-#import log_universe as logu
+
+# import log_universe as logu
 
 __version__ = "2018-10-16"
 
@@ -32,17 +32,20 @@ class GauStuff(mdu.Universe):
     indices start with 0 (converted during reading and reconverted during
     writing procedure).
     """
-    def __init__(self,
-                 rwf=None,
-                 oldchk=None,
-                 chk=None,
-                 nproc=None,
-                 mem=None,
-                 job_settings=None,
-                 gaussian_charges=[],
-                 gaussian_multiplicities=[],
-                 gaussian_other_info={},
-                 energy_unit=None):
+
+    def __init__(
+        self,
+        rwf=None,
+        oldchk=None,
+        chk=None,
+        nproc=None,
+        mem=None,
+        job_settings=None,
+        gaussian_charges=[],
+        gaussian_multiplicities=[],
+        gaussian_other_info={},
+        energy_unit=None,
+    ):
         """
         > job_settings      str; line with job settings, e.g. #P Opt=tight MP2/6-311++G**
                             or #P SP MP2/6-311++G**
@@ -62,7 +65,7 @@ class GauStuff(mdu.Universe):
         mdu.Universe.__init__(self)
 
         if rwf is not None:
-            self.rwf  =  rwf
+            self.rwf = rwf
 
         if oldchk is not None:
             self.oldchk = oldchk
@@ -99,7 +102,9 @@ class GauStuff(mdu.Universe):
         else:
             self.gaussian_other_info = {}
 
-    def read_gau(self, gauin, coordinate_style="cartesian", overwrite=False, debug=False):
+    def read_gau(
+        self, gauin, coordinate_style="cartesian", overwrite=False, debug=False
+    ):
         """
         """
         self.coordinate_style = coordinate_style
@@ -140,9 +145,9 @@ class GauStuff(mdu.Universe):
                     if not hasattr(self, "rwf") or overwrite is True:
                         self.rwf = line.split("=")[1].strip("\n")
 
-                #// ROUTE SECTION (may be scattered over several files)
+                # // ROUTE SECTION (may be scattered over several files)
                 elif line.startswith("#"):
-                    #pdb.set_trace()
+                    # pdb.set_trace()
 
                     # keep reading until empty line is reached, end loop
                     # when it is
@@ -163,7 +168,7 @@ class GauStuff(mdu.Universe):
 
                 line = gau_in.readline()
 
-            #// TITLE SECTION
+            # // TITLE SECTION
             if debug is True:
                 print("Title section")
 
@@ -174,28 +179,32 @@ class GauStuff(mdu.Universe):
                 title_line = line
                 line = gau_in.readline()
 
-            #// MOLECULE SPECIFICATION SECTION
+            # // MOLECULE SPECIFICATION SECTION
             if debug is True:
                 print("Molecule specification section")
 
             while line == "\n":
                 line = gau_in.readline()
             else:
-                charge_mutliplicity_line = re.findall(r'[\w]+', line)
+                charge_mutliplicity_line = re.findall(r"[\w]+", line)
 
                 if self.gaussian_charges == [] or overwrite is True:
-                    self.gaussian_charges = [int(i)
-                                             for idx, i in enumerate(charge_mutliplicity_line)
-                                             if idx % 2 == 0]
+                    self.gaussian_charges = [
+                        int(i)
+                        for idx, i in enumerate(charge_mutliplicity_line)
+                        if idx % 2 == 0
+                    ]
 
                 if self.gaussian_multiplicities == [] or overwrite is True:
-                    self.gaussian_multiplicities = [int(i)
-                                                    for idx, i in enumerate(charge_mutliplicity_line[1:])
-                                                    if idx % 2 == 0]
+                    self.gaussian_multiplicities = [
+                        int(i)
+                        for idx, i in enumerate(charge_mutliplicity_line[1:])
+                        if idx % 2 == 0
+                    ]
 
                 line = gau_in.readline()
 
-            #// COORDINATES SECTION
+            # // COORDINATES SECTION
             if debug is True:
                 print("Coordinates section")
 
@@ -235,10 +244,11 @@ class GauStuff(mdu.Universe):
                     cifrz = None
 
                 # store element info
-                cur_atom = mds.Atom(sitnam=csitnam, atm_id=atom_index ,ifrz=cifrz,
-                                    grp_id=fragment_id)
+                cur_atom = mds.Atom(
+                    sitnam=csitnam, atm_id=atom_index, ifrz=cifrz, grp_id=fragment_id
+                )
 
-                #g_atoms.append(cur_atom)
+                # g_atoms.append(cur_atom)
 
                 try:
                     if overwrite is True:
@@ -248,10 +258,14 @@ class GauStuff(mdu.Universe):
                             self.atoms[atom_index].sitnam = cur_atom.sitnam
 
                         # add ifrz to current atom if overwrite option is set or ifrz attribute has not been defined yet
-                        if hasattr(cur_atom, "ifrz") and not hasattr(self.atoms[atom_index], "ifrz"):
+                        if hasattr(cur_atom, "ifrz") and not hasattr(
+                            self.atoms[atom_index], "ifrz"
+                        ):
                             self.atoms[atom_index].ifrz = cur_atom.ifrz
 
-                        if hasattr(cur_atom, "grp_id") and not hasattr(self.atoms[atom_index], "grp_id"):
+                        if hasattr(cur_atom, "grp_id") and not hasattr(
+                            self.atoms[atom_index], "grp_id"
+                        ):
                             self.atoms[atom_index].grp_id = cur_atom.grp_id
 
                 except IndexError:
@@ -291,7 +305,10 @@ class GauStuff(mdu.Universe):
             if debug is True:
                 print("Bonds Section")
 
-            if "CONNECTIVITY" in self.job_settings.upper() and bool(re.search(r'(^\d+ \d+ \d+.\d+)|(^\d+\n$)', line)) is True:
+            if (
+                "CONNECTIVITY" in self.job_settings.upper()
+                and bool(re.search(r"(^\d+ \d+ \d+.\d+)|(^\d+\n$)", line)) is True
+            ):
                 gau_bonds = []
 
                 while line != "\n":
@@ -303,15 +320,19 @@ class GauStuff(mdu.Universe):
                         catm_id1 = int(line[0])
                         catm_id1 -= 1  # decrement atom index by 1
                         # read other further bond partners (if present)
-                        catms_id2 = [int(i)-1 for idx, i in enumerate(line[1:]) if idx % 2 == 0]
+                        catms_id2 = [
+                            int(i) - 1 for idx, i in enumerate(line[1:]) if idx % 2 == 0
+                        ]
                         # read bond orders (if present)
-                        cbnd_orders = [float(i) for idx, i in enumerate(line[2:]) if idx % 2 == 0]
+                        cbnd_orders = [
+                            float(i) for idx, i in enumerate(line[2:]) if idx % 2 == 0
+                        ]
 
                         # append bond to gaussian given bonds
                         for catm_id2, cbnd_order in zip(catms_id2, cbnd_orders):
-                            cbnd = mds.Bond(atm_id1=catm_id1,
-                                            atm_id2=catm_id2,
-                                            bnd_order=cbnd_order)
+                            cbnd = mds.Bond(
+                                atm_id1=catm_id1, atm_id2=catm_id2, bnd_order=cbnd_order
+                            )
                             gau_bonds.append(cbnd)
 
                     # if there is only one empty line at file bottom
@@ -324,8 +345,10 @@ class GauStuff(mdu.Universe):
                 if len(gau_bonds) == len(self.bonds) and overwrite is False:
                     for idx, gau_bnd in enumerate(gau_bonds):
                         for universe_bnd in self.bonds:
-                            if (universe_bnd.atm_id1 == gau_bnd.atm_id1 and
-                                universe_bnd.atm_id2 == gau_bnd.atm_id2):
+                            if (
+                                universe_bnd.atm_id1 == gau_bnd.atm_id1
+                                and universe_bnd.atm_id2 == gau_bnd.atm_id2
+                            ):
                                 # complement attribute or overwrite existing one
                                 # if overwriting is active
                                 if not hasattr(universe_bnd, "bnd_order"):
@@ -337,10 +360,17 @@ class GauStuff(mdu.Universe):
                 # create molecules by bond information
                 self.fetch_molecules_by_bonds()
 
-            #line = gau_in.readline()
+            # line = gau_in.readline()
 
-    def write_gau(self, gauout, frame_id, modredundant=None,
-                  write_fragments=False, job_settings=None, title=""):
+    def write_gau(
+        self,
+        gauout,
+        frame_id,
+        modredundant=None,
+        write_fragments=False,
+        job_settings=None,
+        title="",
+    ):
         """
         job_type    modredundant | SP
         method      user choice (e.g. MP2, B3LYP)
@@ -381,15 +411,22 @@ class GauStuff(mdu.Universe):
                 gau_out.write("T: {}\n\n".format(title))
 
             # write multiplicity and charge line only if allcheck-keyword is not set
-            if "ALLCHECK" not in self.job_settings.upper() or (self.charge is not None and self.multiplicity is not None):
-                #gau_out.write("{} {}\n".format(self.charge, self.multiplicity))
+            if "ALLCHECK" not in self.job_settings.upper() or (
+                self.charge is not None and self.multiplicity is not None
+            ):
+                # gau_out.write("{} {}\n".format(self.charge, self.multiplicity))
 
-                for charge, multiplicity in zip(self.gaussian_charges, self.gaussian_multiplicities):
+                for charge, multiplicity in zip(
+                    self.gaussian_charges, self.gaussian_multiplicities
+                ):
                     gau_out.write("{} {} ".format(charge, multiplicity))
 
                 gau_out.write("\n")
 
-            if self.ts_coords != [] and ("ALLCHECK" not in self.job_settings.upper() or "CHECK" not in self.job_settings.upper()):
+            if self.ts_coords != [] and (
+                "ALLCHECK" not in self.job_settings.upper()
+                or "CHECK" not in self.job_settings.upper()
+            ):
                 for idx, catm in enumerate(self.atoms):
                     gau_out.write("{}".format(catm.sitnam))
 
@@ -403,10 +440,13 @@ class GauStuff(mdu.Universe):
                     if hasattr(catm, "ifrz") and catm.ifrz is not None:
                         gau_out.write(" {:<3} ".format(catm.ifrz))
 
-                    gau_out.write(" {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
-                        self.ts_coords[frame_id][idx][0],
-                        self.ts_coords[frame_id][idx][1],
-                        self.ts_coords[frame_id][idx][2]))
+                    gau_out.write(
+                        " {:> 11.6f}{:> 11.6f}{:> 11.6f}\n".format(
+                            self.ts_coords[frame_id][idx][0],
+                            self.ts_coords[frame_id][idx][1],
+                            self.ts_coords[frame_id][idx][2],
+                        )
+                    )
 
             gau_out.write("\n")
 
@@ -418,12 +458,13 @@ class GauStuff(mdu.Universe):
                     # according bond order
                     for cur_bond in self.bonds:
                         if cur_atom.atm_id == cur_bond.atm_id1:
-                            gau_out.write("{} {} ".format(cur_bond.atm_id2,
-                                                          cur_bond.bnd_order))
+                            gau_out.write(
+                                "{} {} ".format(cur_bond.atm_id2, cur_bond.bnd_order)
+                            )
                     gau_out.write("\n")
                 gau_out.write("\n")
 
-            #pdb.set_trace()
+            # pdb.set_trace()
             if modredundant is not None:
                 gau_out.write(modredundant)
                 gau_out.write("\n" * 2)
@@ -469,18 +510,20 @@ class GauStuff(mdu.Universe):
         else:
             self.ts_coords[-1] = ts_coords
 
-    def read_gau_log(self, gau_log, save_all_scf_steps=False, overwrite=False, read_summary=False):
+    def read_gau_log(
+        self, gau_log, save_all_scf_steps=False, overwrite=False, read_summary=False
+    ):
         """
         Read the last coordinates from a gaussian log file.
 
         Overwrite overwrites the last frame.
         """
-        #TODO read atom by initial coordinates and not by scf cycles
+        # TODO read atom by initial coordinates and not by scf cycles
 
         if overwrite is True:
             self.ts_coords = []
 
-        #print("Reading last frame of the output file.")
+        # print("Reading last frame of the output file.")
         if "scf_energies" not in self.gaussian_other_info or overwrite is True:
             self.gaussian_other_info["scf_energies"] = []
             self.gaussian_other_info["Counterpoise corrected energy"] = None
@@ -493,7 +536,7 @@ class GauStuff(mdu.Universe):
         g_atoms = []
         atom_index = 0
         read_element_numbers = True
-        #scanned_coordinates = []
+        # scanned_coordinates = []
 
         # read geometries from all scf cycles and their corresponding energies
         with open(gau_log, "r") as opened_gau_log:
@@ -518,8 +561,7 @@ class GauStuff(mdu.Universe):
                         if read_element_numbers is True:
                             element_number = int(split_line[1])
                             element_name = mde.element_name[element_number]
-                            cur_atom = mds.Atom(sitnam=element_name,
-                                                atm_id=atom_index)
+                            cur_atom = mds.Atom(sitnam=element_name, atm_id=atom_index)
                             g_atoms.append(cur_atom)
                             atom_index += 1
 
@@ -542,7 +584,7 @@ class GauStuff(mdu.Universe):
                     current_scf_cycles_coords = []
                     # reset energies for next run to read
                     scf_cycles_energies = []
-                    #self.gaussian_other_info("optimized_parameters")
+                    # self.gaussian_other_info("optimized_parameters")
 
                     # skip the next 5 lines
                     for _ in range(6):
@@ -553,9 +595,11 @@ class GauStuff(mdu.Universe):
 
                         parameter_definition = split_line[2]
                         parameter_value = float(split_line[3])
-                        self.gaussian_other_info[parameter_definition].append(parameter_value)
+                        self.gaussian_other_info[parameter_definition].append(
+                            parameter_value
+                        )
 
-                        #for scanned_coordinate in scanned_coordinates:
+                        # for scanned_coordinate in scanned_coordinates:
                         #    if split_line[2] == scanned_coordinate:
                         #        self.gaussian_other_info[scanned_coordinate].append(float(split_line[3]))
 
@@ -574,23 +618,25 @@ class GauStuff(mdu.Universe):
                         parameter_definition = split_line[2]
                         self.gaussian_other_info[parameter_definition] = []
 
-                        #if "Scan" in line:
+                        # if "Scan" in line:
                         #    scanned_coordinates.append(split_line[2])
 
                         line = opened_gau_log.readline()
 
-                    #for scanned_coordinate in scanned_coordinates:
+                    # for scanned_coordinate in scanned_coordinates:
                     #    self.gaussian_other_info[scanned_coordinate] = []
 
                 elif "Counterpoise corrected energy" in line:
-                    self.gaussian_other_info["Counterpoise corrected energy"] = float(line.split()[-1]) * hartree_eV
+                    self.gaussian_other_info["Counterpoise corrected energy"] = (
+                        float(line.split()[-1]) * hartree_eV
+                    )
 
                 # read the summary
                 elif line.startswith(" 1\\1\\") is True:
 
                     # read every line except it ends with \\@
                     while not line.endswith("@\n"):
-                        #print(line)
+                        # print(line)
                         line = line.lstrip()
                         line = line.rstrip()
                         # create one huge string since lines could be oddly wrapped
@@ -598,7 +644,7 @@ class GauStuff(mdu.Universe):
                         line = opened_gau_log.readline()
                     else:
                         # add the next line (that ends with \\@) as well
-                        #print(line)
+                        # print(line)
                         line = line.lstrip()
                         line = line.rstrip()
                         log_resume += line
@@ -607,13 +653,14 @@ class GauStuff(mdu.Universe):
                     pass
 
                 line = opened_gau_log.readline()
-                #print(log_resume)
+                # print(log_resume)
 
-        #return (all_scf_cycles_coords, all_scf_cycles_energies)
+        # return (all_scf_cycles_coords, all_scf_cycles_energies)
         # extract geometries with lowest energy, omit other scf geometries
         # and energies
-        for scf_cycle_coords, scf_cycle_energy in zip(all_scf_cycles_coords,
-                                                      all_scf_cycles_energies):
+        for scf_cycle_coords, scf_cycle_energy in zip(
+            all_scf_cycles_coords, all_scf_cycles_energies
+        ):
             cur_cycle_min_scf_energy = 1e12
             cur_cycle_min_scf_energy_idx = None
 
@@ -625,7 +672,9 @@ class GauStuff(mdu.Universe):
 
             try:
                 self.ts_coords.append(scf_cycle_coords[cur_cycle_min_scf_energy_idx])
-                self.gaussian_other_info["scf_energies"].append(scf_cycle_energy[cur_cycle_min_scf_energy_idx])
+                self.gaussian_other_info["scf_energies"].append(
+                    scf_cycle_energy[cur_cycle_min_scf_energy_idx]
+                )
             except IndexError:
                 print("***Warning: Gaussian run was aborted before it finished")
 
@@ -682,12 +731,12 @@ class GauStuff(mdu.Universe):
         #                energies_entry = other_entry.split(",")
         #                energies_entry = [float(i)*hartree_eV for i in energies_entry]
         #                self.gaussian_other_info["energies_entry"] = energies_entry
-#
-        #del cidx
-        #del coordinates_cntr
-#
-        #g_frame = np.array(g_frame)
-#
+        #
+        # del cidx
+        # del coordinates_cntr
+        #
+        # g_frame = np.array(g_frame)
+        #
         for idx, gatm in enumerate(g_atoms):
             try:
                 if overwrite is True:
@@ -704,9 +753,9 @@ class GauStuff(mdu.Universe):
                 self.atoms = g_atoms
                 break
 
-        #if self.ts_coords != [] and overwrite is True:
+        # if self.ts_coords != [] and overwrite is True:
         #    self.ts_coords[-1] = g_frame
-        #else:
+        # else:
         #    self.ts_coords.append(g_frame)
 
 
