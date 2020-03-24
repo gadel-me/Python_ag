@@ -555,6 +555,7 @@ if __name__ == "__main__":
                         agk.create_folder(anneal_dir)
                         solvate_sys = aglmp.read_lmpdat(
                             lmpsettings_quench.input_lmpdat,
+                            # dcd file reading is causing pickle problems
                             dcd=lmpsettings_quench.output_dcd,
                         )
                         solvate_sys_natoms = len(solvate_sys.atoms)
@@ -568,12 +569,14 @@ if __name__ == "__main__":
 
                     else:
                         solvate_sys = None
-                        atm_idxs_solvate = None
                         solvate_sys_natoms = None
+                        atm_idxs_solvate = None
 
+                    # debugging
+                    #print(f"{rank}:{type(solvate_sys)}")
                     solvate_sys = comm.bcast(solvate_sys, 0)
-                    atm_idxs_solvate = comm.bcast(atm_idxs_solvate, 0)
                     solvate_sys_natoms = comm.bcast(solvate_sys_natoms, 0)
+                    atm_idxs_solvate = comm.bcast(atm_idxs_solvate, 0)
 
                     # check if solvent is needed
                     if args.lmps is not None:

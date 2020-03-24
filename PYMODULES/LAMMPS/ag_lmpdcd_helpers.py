@@ -100,7 +100,7 @@ def reshape_arguments(sframe, nframes, step, frame_start, frame_stop, key):
     check_for_err(sframe, nframes, step, fsto)
 
     # convert values to indices
-    if frame_start < 0:
+    if frame_start is None or frame_start < 0:
         fsta = int(fsta / step)
     else:
         fsta = int((frame_start - sframe) / step)

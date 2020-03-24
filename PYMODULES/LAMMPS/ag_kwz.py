@@ -14,7 +14,7 @@ import numpy as np
 
 # from natsort import natsorted
 # import itertools as it
-import scipy.stats
+#import scipy.stats
 from mpi4py import MPI
 from lammps import lammps, PyLammps
 import Transformations as cgt
@@ -512,7 +512,7 @@ def sysprep(
     # kwz_radius = main_sys_radius + add_sys_radius
 
     # new procedure: scale radius by main_sys size
-    kwz_radius = main_sys_radius * radius_scale + add_sys_radius
+    kwz_radius = main_sys_radius * main_radius_scale + add_sys_radius
 
     _shift_sys(add_sys, kwz_radius)
 
@@ -636,7 +636,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     # (prevents losing atoms due to being localized outside the cutoff)
     if rank == 0:
         prep_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
-        cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1 :])
+        cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
         cog_force = cog * -1
@@ -931,7 +931,7 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
                         mde.elements_mass_radii[
                             round(
                                 solvate_sys.atm_types[
-                                    solvate_sys.atoms[i].atm_key
+                                    solvate_sys.atoms[atm_idx].atm_key
                                 ].weigh,
                                 1,
                             )
