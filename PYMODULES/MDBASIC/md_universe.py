@@ -358,10 +358,10 @@ class Universe(object):
                         with open(to_file, "a") as pair_file:
                             pair_file.write(
                                 "{:<5}{:<5}{:>10}{:>10}\n".format(
-                                    cij.atm_key_i,
-                                    cij.atm_key_j,
-                                    cij.sigma_ij,
-                                    cij.epsilon_ij,
+                                    cii.atm_key_i,
+                                    cii.atm_key_j,
+                                    cii.sigma_ij,
+                                    cii.epsilon_ij,
                                 )
                             )
                     else:
@@ -824,6 +824,35 @@ class Universe(object):
         # delete 4th dimension after coordinates were altered
         if len(Mx[0]) == 4:
             copy_coords = np.delete(copy_coords, 3, axis=1)
+
+        if copy is True:
+            return copy_coords
+        else:
+            self.ts_coords[frame_id] = copy_coords
+
+    def sm_atm_coords(self, scalar : float, frame_id : int, copy : bool, *atom_ids : int) -> list:
+        """sm_atm_coords
+        Multiply all coordinates of atoms with give atom ids with a given scalar.
+
+        Parameters
+        ----------
+        scalar : float
+            Number to multiply all coordinates with
+        frame_id : int
+            Frame-ID
+        copy : bool
+            Return a copy of the coordinates.
+
+        Returns
+        -------
+        list
+            Copy of the altered coordinates.
+        """
+        copy_coords = np.copy(self.ts_coords[frame_id])
+
+        for cidx in atom_ids:
+            ccoords = self.ts_coords[frame_id][cidx] * scalar
+            copy_coords[cidx] = ccoords
 
         if copy is True:
             return copy_coords
@@ -1763,8 +1792,12 @@ class Universe(object):
         dihs_old_length = len(self.dihedrals)
         imps_old_length = len(self.impropers)
 
+        #? dunno if check is necessary because it should be clear
+        #? to use positive integers only
+        #n = -n if n < 0 else n
+
         # n-1 since we are adding these to an already existing topology
-        for i in range(0, n):
+        for _ in range(n):
 
             last_atm_id = len(self.atoms)
             # always alter the same first atoms

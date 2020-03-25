@@ -19,7 +19,8 @@ def calculate_phonon(lmpcuts):
     lmpcuts.thermo(lmp)
     lmp.file(lmpcuts.pc_file)
     lmp.command("group phonon_IDs id 1:120")
-    phonon_cmd = "fix PHONON phonon_IDs phonon 20 1000 10000 GAMMA _ph"
+    #phonon_cmd = "fix PHONON phonon_IDs phonon 20 1000 10000 GAMMA _ph"
+    phonon_cmd = "fix PHONON all phonon 10 50000 1000000 GAMMA _ph nasr 50"
     lmp.command(phonon_cmd)
     lmpcuts.fix_hoover(lmp, "all", "nvt")
     lmpcuts.dump(lmp, unwrap=True)
@@ -31,17 +32,17 @@ def calculate_phonon(lmpcuts):
 if __name__ == "__main__":
     settings = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/settings_dreiding_on.lmpcfg"
     paircoeffs = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/md_settings/CBZ_gaff-107_dreiding_on.lmpcfg"
-    # lmprst = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/1.cell_relax/CBZ_gaff-107/CBZIII/min_dreiding_on/CBZIII_gaff-107-min.lmprst"
-    #lmpdat = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/2.phonon/CBZIII/CBZIII_small_cell.lmpdat"
-    lmpdat = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/1.cell_relax/CBZ_gaff-107/CBZIII/CBZIII_gaff-107_supercell.lmpdat"
+    #q lmprst = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/1.cell_relax/CBZ_gaff-107/CBZIII/min_dreiding_on/CBZIII_gaff-107-min.lmprst"
+    lmpdat = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/2.phonon/CBZIII/CBZIII_small_cell.lmpdat"
+    #lmpdat = "/hades/gadelmeier/Research.new/carbamazepine/3.1.force_field_gaff/2.geom_opt/3.unit_cell/1.cell_relax/CBZ_gaff-107/CBZIII/CBZIII_gaff-107_supercell.lmpdat"
 
     lmpstuff = LmpSim(
         settings_file=settings,
         input_lmpdat=lmpdat,
         pc_file=paircoeffs,
-        tstart=1,
-        tstop=1,
-        runsteps=31000,
+        tstart=300,
+        tstop=300,
+        runsteps=1000000,
         logsteps=1000,
         output_dcd="out.dcd"
     )

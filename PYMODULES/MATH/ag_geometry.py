@@ -32,7 +32,7 @@ def get_coord_sys(vt_x, vt_y):
     # Projection of x on y
     vt_y_ex_dot = agv.dot(vt_y, vt_e_x)
     vt_y_ex_dot = [vt_y_ex_dot * i for i in vt_e_x]
-    vt_y_proj = [(j - k) for j, k in it.izip(vt_y, vt_y_ex_dot)]
+    vt_y_proj = [(j - k) for j, k in zip(vt_y, vt_y_ex_dot)]
     # Unit vector of vector y
     vt_e_y = agv.get_unit_vt(vt_y_proj)
     # Third orthogonal vector to x and y; vector z (unit vector)
@@ -113,7 +113,7 @@ def get_com(atomic_coordinates, atomic_masses):
     # multiply each x-, y- and z-coordinate with its corresponding mass
     weighted_coords = []
 
-    for cur_atomic_coord, cur_atomic_mass in it.izip(atomic_coordinates, atomic_masses):
+    for cur_atomic_coord, cur_atomic_mass in zip(atomic_coordinates, atomic_masses):
         weighted_coords.append(cur_atomic_coord[0] * cur_atomic_mass)
         weighted_coords.append(cur_atomic_coord[1] * cur_atomic_mass)
         weighted_coords.append(cur_atomic_coord[2] * cur_atomic_mass)

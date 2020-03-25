@@ -1,4 +1,6 @@
 import math
+import numpy as np
+#TODO from typing import Union, Tuple, List
 import ag_vectalg as agv
 
 __version__ = "2017-03-30"
@@ -125,6 +127,46 @@ def box_lmp2cart(lx, ly, lz, xy, xz, yz):
 
     return (vector_a, vector_b, vector_c)
 
+def box_lmp2alat(lx, ly, lz, xy, xz, yz):
+    alat = lx
+    vector_a = [lx / alat, 0, 0]
+    vector_b = [xy / alat, ly / alat, 0]
+    vector_c = [xz / alat, yz / alat, lz / alat]
+
+    return (vector_a, vector_b, vector_c, alat)
+
+def box_cart2alat(vector_a, vector_b, vector_c):
+    """box_cart2alat [summary]
+
+    Parameters
+    ----------
+    vector_a : Union[list, tuple]
+        [description]
+    vector_b : Union[list, tuple]
+        [description]
+    vector_c : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
+    # check if vector a is aligned to x-axis
+    alignement_err = "Vector a is not aligned to the x-axis!"
+    assert vector_a[1] == 0, alignement_err
+    assert vector_a[2] == 0, alignement_err
+
+    # TODO: Rotate box or return rotational matrix at least so the alignment
+    # TODO: is fine (vector_a => x-axis)
+
+    # calculate magnitude of vector_a
+    alat = agv.get_mag(vector_a)
+    # convert vector_a to unit vector
+    vector_a = [i / alat for i in vector_a]
+    vector_b = [i / alat for i in vector_b]
+    vector_c = [i / alat for i in vector_c]
+    return (vector_a, vector_b, vector_c, alat)
 
 # * FRACTIONAL COORDINATES SECTION **********************************************
 def M_fract2cart(a, b, c, alpha, beta, gamma):
@@ -187,3 +229,8 @@ def M_cart2fract(a, b, c, alpha, beta, gamma):
     a_33 = a * b * (a33_enum / a33_denom)
 
     return [[a11, a21, a31], [a12, a22, a32], [a13, a23, a_33]]
+
+
+# debugging area
+if __name__ == '__main__':
+    a,b,c, alat = box_cart2alat([4, 1, 0], [2, 2, 2], [4, 4, 6])
