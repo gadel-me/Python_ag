@@ -2,6 +2,7 @@
 
 import argparse
 import ag_unify_md as agum
+import pdb
 
 __version__ = "2017-05-29"
 
@@ -53,6 +54,11 @@ mydata.read_frames(
 # convert box to lammps box
 print("***Info: Converting box lammps' box format.")
 mydata.change_indices(incr=1, mode="increase")
+#pdb.set_trace()
+
+if len(mydata.ts_coords[0]) != len(mydata.ts_coords[-1]):
+    raise Warning("Number of atoms from {args.d} is different from {args.dcd}!")
+
 mydata.write_lmpdat(
     args.out + ".lmpdat",
     frame_id=frame,

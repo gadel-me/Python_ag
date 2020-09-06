@@ -760,9 +760,11 @@ class LmpStuff(mdu.Universe):
                     or cbox.lmp_xz is not None
                     or cbox.lmp_yz is not None
                 ):
-                    lmp_xy_eval = cbox.lmp_xy > 1e-5
-                    lmp_xz_eval = cbox.lmp_xz > 1e-5
-                    lmp_yz_eval = cbox.lmp_yz > 1e-5
+                    # use abs() so negative numbers are counted as well
+                    lmp_xy_eval = abs(cbox.lmp_xy) > 1e-5
+                    lmp_xz_eval = abs(cbox.lmp_xz) > 1e-5
+                    lmp_yz_eval = abs(cbox.lmp_yz) > 1e-5
+                    #pdb.set_trace()
 
                     if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
                         lmpdat_out.write(
@@ -914,12 +916,15 @@ class LmpStuff(mdu.Universe):
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
 
-            # /// pair types (coeffs) (requires mixed vdw)///
+            # // pair types (coeffs) (requires mixed vdw)
             if hasattr(self, "pair_types") is True:
                 if self.pair_types != []:
-                    # crawl through pair_types if there are any ij-pairs
+
+                    # search for ij-pairs and use them if there is only one
                     pair_ij = False
+
                     for cpair in self.pair_types:
+
                         if cpair.pairs == "ij":
                             pair_ij = True
                             break
@@ -932,6 +937,7 @@ class LmpStuff(mdu.Universe):
                     lmpdat_out.write("\n")
 
                     for prtyp in self.pair_types:
+                        #pdb.set_trace()
 
                         if prtyp.pairs == "ii":
                             lmpdat_out.write(

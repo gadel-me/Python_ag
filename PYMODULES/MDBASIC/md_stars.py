@@ -55,6 +55,7 @@ class Atom(IterMixin):
         force=None,
         velocity=None,
         pseudopotential=None,
+        ucell_info=None
     ):
         if atm_id is not None:
             self.atm_id = atm_id
@@ -123,6 +124,14 @@ class Atom(IterMixin):
 
         if pseudopotential is not None:
             self.pseudopotential = pseudopotential
+
+        # ids of the unit cell the atom is in, starting with [0, 0, 0]
+        #  e.g. 1 2 5 means the atom is in unit cell repetition
+        # a * 1 (2nd cell), b * 2 (3rd), c * 5 (6th) counting from
+        # the first one (0 0 0)
+        # only apllies to super cells consisting of unit cells!
+        if ucell_info is not None:
+            self.ucell_info = ucell_info
 
     def convert_energy_unit(self, unit_out):
         """
