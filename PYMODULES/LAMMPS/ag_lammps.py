@@ -760,9 +760,11 @@ class LmpStuff(mdu.Universe):
                     or cbox.lmp_xz is not None
                     or cbox.lmp_yz is not None
                 ):
-                    lmp_xy_eval = cbox.lmp_xy > 1e-5
-                    lmp_xz_eval = cbox.lmp_xz > 1e-5
-                    lmp_yz_eval = cbox.lmp_yz > 1e-5
+                    # use abs() so negative numbers are counted as well
+                    lmp_xy_eval = abs(cbox.lmp_xy) > 1e-5
+                    lmp_xz_eval = abs(cbox.lmp_xz) > 1e-5
+                    lmp_yz_eval = abs(cbox.lmp_yz) > 1e-5
+                    #pdb.set_trace()
 
                     if lmp_xy_eval or lmp_xz_eval or lmp_yz_eval:
                         lmpdat_out.write(
@@ -914,12 +916,15 @@ class LmpStuff(mdu.Universe):
                     lmpdat_out.write("\n")
                 lmpdat_out.write("\n")
 
-            # /// pair types (coeffs) (requires mixed vdw)///
+            # // pair types (coeffs) (requires mixed vdw)
             if hasattr(self, "pair_types") is True:
                 if self.pair_types != []:
-                    # crawl through pair_types if there are any ij-pairs
+
+                    # search for ij-pairs and use them if there is only one
                     pair_ij = False
+
                     for cpair in self.pair_types:
+
                         if cpair.pairs == "ij":
                             pair_ij = True
                             break
@@ -932,6 +937,7 @@ class LmpStuff(mdu.Universe):
                     lmpdat_out.write("\n")
 
                     for prtyp in self.pair_types:
+                        #pdb.set_trace()
 
                         if prtyp.pairs == "ii":
                             lmpdat_out.write(
@@ -1128,17 +1134,17 @@ class LmpStuff(mdu.Universe):
         Open DCD and read the remarks. This function must be called before
         anything else that has to do anything with file reading.
         """
-        self._dcdfile = open(dcd, "rb")
+        self._opend_dcdfile = open(dcd, "rb")
         self._read_header()
         self._read_title()
         # get position in file (bytes?) after header and title
-        self._pos_1 = self._dcdfile.tell()
+        self._pos_1 = self._opend_dcdfile.tell()
 
     def jump_to_first_frame(self):
         """
         Rewind to the first frame
         """
-        self._dcdfile.seek(self._pos_1)
+        self._opend_dcdfile.seek(self._pos_1)
 
     def _read_header(self, debug=False):
         """
@@ -1149,7 +1155,7 @@ class LmpStuff(mdu.Universe):
         self.is_charmm = False
 
         # header block
-        hdr_blck = agldh.read_record(self._dcdfile)
+        hdr_blck = agldh.read_record(self._opend_dcdfile)
         hdr = struct.unpack("4c9if10i", hdr_blck)
         self.nframes = hdr[4]  # total number of frames
         self.sframe = hdr[5]  # number of start frame
@@ -1171,8 +1177,8 @@ class LmpStuff(mdu.Universe):
         Read title blocks (only possible if header block was read before!)
         """
         # 2 title lines
-        title_1 = agldh.read_record(self._dcdfile)  # 1st title block
-        title_2 = agldh.read_record(self._dcdfile)  # 2nd title block
+        title_1 = agldh.read_record(self._opend_dcdfile)  # 1st title block
+        title_2 = agldh.read_record(self._opend_dcdfile)  # 2nd title block
         (self.natoms,) = struct.unpack("i", title_2)
 
         if debug is True:
@@ -1189,35 +1195,35 @@ class LmpStuff(mdu.Universe):
         """
         # read cell information
         if self.extra_blck:
-            cur_blck = agldh.read_record(self._dcdfile)
+            cur_blck = agldh.read_record(self._opend_dcdfile)
             cur_cell = struct.unpack("6d", cur_blck)
 
         # read coordinate-sets
-        x_coordset = agldh.read_record(self._dcdfile)
-        y_coordset = agldh.read_record(self._dcdfile)
-        z_coordset = agldh.read_record(self._dcdfile)
+        x_coordset = agldh.read_record(self._opend_dcdfile)
+        y_coordset = agldh.read_record(self._opend_dcdfile)
+        z_coordset = agldh.read_record(self._opend_dcdfile)
         x = np.fromstring(x_coordset, dtype=np.dtype("f"), count=self.natoms)
         y = np.fromstring(y_coordset, dtype=np.dtype("f"), count=self.natoms)
         z = np.fromstring(z_coordset, dtype=np.dtype("f"), count=self.natoms)
 
         # 4th dimension given? (has also to be read)
         if self.has_4dims:
-            agldh.read_record(self._dcdfile)
-            # dims_4_blck = agldh.read_record(self._dcdfile)
+            agldh.read_record(self._opend_dcdfile)
+            # dims_4_blck = agldh.read_record(self._opend_dcdfile)
             # dunno = struct.unpack(str(self.natoms)+"i", dims_4_blck)
 
         return (x, y, z, cur_cell)
 
     def _skip_frame(self):
         if self.extra_blck:
-            agldh.read_record(self._dcdfile)
+            agldh.read_record(self._opend_dcdfile)
 
-        agldh.read_record(self._dcdfile)
-        agldh.read_record(self._dcdfile)
-        agldh.read_record(self._dcdfile)
+        agldh.read_record(self._opend_dcdfile)
+        agldh.read_record(self._opend_dcdfile)
+        agldh.read_record(self._opend_dcdfile)
 
         if self.has_4dims:
-            agldh.read_record(self._dcdfile)
+            agldh.read_record(self._opend_dcdfile)
 
     def read_frames(self, frame=None, to_frame=-1, frame_by="index", debug=False):
         """
@@ -1226,7 +1232,7 @@ class LmpStuff(mdu.Universe):
         if debug:
             print(
                 "***Verbose: MB already read: {:.2f} MiB".format(
-                    self._dcdfile.tell() / 1000000
+                    self._opend_dcdfile.tell() / 1000000
                 )
             )
 
@@ -1343,12 +1349,15 @@ class LmpStuff(mdu.Universe):
         """
         Close dcd-file if still open.
         """
-        if not self._dcdfile.closed:
+        if not self._opend_dcdfile.closed:
+            self._opend_dcdfile.close()
 
             if debug is True:
-                print("***Info: Closing file: {}.".format(self._dcdfile))
+                print("***Info: Closed file: {}.".format(self._opend_dcdfile))
 
-            self._dcdfile.close()
+        # self._opened_dcdfile hast to be deleted
+        # or it cannot be pickled which gives a TypeError '_io.BufferedReader'
+        del self._opend_dcdfile
 
     def write_dcd(self, *frames):
         """

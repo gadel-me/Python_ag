@@ -28,7 +28,9 @@ def get_cell_from_cif(cif_file):
     def get_number_from_line(input_line):
         """Get lattice entities from line."""
         input_line = input_line.split()
-        number = float(input_line[1].split("(")[0])
+        number = float(
+            input_line[1].split("(")[0]
+        )
         return number
 
     with open(cif_file) as f_open:

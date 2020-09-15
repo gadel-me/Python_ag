@@ -6,7 +6,7 @@ import ag_lammps
 # import math
 # import md_box as mdb
 # import ag_unify_md as agum
-
+import pdb
 
 # Argument Parsing -------------------------------------------------------------
 parser = argparse.ArgumentParser(
@@ -78,6 +78,8 @@ for idx, lmpdat in enumerate(args.lmpdats):
         lmpdat, dcd=curdcd, frame_idx_start=-1, frame_idx_stop=-1
     )
 
+    #pdb.set_trace()
+
     # resetting the pair types
     cursys.pair_types = []
 
@@ -140,12 +142,14 @@ for idx in range(1, len(sys_all)):
         # print("Delete atoms")
         # print(delete_atoms)
 
-sys_all[0].pair_types = []
-# sys_all[0].mix_pair_types(mode="ij")
+#sys_all[0].pair_types = []
+# ! does somehow not work properly!
+# ! (old paircoeffs are written additionally to the new ones)
+#pdb.set_trace()
+sys_all[0].change_indices(incr=1, mode="increase")
+sys_all[0].mix_pair_types(mode="ij", to_file=f"{args.out}.lmpcfg")
 # sys_all[0].fetch_molecules_by_bonds()
 # sys_all[0].mols_to_grps()
-sys_all[0].change_indices(incr=1, mode="increase")
-
 
 # check interatomic distances fo the last time (not necessary, only for testing)
 sys_all[0].create_linked_cells(-1)
@@ -153,4 +157,5 @@ close_atoms = sys_all[0].chk_atm_dist(min_dist=1.0)
 close_atoms = " ".join(map(str, close_atoms))
 print("***Warning: Atoms with close contacts found: \n" + close_atoms)
 
-sys_all[0].write_lmpdat(args.out, frame_id=-1, title=args.sysname, cgcmm=True)
+#pdb.set_trace()
+sys_all[0].write_lmpdat(f"{args.out}.lmpdat", frame_id=-1, title=args.sysname, cgcmm=True)

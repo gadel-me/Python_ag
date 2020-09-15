@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pdb
+import sys
 import os
 import time
 import numpy as np
@@ -14,23 +15,44 @@ import Transformations as cgt
 import pantone_colors
 
 # VMD MODULES
-import atomsel  # Replaces AtomSel and atomselection
-import axes
-import color
-import display
-import graphics
-import imd
-import label
-import material
-import molecule
-import molrep
-import mouse
-import render
-import trans
-import vmdmenu
-import Label
-import Material
-import Molecule
+# python 3 compatibility
+if sys.version_info[0] == 3:
+    from vmd import atomsel  # Replaces AtomSel and atomselection
+    from vmd import axes
+    from vmd import color
+    from vmd import display
+    from vmd import graphics
+    from vmd import imd
+    from vmd import label
+    from vmd import material
+    from vmd import molecule
+    from vmd import molrep
+    from vmd import mouse
+    from vmd import render
+    from vmd import trans
+    from vmd import vmdmenu
+    from vmd import Label
+    from vmd import Material
+    from vmd import Molecule
+else:
+    import atomsel  # Replaces AtomSel and atomselection
+    import axes
+    import color
+    import display
+    import graphics
+    import imd
+    import label
+    import material
+    import molecule
+    import molrep
+    import mouse
+    import render
+    import trans
+    import vmdmenu
+    import Label
+    import Material
+    import Molecule
+
 import VMD
 
 
@@ -233,10 +255,10 @@ def vmd_label(
     """
 
     # select atoms to label
-    selected_atoms = atomsel.atomsel(selection, molid)
+    selected_atoms = atomsel(selection, molid)
 
     # complete selection of all atoms in order to label just the ones needed
-    complete_selection = atomsel.atomsel("all", molid)
+    complete_selection = atomsel("all", molid)
     atom_idxs = selected_atoms.get("index")
     print(len(atom_idxs))
 

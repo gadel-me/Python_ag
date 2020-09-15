@@ -211,7 +211,7 @@ class Universe(object):
         # delete whole molecules
         atoms2delete = set(self.same_molecule_as(False, *atoms2delete))
 
-        # /// delete entries
+        # // delete entries
         for frame_id in range(len(self.ts_coords)):
             self.ts_coords[frame_id] = [
                 coord
@@ -307,7 +307,9 @@ class Universe(object):
             pass
 
     def mix_pair_types(
-        self, mode="ii", mix_style="arithmetic", to_file=None, debug=False
+        self, mode="ii", mix_style="arithmetic", to_file=None,
+        mixing_type="lj/cut/coul/dsf",
+        debug=False
     ):
         """
         Calculate sigma_ij and epsilon_ij by utilizing the Lorentz-Berthelot rules
@@ -326,13 +328,14 @@ class Universe(object):
         to_file:
             write mixing to a file with filename being the value of 'to_file'
         """
-        # delete previous values
         if debug is True:
             print("***Mixing Pair Types Info: Deleting previous pair_types!")
 
+        if self.pair_types != []:
+            self.pair_types = []
+
+        # delete previous values
         if mode == "ii":
-            if self.pair_types != []:
-                self.pair_types = []
 
             for i in self.atm_types:
                 # define current atom-type
@@ -357,11 +360,11 @@ class Universe(object):
                     if to_file is not None:
                         with open(to_file, "a") as pair_file:
                             pair_file.write(
-                                "{:<5}{:<5}{:>10}{:>10}\n".format(
-                                    cij.atm_key_i,
-                                    cij.atm_key_j,
-                                    cij.sigma_ij,
-                                    cij.epsilon_ij,
+                                "pair_coeff {:<5} {:<5} {:<20} {:<20}\n".format(
+                                    cii.atm_key_i,
+                                    cii.atm_key_j,
+                                    cii.sigma_ij,
+                                    cii.epsilon_ij,
                                 )
                             )
                     else:
@@ -398,9 +401,10 @@ class Universe(object):
                     if to_file is not None:
                         with open(to_file, "a") as pair_file:
                             pair_file.write(
-                                "{:<5}{:<5}{:<20}{:<20}\n".format(
+                                "pair_coeff {:<10} {:<10} {} {:<20.6} {:<20.6}\n".format(
                                     cij.atm_key_i,
                                     cij.atm_key_j,
+                                    mixing_type,
                                     cij.epsilon_ij,
                                     cij.sigma_ij,
                                 )
@@ -414,7 +418,7 @@ class Universe(object):
     def extend_universe(self, universe2, u1_frame_id=0, u2_frame_id=0, mode="merge"):
         # TODO adapt box from 1 or 2 argument
         # TODO ATTN THIS STUFF HERE NEEDS REVISION TO STAY IN LINE WITH THE OTHER
-        # TODO METHODS. EVERYTHING SHOULD BE DONE IN A MUCH CLEARER WAY!
+        # TODO METHODS. EVERYTHING SHOULD BE DONE IN A MUCH CLEANER WAY!
         """
         Combine the data if two instances (self, universe2_copy) in different modes
         such as append, complement or overwrite.
@@ -824,6 +828,37 @@ class Universe(object):
         # delete 4th dimension after coordinates were altered
         if len(Mx[0]) == 4:
             copy_coords = np.delete(copy_coords, 3, axis=1)
+
+        if copy is True:
+            return copy_coords
+        else:
+            self.ts_coords[frame_id] = copy_coords
+
+    def sm_atm_coords(
+        self, scalar, frame_id, copy, *atom_ids
+    ):
+        """sm_atm_coords
+        Multiply all coordinates of atoms with give atom ids with a given scalar.
+
+        Parameters
+        ----------
+        scalar : float
+            Number to multiply all coordinates with
+        frame_id : int
+            Frame-ID
+        copy : bool
+            Return a copy of the coordinates.
+
+        Returns
+        -------
+        list
+            Copy of the altered coordinates.
+        """
+        copy_coords = np.copy(self.ts_coords[frame_id])
+
+        for cidx in atom_ids:
+            ccoords = self.ts_coords[frame_id][cidx] * scalar
+            copy_coords[cidx] = ccoords
 
         if copy is True:
             return copy_coords
@@ -1763,8 +1798,12 @@ class Universe(object):
         dihs_old_length = len(self.dihedrals)
         imps_old_length = len(self.impropers)
 
+        # ? dunno if check is necessary because it should be clear
+        # ? to use positive integers only
+        # n = -n if n < 0 else n
+
         # n-1 since we are adding these to an already existing topology
-        for i in range(0, n):
+        for _ in range(n):
 
             last_atm_id = len(self.atoms)
             # always alter the same first atoms
@@ -2285,6 +2324,36 @@ class Universe(object):
         density = total_mass / volume
 
         return density
+
+    def atm_add_ucell(self, ucell, frame_id=-1):
+        """Works only, if the supercell is a perfect replication of the unit cell!
+
+        Parameters
+        ----------
+        ucell : md_universe.Universe()
+        frame_id : int, optional
+            [description], by default -1
+        """
+        M_fract = agc.M_cart2fract(
+            ucell_lat["a"],
+            ucell_lat["b"],
+            ucell_lat["c"],
+            ucell_lat["alpha"],
+            ucell_lat["beta"],
+            ucell_lat["gamma"],
+        )
+
+        natoms = len(self.atoms)
+        copy_coords = self.mm_atm_coords(
+            frame_id, M_fract, True, *range(natoms)
+        )
+
+        for idx in range(natoms):
+            ucell_a = abs(int(copy_coords[idx][0]))
+            ucell_b = abs(int(copy_coords[idx][1]))
+            ucell_c = abs(int(copy_coords[idx][2]))
+            self.atoms[idx].ucell_info = [ucell_a, ucell_b, ucell_c]
+
 
 
 ################################################################################

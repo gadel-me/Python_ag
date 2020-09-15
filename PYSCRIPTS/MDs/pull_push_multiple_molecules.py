@@ -390,7 +390,7 @@ def write_summary(distances, energies):
             opened_file.write(row.format(distance, pe, coule, vdwe, intrae))
 
 
-if __name__ == "__main__":
+def main_1():
     # force field and settings
     ITERATION = "208"
     DREIDING = "on"
@@ -599,3 +599,7 @@ if __name__ == "__main__":
         )
 
         norm_energy("md_energies.txt", "md_energies_normed.txt")
+
+
+if __name__ == "__main__":
+    main_1()

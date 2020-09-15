@@ -36,6 +36,7 @@ class Box(object):
         lmp_xy=None,
         lmp_xz=None,
         lmp_yz=None,
+        alat=None,
     ):
         """
         Get box attributes.
@@ -79,9 +80,14 @@ class Box(object):
             self.lmp_xy = lmp_xy
             self.lmp_xz = lmp_xz
             self.lmp_yz = lmp_yz
+        elif boxtype == "alat":
+            self.crt_a = crt_a
+            self.crt_b = crt_b
+            self.crt_c = crt_c
+            self.alat = alat
         else:
             raise AttributeError(
-                "'boxtype' has to be 'cartesian', " + "'lattice' or 'lammps'!"
+                "'boxtype' has to be 'cartesian', 'alat', " + "'lattice' or 'lammps'!"
             )
 
     def box_cart2lat(self):
@@ -113,10 +119,10 @@ class Box(object):
         self.lmp_xhi = lx / 2
         self.lmp_yhi = ly / 2
         self.lmp_zhi = lz / 2
-        self.lmp_xlo = -self.lmp_xhi
-        self.lmp_ylo = -self.lmp_yhi
-        self.lmp_zlo = -self.lmp_zhi
-        # change box
+        self.lmp_xlo = None if self.lmp_xhi is None else -1 * self.lmp_xhi
+        self.lmp_ylo = None if self.lmp_yhi is None else -1 * self.lmp_yhi
+        self.lmp_zlo = None if self.lmp_zhi is None else -1 * self.lmp_zhi
+        # change box1 *
         self.boxtype = "lammps"
         del (self.crt_a, self.crt_b, self.crt_c)
 
@@ -162,12 +168,19 @@ class Box(object):
             self.ltc_beta,
             self.ltc_gamma,
         )
+
         self.lmp_xhi = lx / 2
         self.lmp_yhi = ly / 2
         self.lmp_zhi = lz / 2
-        self.lmp_xlo = -self.lmp_xhi
-        self.lmp_ylo = -self.lmp_yhi
-        self.lmp_zlo = -self.lmp_zhi
+        self.lmp_xlo = (
+            None if self.lmp_xhi is None else -1 * self.lmp_xhi
+        )  # // -self.lmp_xhi
+        self.lmp_ylo = (
+            None if self.lmp_yhi is None else -1 * self.lmp_yhi
+        )  # // -self.lmp_yhi
+        self.lmp_zlo = (
+            None if self.lmp_zhi is None else -1 * self.lmp_zhi
+        )  # // -self.lmp_zhi
         # change box
         self.boxtype = "lammps"
 
@@ -253,6 +266,35 @@ class Box(object):
             self.lmp_xz,
             self.lmp_yz,
         )
+
+    def box_cart2alat(self):
+        assert self.boxtype == "cartesian"
+        self.crt_a, self.crt_b, self.crt_c, self.alat = agc.box_cart2alat(
+            self.crt_a, self.crt_b, self.crt_c
+        )
+        self.boxtype = "alat"
+
+    def box_lmp2alat(self):
+        """box_lmp2alat [summary]
+        Lammps -> alat
+        """
+        assert self.boxtype == "lammps"
+
+        lx = self.lmp_xhi - self.lmp_xlo
+        ly = self.lmp_yhi - self.lmp_ylo
+        lz = self.lmp_zhi - self.lmp_zlo
+
+        if self.lmp_xy is None:
+            self.lmp_xy = 0
+        if self.lmp_xz is None:
+            self.lmp_xz = 0
+        if self.lmp_yz is None:
+            self.lmp_yz = 0
+
+        self.crt_a, self.crt_b, self.crt_c, self.alat = agc.box_lmp2alat(
+            lx, ly, lz, self.lmp_xy, self.lmp_xz, self.lmp_yz
+        )
+        self.boxtype = "alat"
 
     def get_center(self):
         """
