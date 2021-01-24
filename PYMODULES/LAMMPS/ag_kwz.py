@@ -219,13 +219,12 @@ def md_simulation(
         lmp.command("dielectric {}".format(lmpcuts.dielectric))
 
     lmpcuts.load_system(lmp)
-
-    lmpcuts.thermo(lmp)
     lmpcuts.dump(lmp, unwrap=unwrap_dcd)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    lmpcuts.thermo(lmp)
     # distribute the available cores; option must be set after loading pair coeffs!
     lmp.command("comm_style tiled")
     lmp.command("balance 1.0 rcb")
@@ -293,13 +292,13 @@ def nose_hoover_md(lmpcuts, group="all"):
         lmp.command("dielectric {}".format(lmpcuts.dielectric))
 
     lmpcuts.load_system(lmp)
-    lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    lmpcuts.thermo(lmp)
     # minimize cut box if not done already
     if lmpcuts.input_lmprst is None or os.path.isfile(lmpcuts.input_lmprst):
         lmpcuts.minimize(lmp, style="cg")
@@ -612,11 +611,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     # lmp.command("velocity all create {} {} mom yes rot yes dist gaussian".format(lmpcuts.tstart, np.random.randint(29847587)))
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
-    lmpcuts.thermo(lmp)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    lmpcuts.thermo(lmp)
     # distribute the available cores if we have lots of vacuum in our box
     lmp.command("comm_style tiled")
     lmp.command("balance 1.0 rcb")
@@ -885,13 +884,13 @@ def create_voids(lmpcuts, lmpdat_solvate, dcd_solvate=None, dcd_solvent=None):
         lmp.command("dielectric {}".format(lmpcuts.dielectric))
 
     lmpcuts.load_system(lmp)
-    lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmpcuts.dump(lmp, unwrap=True)
 
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    lmpcuts.thermo(lmp)
     # lmpcuts.fix_berendsen(lmp, group="all", ensemble="nve", keyword="iso")
     lmpcuts.fix_berendsen(
         lmp, group="all", ensemble="npt", keyword="iso", integrator="nve/limit 0.2"
@@ -980,7 +979,6 @@ def requench(lmpcuts, minstyle="cg"):
 
     # read restart file from previous run
     lmpcuts.load_system(lmp)
-    lmpcuts.thermo(lmp)
     lmp.command("fix ic_prevention all momentum 100 linear 1 1 1 angular rescale")
     lmp.command(
         "fix integrator all nvt temp {0} {1} 0.1".format(lmpcuts.tstart, lmpcuts.tstop)
@@ -990,6 +988,7 @@ def requench(lmpcuts, minstyle="cg"):
     if lmpcuts.pc_file is not None:
         lmp.file(lmpcuts.pc_file)
 
+    lmpcuts.thermo(lmp)
     lmp.command("reset_timestep 0")
     lmp.command("run {}".format(lmpcuts.runsteps))
     lmpcuts.minimize(lmp, style=minstyle)
