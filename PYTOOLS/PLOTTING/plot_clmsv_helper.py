@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import scipy.stats as stats
+from scipy.stats import norm
 import numpy as np
 import math
 import scipy.stats
@@ -179,7 +180,8 @@ def plot_histogram(data, key, label=None):
 
     # define best fit line for given x_range, mu and sigma
     pdf_x_values = bins
-    pdf_y_values = mlab.normpdf(pdf_x_values, mu, sigma)
+    # pdf_y_values = mlab.normpdf(pdf_x_values, mu, sigma)
+    pdf_y_values = norm.pdf(x_range)
     # pdb.set_trace()
     plt.plot(
         pdf_x_values,
