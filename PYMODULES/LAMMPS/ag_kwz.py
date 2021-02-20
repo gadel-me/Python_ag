@@ -697,7 +697,8 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         # remove pushing force
         lmp.command("unfix push")
 
-        # run the 2nd half of the simulation with push 'grp_add_sys'
+        # run the 2nd half of the simulation with added momentum by the push
+        # to 'grp_add_sys'
         _run(int(lmpcuts.runsteps * 0.5))
 
         # stop to-be-docked molecules from moving
