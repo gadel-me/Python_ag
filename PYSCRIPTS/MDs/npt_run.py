@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-
-
 import pdb
 import argparse
 import os
@@ -8,6 +6,14 @@ import re
 import random
 from lammps import lammps
 from mpi4py import MPI
+
+# ==============================================================================#
+# Setup MPI
+# ==============================================================================#
+
+comm = MPI.COMM_WORLD
+size = comm.Get_size()  # number of processes in communicator
+rank = comm.Get_rank()  # process' id(s) within a communicator
 
 """
 Caveat: Ice cube prevention and velocity creation is used on all atoms.
@@ -152,16 +158,15 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+# get starting temperature for random velocities from lammps ensemble command
 if args.ensemble is not None:
-    start_temp = re.findall(r"temp \d*", args.ensemble[0])[0].split()[-1]
 
-# ==============================================================================#
-# Setup MPI
-# ==============================================================================#
+    if rank == 0:
+        start_temp = re.findall(r"temp \d*", args.ensemble[0])[0].split()[-1]
+    else:
+        start_temp = None
 
-comm = MPI.COMM_WORLD
-size = comm.Get_size()  # number of processes in communicator
-rank = comm.Get_rank()  # process' id(s) within a communicator
+    start_temp = comm.bcast(start_temp, 0)
 
 # ==============================================================================#
 # Lammps
