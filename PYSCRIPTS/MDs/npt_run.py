@@ -215,27 +215,7 @@ lmp.file(args.set)
 lmp.command("box tilt large")  # ignore too tilted boxes
 
 # read file
-# if args.lmprst is not None and os.path.isfile(args.lmprst):
-#     lmp.command("read_restart {}".format(args.lmprst))
-
-#     if args.rn_start_velocity is True:
-#         lmp.command(
-#             ("velocity all create {} {} rot yes dist gaussian").format(
-#                 start_temp, random.randint(10000, 5000000)
-#             )
-#         )
-
-# elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
-#     lmp.command("read_data {}".format(args.lmpdat))
-
-#     if not args.minimize:
-#         lmp.command(
-#             ("velocity all create {} {} rot yes dist gaussian").format(
-#                 start_temp, random.randint(10000, 100000)
-#             )
-#         )
-
-try:
+if args.lmprst is not None and os.path.isfile(args.lmprst):
     lmp.command("read_restart {}".format(args.lmprst))
 
     if args.rn_start_velocity is True:
@@ -245,7 +225,7 @@ try:
             )
         )
 
-except MPIAbortException:
+elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
     lmp.command("read_data {}".format(args.lmpdat))
 
     if not args.minimize:
@@ -255,8 +235,28 @@ except MPIAbortException:
             )
         )
 
-else:
-    raise IOError("No data nor restart files given.")
+# try:
+#     lmp.command("read_restart {}".format(args.lmprst))
+
+#     if args.rn_start_velocity is True:
+#         lmp.command(
+#             ("velocity all create {} {} rot yes dist gaussian").format(
+#                 start_temp, random.randint(10000, 5000000)
+#             )
+#         )
+
+# except MPIAbortException:
+#     lmp.command("read_data {}".format(args.lmpdat))
+
+#     if not args.minimize:
+#         lmp.command(
+#             ("velocity all create {} {} rot yes dist gaussian").format(
+#                 start_temp, random.randint(10000, 100000)
+#             )
+#         )
+
+# else:
+#     raise IOError("No data nor restart files given.")
 
 if args.non_covalent is not None:
     lmp.file(args.non_covalent)
