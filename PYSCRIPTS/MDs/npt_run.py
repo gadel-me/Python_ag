@@ -5,7 +5,7 @@ import os
 import re
 import random
 from lammps import lammps
-from lammps.core import MPIAbortException
+# from lammps.core import MPIAbortException
 from mpi4py import MPI
 
 # ==============================================================================#
