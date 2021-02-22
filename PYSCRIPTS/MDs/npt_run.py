@@ -5,6 +5,7 @@ import os
 import re
 import random
 from lammps import lammps
+from lammps.core import MPIAbortException
 from mpi4py import MPI
 
 # ==============================================================================#
@@ -213,9 +214,28 @@ if args.gpu is not None:
 lmp.file(args.set)
 lmp.command("box tilt large")  # ignore too tilted boxes
 
-# print(args.lmprst)
 # read file
-if args.lmprst is not None and os.path.isfile(args.lmprst):
+# if args.lmprst is not None and os.path.isfile(args.lmprst):
+#     lmp.command("read_restart {}".format(args.lmprst))
+
+#     if args.rn_start_velocity is True:
+#         lmp.command(
+#             ("velocity all create {} {} rot yes dist gaussian").format(
+#                 start_temp, random.randint(10000, 5000000)
+#             )
+#         )
+
+# elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
+#     lmp.command("read_data {}".format(args.lmpdat))
+
+#     if not args.minimize:
+#         lmp.command(
+#             ("velocity all create {} {} rot yes dist gaussian").format(
+#                 start_temp, random.randint(10000, 100000)
+#             )
+#         )
+
+try:
     lmp.command("read_restart {}".format(args.lmprst))
 
     if args.rn_start_velocity is True:
@@ -225,7 +245,7 @@ if args.lmprst is not None and os.path.isfile(args.lmprst):
             )
         )
 
-elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
+except MPIAbortException:
     lmp.command("read_data {}".format(args.lmpdat))
 
     if not args.minimize:
