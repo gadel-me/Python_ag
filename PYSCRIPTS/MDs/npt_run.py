@@ -234,6 +234,8 @@ elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
                 start_temp, random.randint(10000, 100000)
             )
         )
+else:
+    raise IOError(f"File(s) not found: {args.lmpdat}, {args.lmprst}")
 
 # try:
 #     lmp.command("read_restart {}".format(args.lmprst))
@@ -255,8 +257,7 @@ elif args.lmpdat is not None and os.path.isfile(args.lmpdat) is True:
 #             )
 #         )
 
-# else:
-#     raise IOError("No data nor restart files given.")
+
 
 if args.non_covalent is not None:
     lmp.file(args.non_covalent)
