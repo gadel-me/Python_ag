@@ -1,37 +1,22 @@
-import pdb
 import datetime
-import os
-
-# import copy
-import shutil as sl
-import re
-
-# import argparse
 import math
+import os
+import re
+import shutil as sl
+from timeit import default_timer as timer
 
-# import time
-import numpy as np
-
-# from natsort import natsorted
-# import itertools as it
-#import scipy.stats
-from mpi4py import MPI
-from lammps import lammps, PyLammps
-import Transformations as cgt
-import md_elements as mde
-import md_box as mdb
-import md_universe as mdu
-
-# import ag_unify_md as agum
 import ag_geometry as agm
 import ag_lammps as aglmp
 import ag_lmplog as agl
-
-# import ag_vectalg as agv
-import ag_statistics as ags
 import ag_plotting as agplot
-
-# import vmd
+import ag_statistics as ags
+import md_box as mdb
+import md_elements as mde
+import md_universe as mdu
+import numpy as np
+import Transformations as cgt
+from lammps import PyLammps, lammps
+from mpi4py import MPI
 
 # ==============================================================================#
 # Setup MPI
@@ -543,6 +528,7 @@ def sysprep(
 def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     """
     """
+
     # check how many cores are used, leave the list empty if it is only one
     try:
         other_ranks = list(range(lmpcuts.ncores))[1:]
@@ -626,9 +612,14 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     # lmp.command("fix freeze grp_main_sys setforce {0} {0} {0}".format(0.0))
 
     # pre-optimization
+    # measure performance of minimization
+    minimize_start = timer()
     lmp.command("min_style cg")
     lmp.command("min_modify dmax 0.5")
     lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+    minimize_end = timer()
+    duration = minimize_end - minimize_start
+    print(f"Quenching 1 took {duration}")
 
     # set an additional push to the added atoms that should be docked
     # towards the origin at (0/0/0)
@@ -657,12 +648,13 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
 
     # runs attempts to dock the molecule
     for _ in range(runs):
-        # minimize and check if that is enough for docking
-        lmp.command("min_style quickmin")
-        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+        # Not sure if necessary, since it takes very long to complete
+        # # minimize and check if that is enough for docking
+        # lmp.command("min_style quickmin")
+        # lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-        lmp.command("min_style cg")
-        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+        # lmp.command("min_style cg")
+        # lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
         # check aggregate, i.e. docking was a success
         quench_success = _check_success()
