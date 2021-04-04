@@ -613,13 +613,10 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
 
     # pre-optimization
     # measure performance of minimization
-    minimize_start = timer()
+
     lmp.command("min_style cg")
     lmp.command("min_modify dmax 0.5")
     lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
-    minimize_end = timer()
-    duration = minimize_end - minimize_start
-    print(f"Quenching 1 took {duration}")
 
     # set an additional push to the added atoms that should be docked
     # towards the origin at (0/0/0)
@@ -650,11 +647,10 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
     for _ in range(runs):
         # Not sure if necessary, since it takes very long to complete
         # # minimize and check if that is enough for docking
-        # lmp.command("min_style quickmin")
-        # lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
-
-        # lmp.command("min_style cg")
-        # lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+        lmp.command("min_style quickmin")
+        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
+        lmp.command("min_style cg")
+        lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
         # check aggregate, i.e. docking was a success
         quench_success = _check_success()
@@ -668,7 +664,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         _run(int(lmpcuts.runsteps))
 
         # check aggregate, i.e. docking was a success
+        minimize_start = timer()
         quench_success = _check_success()
+        minimize_end = timer()
+        duration = minimize_end - minimize_start
+        print(f"Checking aggregation took {duration} seconds!")
 
         if quench_success is True:
             break
