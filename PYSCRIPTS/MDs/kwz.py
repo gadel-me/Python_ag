@@ -1,19 +1,20 @@
-import os
-import numpy as np
-import re
-import glob
-import shutil as sl
 import argparse
-from mpi4py import MPI
-import ag_kwz as agk
-import ag_lammps as aglmp
-import ag_lammps_sim as aglmpsim
-import time
+import glob
+import os
 
 # import ag_fileio
 # import ag_lmplog as agl
 # import ag_statistics as ags
 import pdb
+import re
+import shutil as sl
+import time
+
+import ag_kwz as agk
+import ag_lammps as aglmp
+import ag_lammps_sim as aglmpsim
+import numpy as np
+from mpi4py import MPI
 
 """
 Kawska-Zahn approach to aggregate crystals.
@@ -36,6 +37,31 @@ CAVEAT: DO NOT UNWRAP SOLVENT BOX, IT MUST BE WRAPPED OR OTHERWISE THE DENSITY
 
 CAVEAT: THE PATTERN STUFF IS ADDED SHOULD BE ACCORDING TO A CERTAIN PROBABILITY.
 """
+def check_positive(value):
+    """
+    Check if parsed value is a positive integer.
+
+    Parameters
+    ----------
+    value : int
+        Value to check
+
+    Returns
+    -------
+    int
+        [description]
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        Value is a negative integer
+    """
+    ivalue = int(value)
+
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("{value} is an invalid positive int value")
+
+    return ivalue
 
 # ==============================================================================#
 # Setup MPI
@@ -76,31 +102,36 @@ if __name__ == "__main__":
         "lammps'  script with lj, dreiding, etc. parameters for the solvent"
     )
     logsteps_help = (
-        "log thermodynamic-, steps- and restart-files every" + "'logsteps' steps"
+        "log thermodynamic-, steps- and restart-files every"
+        + "'logsteps' steps"
     )
     gpu_help = "Utilize lammps' GPU package (solvent relaxation not included)."
     solvent_gpu_help = "Use gpu for the solvent relaxation."
     cycles_help = "Number of aggregations."
-    timeout_help = (
-        "allowed duration of simulation, for resubmitting purposes;  should be < 24h"
-    )
+    timeout_help = "allowed duration of simulation, for resubmitting purposes;  should be < 24h"
     pa_help = "The pattern in which looping order lmpa will be added, e.g. 0 1 2 3 3 1, repeats every 6 cycles"
-    solution_paircoeffs_help = "Mixed pair types for the solvent and the solvate"
-    dielectric_help = (
-        "Reduce all coulombic interactions to 1/dielectric of their original strength."
+    solution_paircoeffs_help = (
+        "Mixed pair types for the solvent and the solvate"
     )
+    dielectric_help = "Reduce all coulombic interactions to 1/dielectric of their original strength."
 
     # general
-    parser.add_argument("-lmpm", default=None, metavar="*.lmpdat", help=lmpm_help)
+    parser.add_argument(
+        "-lmpm", default=None, metavar="*.lmpdat", help=lmpm_help
+    )
     parser.add_argument(
         "-lmpa", default=None, nargs="*", metavar="*.lmpdat", help=lmpa_help
     )
-    parser.add_argument("-lmps", default=None, metavar="*.lmpdat", help=lmps_help)
+    parser.add_argument(
+        "-lmps", default=None, metavar="*.lmpdat", help=lmps_help
+    )
     parser.add_argument(
         "-lmps_dcd", default=None, metavar="*.lmpdat", help=lmps_dcd_help
     )
     # parser.add_argument("-solvate_resnames, metavar='cbz sac'")
-    parser.add_argument("-set", metavar="*.lmpcfg", required=True, help=set_help)
+    parser.add_argument(
+        "-set", metavar="*.lmpcfg", required=True, help=set_help
+    )
     parser.add_argument(
         "-settings_solvent", metavar="*.lmpcfg", help=settings_solvent_help
     )
@@ -112,7 +143,10 @@ if __name__ == "__main__":
         help=pair_coeffs_help,
     )
     parser.add_argument(
-        "-solvent_paircoeffs", default=None, metavar="*.lmpcfg", help=solvent_pc_help
+        "-solvent_paircoeffs",
+        default=None,
+        metavar="*.lmpcfg",
+        help=solvent_pc_help,
     )
     parser.add_argument(
         "-solution_paircoeffs",
@@ -121,9 +155,14 @@ if __name__ == "__main__":
         help=solution_paircoeffs_help,
     )
     # parser.add_argument("-logsteps", type=int, default=1000, help=logsteps_help)
-    parser.add_argument("-gpu", default=False, action="store_true", help=gpu_help)
     parser.add_argument(
-        "-solvent_gpu", default=False, action="store_true", help=solvent_gpu_help
+        "-gpu", default=False, action="store_true", help=gpu_help
+    )
+    parser.add_argument(
+        "-solvent_gpu",
+        default=False,
+        action="store_true",
+        help=solvent_gpu_help,
     )
     parser.add_argument("-cycles", type=int, default=5, help=cycles_help)
     parser.add_argument(
@@ -132,13 +171,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "-pa", "-pattern_add", nargs="*", default=[0], type=int, help=pa_help
     )
-    parser.add_argument("-dielectric", default=None, type=float, help=dielectric_help)
+    parser.add_argument(
+        "-dielectric", default=None, type=float, help=dielectric_help
+    )
 
     # quenching
     parser.add_argument("-quench_tstart", type=int, default=5)
     parser.add_argument("-quench_tstop", type=int, default=5)
     parser.add_argument("-quench_steps", type=int, default=250000)
     parser.add_argument("-quench_logsteps", type=int, default=1000)
+    parser.add_argument("-quench_addforce_magnifier", type=check_positive, default=1)
     parser.add_argument(
         "-quench_np",
         type=int,
@@ -245,7 +287,9 @@ if __name__ == "__main__":
         requench_dir = PWD + "/requench_{}/".format(curcycle)
 
         # system preparation
-        sysprep_out_lmpdat = sysprep_dir + "sysprep_out_{}.lmpdat".format(curcycle)
+        sysprep_out_lmpdat = sysprep_dir + "sysprep_out_{}.lmpdat".format(
+            curcycle
+        )
         lmpsettings_sysprep = aglmpsim.LmpSim(output_lmpdat=sysprep_out_lmpdat)
 
         # quench
@@ -271,9 +315,13 @@ if __name__ == "__main__":
         )
 
         # anneal -> solvent
-        cut_solv_lmpdat = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
+        cut_solv_lmpdat = (
+            anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmpdat"
+        )
         cut_solv_rst = anneal_dir + "cut_solv_{}".format(curcycle) + "_tmp.rst"
-        cut_solv_out = anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmprst"
+        cut_solv_out = (
+            anneal_dir + "cut_solv_{}".format(curcycle) + "_out.lmprst"
+        )
         cut_solv_dcd = anneal_dir + "cut_solv_{}".format(curcycle) + ".dcd"
         cut_solv_log = anneal_dir + "cut_solv_{}".format(curcycle) + ".lmplog"
         lmpsettings_relax_cut = aglmpsim.LmpSim(
@@ -294,10 +342,16 @@ if __name__ == "__main__":
             dielectric=args.dielectric,
         )
 
-        void_solv_rst = anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
-        void_solv_out = anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmprst"
+        void_solv_rst = (
+            anneal_dir + "void_solv_{}".format(curcycle) + "_tmp.rst"
+        )
+        void_solv_out = (
+            anneal_dir + "void_solv_{}".format(curcycle) + "_out.lmprst"
+        )
         void_solv_dcd = anneal_dir + "void_solv_{}".format(curcycle) + ".dcd"
-        void_solv_log = anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
+        void_solv_log = (
+            anneal_dir + "void_solv_{}".format(curcycle) + ".lmplog"
+        )
         lmpsettings_void = aglmpsim.LmpSim(
             tstart=args.void_tstart,
             tstop=args.void_tstop,
@@ -326,10 +380,16 @@ if __name__ == "__main__":
             args.solution_paircoeffs = args.pair_coeffs
 
         # relax_solv_in = anneal_dir + "relax_solv_{}".format(curcycle) + "_in.lmpdat"
-        relax_solv_out = anneal_dir + "relax_solv_{}".format(curcycle) + "_out.lmprst"
-        relax_solv_rst = anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
+        relax_solv_out = (
+            anneal_dir + "relax_solv_{}".format(curcycle) + "_out.lmprst"
+        )
+        relax_solv_rst = (
+            anneal_dir + "relax_solv_{}".format(curcycle) + "_tmp.lmprst"
+        )
         relax_solv_dcd = anneal_dir + "relax_solv_{}".format(curcycle) + ".dcd"
-        relax_solv_log = anneal_dir + "relax_solv_{}".format(curcycle) + ".lmplog"
+        relax_solv_log = (
+            anneal_dir + "relax_solv_{}".format(curcycle) + ".lmplog"
+        )
         lmpsettings_relax_solv = aglmpsim.LmpSim(
             tstart=args.relax_solv_tstart,
             tstop=args.relax_solv_tstop,
@@ -349,8 +409,12 @@ if __name__ == "__main__":
         )
 
         # anneal -> equilibration/heating
-        heat_out = anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"
-        heat_rst = anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
+        heat_out = (
+            anneal_dir + "equil_anneal_{}".format(curcycle) + "_out.lmprst"
+        )
+        heat_rst = (
+            anneal_dir + "equil_anneal_{}".format(curcycle) + "_tmp.lmprst"
+        )
         heat_dcd = anneal_dir + "equil_anneal_{}".format(curcycle) + ".dcd"
         heat_log = anneal_dir + "equil_anneal_{}".format(curcycle) + ".lmplog"
         lmpsettings_heat = aglmpsim.LmpSim(
@@ -375,7 +439,9 @@ if __name__ == "__main__":
         if args.lmps is None:
             lmpsettings_heat.input_lmprst = lmpsettings_quench.output_lmprst
         else:
-            lmpsettings_heat.input_lmprst = lmpsettings_relax_solv.output_lmprst
+            lmpsettings_heat.input_lmprst = (
+                lmpsettings_relax_solv.output_lmprst
+            )
 
         # anneal -> productive
         anneal_out = anneal_dir + "anneal_{}".format(curcycle) + "_out.lmprst"
@@ -404,11 +470,19 @@ if __name__ == "__main__":
         # requench
         # tmp_solvate_anneal_out = requench_dir + "requench_{}".format(curcycle) + "_tmp_solvate_out.lmpdat"
         # requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmpdat"
-        requench_lmpdat = requench_dir + "requench_{}".format(curcycle) + ".lmpdat"
-        requench_out = requench_dir + "requench_{}".format(curcycle) + "_out.lmprst"
-        requench_rst = requench_dir + "requench_{}".format(curcycle) + "_tmp.lmprst"
+        requench_lmpdat = (
+            requench_dir + "requench_{}".format(curcycle) + ".lmpdat"
+        )
+        requench_out = (
+            requench_dir + "requench_{}".format(curcycle) + "_out.lmprst"
+        )
+        requench_rst = (
+            requench_dir + "requench_{}".format(curcycle) + "_tmp.lmprst"
+        )
         requench_dcd = requench_dir + "requench_{}".format(curcycle) + ".dcd"
-        requench_log = requench_dir + "requench_{}".format(curcycle) + ".lmplog"
+        requench_log = (
+            requench_dir + "requench_{}".format(curcycle) + ".lmplog"
+        )
         lmpsettings_requench = aglmpsim.LmpSim(
             tstart=args.requench_tstart,
             tstop=args.requench_tstop,
@@ -428,10 +502,14 @@ if __name__ == "__main__":
         pre_sysprep_out = "{0}/sysprep_{1}/sysprep_out_{1}.lmpdat".format(
             PWD, curcycle - 1
         )
-        pre_solvent_anneal_out = "{0}/anneal_{1}/anneal_{0}_solvent_out.xyz".format(
+        pre_solvent_anneal_out = (
+            "{0}/anneal_{1}/anneal_{0}_solvent_out.xyz".format(
+                PWD, curcycle - 1
+            )
+        )
+        pre_requench_dcd = "{0}/requench_{1}/requench_{1}.dcd".format(
             PWD, curcycle - 1
         )
-        pre_requench_dcd = "{0}/requench_{1}/requench_{1}.dcd".format(PWD, curcycle - 1)
 
         quench_success = os.path.isfile(lmpsettings_quench.output_lmprst)
         anneal_success = os.path.isfile(lmpsettings_anneal.output_lmprst)
@@ -455,7 +533,9 @@ if __name__ == "__main__":
                 while not os.path.isfile(lmpsettings_quench.output_lmprst):
                     comm.Barrier()
                     sysprep_attempt = 0
-                    while not os.path.isfile(lmpsettings_sysprep.output_lmpdat):
+                    while not os.path.isfile(
+                        lmpsettings_sysprep.output_lmpdat
+                    ):
                         comm.Barrier()
                         # ==================================================================#
                         # 1. System Preparation
@@ -486,7 +566,9 @@ if __name__ == "__main__":
                                 timestamp = agk.generate_timestamp()
                                 os.rename(
                                     sysprep_dir,
-                                    sysprep_dir.rstrip("/") + "_failed_" + timestamp,
+                                    sysprep_dir.rstrip("/")
+                                    + "_failed_"
+                                    + timestamp,
                                 )
                                 del timestamp
                                 sysprep_attempt += 1
@@ -502,7 +584,10 @@ if __name__ == "__main__":
                     # 2. System Quenching
                     # ===================================================================
 
-                    if os.path.isfile(lmpsettings_quench.output_lmprst) is False:
+                    if (
+                        os.path.isfile(lmpsettings_quench.output_lmprst)
+                        is False
+                    ):
                         if rank == 0:
                             agk.create_folder(quench_dir)
 
@@ -515,7 +600,10 @@ if __name__ == "__main__":
 
                         if quench_tasks_color == 0:
                             quench_success = agk.quench(
-                                lmpsettings_quench, main_prep_lmpdat, split=quench_split
+                                lmpsettings_quench,
+                                main_prep_lmpdat,
+                                addforce_magnifier=args.quench_addforce_magnifier,
+                                split=quench_split,
                             )
                         else:
                             quench_success = False
@@ -529,11 +617,15 @@ if __name__ == "__main__":
                                 timestamp = agk.generate_timestamp()
                                 os.rename(
                                     sysprep_dir,
-                                    sysprep_dir.rstrip("/") + "_failed_" + timestamp,
+                                    sysprep_dir.rstrip("/")
+                                    + "_failed_"
+                                    + timestamp,
                                 )
                                 os.rename(
                                     quench_dir,
-                                    quench_dir.rstrip("/") + "_failed_" + timestamp,
+                                    quench_dir.rstrip("/")
+                                    + "_failed_"
+                                    + timestamp,
                                 )
                                 del timestamp
 
@@ -574,7 +666,7 @@ if __name__ == "__main__":
                         atm_idxs_solvate = None
 
                     # debugging
-                    #print(f"{rank}:{type(solvate_sys)}")
+                    # print(f"{rank}:{type(solvate_sys)}")
                     solvate_sys = comm.bcast(solvate_sys, 0)
                     solvate_sys_natoms = comm.bcast(solvate_sys_natoms, 0)
                     atm_idxs_solvate = comm.bcast(atm_idxs_solvate, 0)
@@ -593,7 +685,9 @@ if __name__ == "__main__":
                             )
 
                         # relax cut out box (which has a buffer frame around it) in order to get rid of unnecessary cavities
-                        if not os.path.isfile(lmpsettings_relax_cut.output_lmprst):
+                        if not os.path.isfile(
+                            lmpsettings_relax_cut.output_lmprst
+                        ):
                             agk.md_simulation(
                                 lmpsettings_relax_cut,
                                 group="all",
@@ -602,7 +696,9 @@ if __name__ == "__main__":
                                 keyword_min="iso",
                                 unwrap_dcd=True,
                             )
-                            lmpsettings_relax_cut.tstart = lmpsettings_relax_cut.tstop
+                            lmpsettings_relax_cut.tstart = (
+                                lmpsettings_relax_cut.tstop
+                            )
                             agk.md_simulation(
                                 lmpsettings_relax_cut,
                                 group="all",
@@ -652,7 +748,9 @@ if __name__ == "__main__":
                         # a solvent atom
                         agk.md_simulation(
                             lmpsettings_relax_solv,
-                            group="group solvate id > {}".format(solvate_sys_natoms),
+                            group="group solvate id > {}".format(
+                                solvate_sys_natoms
+                            ),
                             style="berendsen",
                             ensemble="nvt",
                             keyword_min="iso",
@@ -691,9 +789,12 @@ if __name__ == "__main__":
                     # check if aggregate is still ok
                     if rank == 0:
                         solution_sys = aglmp.read_lmpdat(
-                            lmpsettings_heat.input_lmpdat, lmpsettings_heat.output_dcd
+                            lmpsettings_heat.input_lmpdat,
+                            lmpsettings_heat.output_dcd,
                         )
-                        solution_sys_atoms_idxs = list(range(len(solution_sys.atoms)))
+                        solution_sys_atoms_idxs = list(
+                            range(len(solution_sys.atoms))
+                        )
 
                         # check aggregation state of the last frame
                         aggregate_ok = solution_sys.check_aggregate(
@@ -719,15 +820,21 @@ if __name__ == "__main__":
                             timestamp = agk.generate_timestamp()
                             os.rename(
                                 sysprep_dir,
-                                sysprep_dir.rstrip("/") + "_failed_" + timestamp,
+                                sysprep_dir.rstrip("/")
+                                + "_failed_"
+                                + timestamp,
                             )
                             os.rename(
                                 quench_dir,
-                                quench_dir.rstrip("/") + "_failed_" + timestamp,
+                                quench_dir.rstrip("/")
+                                + "_failed_"
+                                + timestamp,
                             )
                             os.rename(
                                 anneal_dir,
-                                anneal_dir.rstrip("/") + "_failed_" + timestamp,
+                                anneal_dir.rstrip("/")
+                                + "_failed_"
+                                + timestamp,
                             )
                             del timestamp
 
@@ -742,7 +849,7 @@ if __name__ == "__main__":
                             "npt",
                             keyword="iso",
                             output=anneal_dir + "anneal_{}".format(curcycle),
-                            rsquare_thrsh=args.rsquare_thrsh
+                            rsquare_thrsh=args.rsquare_thrsh,
                         )
                     else:
                         anneal_success = agk.anneal_productive(
@@ -765,15 +872,21 @@ if __name__ == "__main__":
                             timestamp = agk.generate_timestamp()
                             os.rename(
                                 sysprep_dir,
-                                sysprep_dir.rstrip("/") + "_failed_" + timestamp,
+                                sysprep_dir.rstrip("/")
+                                + "_failed_"
+                                + timestamp,
                             )
                             os.rename(
                                 quench_dir,
-                                quench_dir.rstrip("/") + "_failed_" + timestamp,
+                                quench_dir.rstrip("/")
+                                + "_failed_"
+                                + timestamp,
                             )
                             os.rename(
                                 anneal_dir,
-                                anneal_dir.rstrip("/") + "_failed_" + timestamp,
+                                anneal_dir.rstrip("/")
+                                + "_failed_"
+                                + timestamp,
                             )
                             del timestamp
 
@@ -810,7 +923,13 @@ if __name__ == "__main__":
                         best_idx,
                         output_lmpdat_a=lmpsettings_requench.input_lmpdat,
                     )
-                    del (anneal_lmplog_files, anneal_dcds, best_dcd, best_idx, best_val)
+                    del (
+                        anneal_lmplog_files,
+                        anneal_dcds,
+                        best_dcd,
+                        best_idx,
+                        best_val,
+                    )
 
             requench_success = agk.requench(lmpsettings_requench)
 
@@ -822,16 +941,20 @@ if __name__ == "__main__":
                 if rank == 0:
                     timestamp = agk.generate_timestamp()
                     os.rename(
-                        sysprep_dir, sysprep_dir.rstrip("/") + "_failed_" + timestamp
+                        sysprep_dir,
+                        sysprep_dir.rstrip("/") + "_failed_" + timestamp,
                     )
                     os.rename(
-                        quench_dir, quench_dir.rstrip("/") + "_failed_" + timestamp
+                        quench_dir,
+                        quench_dir.rstrip("/") + "_failed_" + timestamp,
                     )
                     os.rename(
-                        anneal_dir, anneal_dir.rstrip("/") + "_failed_" + timestamp
+                        anneal_dir,
+                        anneal_dir.rstrip("/") + "_failed_" + timestamp,
                     )
                     os.rename(
-                        requench_dir, requench_dir.rstrip("/") + "_failed_" + timestamp
+                        requench_dir,
+                        requench_dir.rstrip("/") + "_failed_" + timestamp,
                     )
                     del timestamp
 
