@@ -180,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("-quench_tstop", type=int, default=5)
     parser.add_argument("-quench_steps", type=int, default=250000)
     parser.add_argument("-quench_logsteps", type=int, default=1000)
-    parser.add_argument("-quench_addforce_magnifier", type=check_positive, default=1)
+    parser.add_argument("-quench_addforce_magnifier", type=float, default=1)
     parser.add_argument(
         "-quench_np",
         type=int,
