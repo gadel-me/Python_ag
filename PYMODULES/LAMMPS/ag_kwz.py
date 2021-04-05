@@ -525,7 +525,7 @@ def sysprep(
 ################################################################################
 
 
-def quench(lmpcuts, lmpdat_main, runs=20, split=None):
+def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
     """
     """
 
@@ -572,6 +572,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         try:
             lmp.command("run {}".format(steps))
         except:
+            print("Catching an exception, something went wrong in _run.")
             # prevent deadlock by not nicely ending the whole program if more
             # than one rank is used
             if size > 1:
@@ -626,7 +627,7 @@ def quench(lmpcuts, lmpdat_main, runs=20, split=None):
         cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
         cog /= np.linalg.norm(cog, axis=0)  # unit vector
         # make vector show towards the center (0/0/0)
-        cog_force = cog * -1
+        cog_force = cog * addforce_magnifier * -1
 
         for other_rank in other_ranks:
             comm.send(cog_force, dest=other_rank)
