@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("-lmpdat", metavar="*.lmpdat", action="store", required=True)
 
 parser.add_argument(
-    "-dcd", required=True, metavar="*.dcd", action="store", help="Lammps' DCD-file."
+    "-dcd", required=False, metavar="*.dcd", action="store", help="Lammps' DCD-file."
 )
 
 parser.add_argument(
@@ -38,8 +38,11 @@ mydata = agum.Unification()
 frame = args.frame
 mydata = agum.Unification()
 mydata.read_lmpdat(args.lmpdat)
-mydata.import_dcd(args.dcd)
-mydata.read_frames(frame=None, to_frame=-1, frame_by="index")
+
+if args.dcd is not None:
+    mydata.import_dcd(args.dcd)
+    mydata.read_frames(frame=None, to_frame=-1, frame_by="index")
+
 mydata.create_linked_cells(frame_id=args.frame, rcut_a=2, rcut_b=2, rcut_c=2)
 close_contacts = mydata.chk_atm_dist(
     frame_id=args.frame, min_dist=args.min_dist, exclude_same_molecule=False
