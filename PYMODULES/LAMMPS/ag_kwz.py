@@ -665,11 +665,11 @@ def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
         _run(int(lmpcuts.runsteps))
 
         # check aggregate, i.e. docking was a success
-        minimize_start = timer()
+        # minimize_start = timer()
         quench_success = _check_success()
-        minimize_end = timer()
-        duration = minimize_end - minimize_start
-        print(f"Checking aggregation took {duration} seconds!")
+        # minimize_end = timer()
+        # duration = minimize_end - minimize_start
+        # print(f"Checking aggregation took {duration} seconds!")
 
         if quench_success is True:
             break

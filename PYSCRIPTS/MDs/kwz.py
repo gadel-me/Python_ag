@@ -8,7 +8,7 @@ import os
 import pdb
 import re
 import shutil as sl
-import time
+from timeit import default_timer as timer
 
 import ag_kwz as agk
 import ag_lammps as aglmp
@@ -583,6 +583,7 @@ if __name__ == "__main__":
                     # ===================================================================
                     # 2. System Quenching
                     # ===================================================================
+                    quench_timer_start = timer()
 
                     if (
                         os.path.isfile(lmpsettings_quench.output_lmprst)
@@ -639,6 +640,14 @@ if __name__ == "__main__":
                             exit(101)
 
                         # del quench_attempts
+
+                    quench_timer_stop = timer()
+                    duration = quench_timer_start - quench_timer_stop
+
+                    if rank == 0:
+                        print(f"It took {duration} seconds to quench.")
+
+                    del (quench_timer_start, quench_timer_stop, duration)
 
                 # ======================================================================#
                 # 3. ANNEALING
