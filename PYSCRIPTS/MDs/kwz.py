@@ -589,6 +589,11 @@ if __name__ == "__main__":
                         os.path.isfile(lmpsettings_quench.output_lmprst)
                         is False
                     ):
+
+                        # when quenching fails, an exception is thrown that
+                        # `quench_success` is unbound when utilizing mpi
+                        quench_success = False
+
                         if rank == 0:
                             agk.create_folder(quench_dir)
 
@@ -606,8 +611,8 @@ if __name__ == "__main__":
                                 addforce_magnifier=args.quench_addforce_magnifier,
                                 split=quench_split,
                             )
-                        else:
-                            quench_success = False
+                        # else:
+                        #     quench_success = False
 
                         comm.Barrier()
                         quench_success = comm.bcast(quench_success, root=0)
