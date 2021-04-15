@@ -525,7 +525,7 @@ def sysprep(
 ################################################################################
 
 
-def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
+def quench(lmpcuts, lmpdat_main, runs=50, addforce_magnifier=1, split=None):
     """
     """
 
@@ -534,6 +534,22 @@ def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
         other_ranks = list(range(lmpcuts.ncores))[1:]
     except ValueError:
         other_ranks = []
+
+    def _calculate_force_vector():
+        if rank == 0:
+            quench_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat, dcd=lmpcuts.output_dcd)
+            cog = agm.get_cog(quench_sys.ts_coords[-1][natoms_main_sys + 1:])
+            cog /= np.linalg.norm(cog, axis=0)  # unit vector
+            # make vector show towards the center (0/0/0)
+            cog_force = cog * addforce_magnifier * -1
+
+            for other_rank in other_ranks:
+                comm.send(cog_force, dest=other_rank)
+
+        else:
+            cog_force = comm.recv(source=0)
+
+        return cog_force
 
     def _check_success():
         """
@@ -619,23 +635,6 @@ def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
     lmp.command("min_modify dmax 0.5")
     lmp.command("minimize 1.0e-5 1.0e-8 10000 100000")
 
-    # set an additional push to the added atoms that should be docked
-    # towards the origin at (0/0/0)
-    # (prevents losing atoms due to being localized outside the cutoff)
-    if rank == 0:
-        prep_sys = aglmp.read_lmpdat(lmpcuts.input_lmpdat)
-        cog = agm.get_cog(prep_sys.ts_coords[-1][natoms_main_sys + 1:])
-        cog /= np.linalg.norm(cog, axis=0)  # unit vector
-        # make vector show towards the center (0/0/0)
-        cog_force = cog * addforce_magnifier * -1
-
-        for other_rank in other_ranks:
-            comm.send(cog_force, dest=other_rank)
-
-    else:
-        cog_force = comm.recv(source=0)
-
-    # cog_force = comm.bcast(cog_force, 0)
     # barostatting, thermostatting only for atoms that will be docked
     lmp.command(
         "fix integrator grp_add_sys nvt temp {0} {1} 0.1".format(
@@ -661,8 +660,8 @@ def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
 
         del quench_success
         # perform a little molecular dynamics simulation with
-        # half of the lmpcuts.runsteps
-        _run(int(lmpcuts.runsteps))
+        # quarter of the lmpcuts.runsteps to see if the molecule docks by itself
+        _run(int(lmpcuts.runsteps * 0.25))
 
         # check aggregate, i.e. docking was a success
         # minimize_start = timer()
@@ -675,6 +674,10 @@ def quench(lmpcuts, lmpdat_main, runs=20, addforce_magnifier=1, split=None):
             break
 
         del quench_success
+
+        # recalculate force vector since position of the molecule has changed
+        cog_force = _calculate_force_vector()
+
         # give 'to-be-docked' molecules a little push if minimization was not
         # sufficient for aggregation
         addforce_cmd = "fix push grp_add_sys addforce {c[0]} {c[1]} {c[2]} every 1"
