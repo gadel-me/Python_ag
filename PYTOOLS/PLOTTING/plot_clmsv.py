@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 
-import readline  # necessary for raw_input and using arrow keys
 import argparse
-import scipy.stats
-import numpy as np
-import ag_unify_log as agul
-import plot_clmsv_helper as pcsvh
-import pdb
-import copy
 import collections
 
+import ag_unify_log as agul
+import numpy as np
+
+import plot_clmsv_helper as pcsvh
 
 parser = argparse.ArgumentParser(
     prog="ag_plot_lmplog.py",
@@ -236,7 +233,7 @@ while keep_plotting in ["Yes", "Y", "yes", "y", ""]:
         print("Plotting: {} for steps {} to {}\n".format(args.xkey, args.fst, args.lst))
         pcsvh.plot_histogram(xvals, args.xkey)
     elif args.qqplot is True:
-        pcsvh.plot_qq(xvals, args.xkey)
+        pcsvh.plot_qq(xvals, args.xkey, output=f"{args.clmsv}_qqplot")
     elif args.acf is True:
         pcsvh.plot_autocorrelation_function(xvals, args.xkey)
     else:
