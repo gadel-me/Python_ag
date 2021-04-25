@@ -1,14 +1,16 @@
-import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
-import scipy.stats as stats
-from scipy.stats import norm
-import numpy as np
 import math
+import pdb
+
+import ag_statistics as ags
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+import numpy as np
 import scipy.stats
+import scipy.stats as stats
+from ag_statistics import qq_test
+from scipy.stats import norm
 from statsmodels.graphics.gofplots import qqplot
 from statsmodels.graphics.tsaplots import plot_acf
-import ag_statistics as ags
-import pdb
 
 
 def ask4frame(first_last, num_frames):
@@ -37,7 +39,7 @@ def ask4keyword(xory, keywords):
     return input("> ")
 
 
-def plot_qq(data, key):
+def plot_qq(data, key, output=None):
     """
     Quantile-quantile plot.
 
@@ -54,6 +56,10 @@ def plot_qq(data, key):
     this expectation clear. Deviations by the dots from the line shows a deviation from the
     expected distribution.
     """
+    # save a different (?) qq-plot
+    if output is not None:
+        qq_test(data, output=output,save_plot=True)
+
     data = np.array(data)
     # pdb.set_trace()
     qqplot(data, line="s")
@@ -203,8 +209,8 @@ def plot_histogram(data, key, label=None):
     )
 
     # line that goes through mu (=max. of gauss-function)
-    plt.axvline(x=mu, linewidth=0.5, color="red", alpha=3.0, label="average")
-    plt.axvline(x=median, linewidth=0.5, color="green", alpha=3.0, label="median")
+    plt.axvline(x=mu, linewidth=0.5, color="red", alpha=None, label="average")
+    plt.axvline(x=median, linewidth=0.5, color="green", alpha=None, label="median")
 
     # Tweak spacing to prevent clipping of ylabel
     plt.subplots_adjust(left=0.15)
